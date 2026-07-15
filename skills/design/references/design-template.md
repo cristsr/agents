@@ -1,0 +1,78 @@
+# design.md Template
+
+Save to `work/active/sm-<number>/design.md` using exactly this structure.
+Remove sections marked as conditional if they do not apply.
+
+`design.md` is the narrative summary — full machine-readable contracts live
+in `work/active/sm-<number>/docs/` (see `api-template.md` for `docs/api.yaml`
+and `data-model-template.md` for `docs/data-model.md`).
+Never embed the full Mermaid diagram, DTO/schema definitions, or the
+TypeORM entity/migration SQL inline here — reference the files in `docs/`
+instead.
+
+---
+
+```markdown
+# design: sm-<number>
+
+> Generado por /design. Input para /plan.
+> Investigación técnica (si aplica): `docs/research.md`.
+> Diagrama completo: `docs/diagram.md`. Contrato completo: `docs/api.yaml`.
+> Modelado de datos (si aplica): `docs/data-model.md`.
+> Revisá todo antes de ejecutar `/plan sm-<number>`.
+
+## Decisiones de Diseño
+
+<!-- OPTIONAL: Include only if PHASE 3 resolved at least one unknown via
+     questions. Omit this section entirely if design.md was produced with
+     zero ambiguities (everything was already defined in hu.md/context.md). -->
+
+- **<unknown resuelto>:** <opción elegida> — <razón breve>
+
+## Flujo entre microservicios
+
+<resumen de 1-2 oraciones de qué hace el flujo — el diagrama completo está en `docs/diagram.md`>
+
+## Contratos por microservicio
+
+### sm-<microservice-1>
+
+| Método | Ruta | Descripción de negocio |
+|--------|------|-------------------------|
+| POST | /recurso/search | <qué resuelve, no solo el verbo HTTP> |
+
+> Schemas de request/response, validaciones y códigos de respuesta completos: `docs/api.yaml` (tag `<microservice-1>`).
+
+---
+
+### sm-<microservice-2>  ← repetir si hay más de uno
+
+[misma estructura]
+
+---
+
+## Modelado de datos  ← omitir si no hay tabla nueva
+
+Entidad(es) nueva(s): `nombre_tabla`.
+
+> Entidad TypeORM y migración SQL completas: `docs/data-model.md`.
+
+## Validación de Quality Gates
+
+<!-- Siempre presente. Si hay constitución cargada, valida sus gates; si no,
+     aplica los cuatro gates built-in por default. -->
+
+| Gate | Resultado | Justificación |
+|------|-----------|---------------|
+| Simplicity | ✅/⚠️ | <justificación en una línea> |
+| Anti-Abstraction | ✅/⚠️ | <justificación en una línea> |
+| Integration-First | ✅/⚠️ | <justificación en una línea> |
+| Test-First | ✅/⚠️ | <justificación en una línea> |
+
+## Excepciones a la constitución  ← omitir si todos los gates pasaron (✅)
+
+<!-- OPTIONAL: solo si un gate falla (⚠️) y se decide seguir igual con
+     justificación aprobada por el usuario en PHASE 5. -->
+
+- **<Gate/Artículo violado>:** <por qué se hace la excepción> — aprobado por el usuario.
+```
