@@ -1,10 +1,10 @@
 ---
 name: hotfix
 description: >
-  Corrige un defecto post-build que se originó por una ambigüedad o un gap de
-  clarificación en hu.md — corrige o agrega el AC afectado y aplica el fix
-  como una tarea puntual sobre plan.md y el código ya construido, sin
-  regenerar el plan completo ni re-ejecutar /build desde cero.
+  Fixes a post-build defect that originated from an ambiguity or a
+  clarification gap in hu.md — corrects or adds the affected AC and applies
+  the fix as a single targeted task on plan.md and the already-built code,
+  without regenerating the full plan or re-running /build from scratch.
   Use when the user says "/hotfix sm-XXX", "esto quedó mal porque no se
   clarificó bien", "hay un bug post-build por un AC ambiguo", "necesito
   corregir algo que ya se construyó", "encontré un caso que no se cubrió",
@@ -120,7 +120,7 @@ lo maneja el usuario.
 
 5. Esperar confirmación antes de tocar `hu.md`.
 
-### Tamaño check (importante)
+### Size check (important)
 
 Si el AC faltante implica un microservicio nuevo, un endpoint nuevo, o una
 tabla nueva — esto **no es un hotfix**, es una historia mal dimensionada.

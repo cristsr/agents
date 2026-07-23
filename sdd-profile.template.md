@@ -1,9 +1,10 @@
 # SDD Profile — plantilla
 
 Copiar a `.agents/profile.md` en la **raíz del proyecto** y rellenar. Las skills
-SDD (`hu, clarify, scan, design, plan, build, refine, hotfix, constitution`) viven
-en `~/.agents/skills/` y son globales: **este archivo es lo único que las adapta a
-un proyecto**. Sin él, las skills se detienen.
+SDD (`hu, clarify, scan, design, plan, build, refine, hotfix, sync, commit,
+architecture, constitution`) viven en `~/.agents/skills/` y son globales:
+**este archivo es lo único que las adapta a un proyecto**. Sin él, las skills
+se detienen.
 
 ---
 
@@ -94,6 +95,8 @@ expuestos, puerto/servicio abstracto + firmas.
 | `DOCS_COMPONENTS_INDEX` | <catálogo para identificar componentes afectados> |
 | `DOCS_COMPONENT_README` | <doc por componente> |
 | `DOCS_COMPONENT_ARCH` | <arquitectura por componente> |
+| `DOCS_MODULE_ARTIFACTS` | <ruta por módulo para los artefactos que `/sync` promueve desde cada historia, ej. `apps/<app>/docs/<module>/<artifact>.md`> |
+| `DOCS_ARCHITECTURE` | <ruta del modelo C4 a nivel sistema (context.md Nivel 1 + containers.md Nivel 2) que gestiona `/architecture`, ej. `docs/architecture/`> |
 
 ## 9. Subagentes / herramientas auxiliares
 

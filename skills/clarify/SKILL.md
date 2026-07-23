@@ -1,14 +1,16 @@
 ---
 name: clarify
 description: >
-  Detecta ambigüedades en los criterios de aceptación de hu.md (testabilidad, edge cases,
-  comportamiento no especificado) y luego captura contexto técnico conocido por el
-  desarrollador — ambos antes de escanear el código. Use when the user says "/clarify sm-XXX",
-  "clarificar historia", "revisar ambigüedades", "enriquecer historia", "agregar contexto
-  técnico", "antes del scan quiero revisar algo", "ya sé qué módulos aplican", or has created
-  hu.md with /hu and wants to resolve ambiguity or add known technical context before /scan.
-  Do NOT use to correct acceptance criteria after design/plan already exist (use /refine),
-  scan the codebase (use /scan), or create the user story (use /hu).
+  Detects ambiguities in hu.md's acceptance criteria (testability, edge cases,
+  unspecified behavior) and then captures technical context already known by
+  the developer — both before scanning the codebase. Use when the user says
+  "/clarify sm-XXX", "clarificar historia", "revisar ambigüedades",
+  "enriquecer historia", "agregar contexto técnico", "antes del scan quiero
+  revisar algo", "ya sé qué módulos aplican", or has created hu.md with /hu
+  and wants to resolve ambiguity or add known technical context before /scan.
+  Do NOT use to correct acceptance criteria after design/plan already exist
+  (use /refine), scan the codebase (use /scan), or create the user story
+  (use /hu).
 ---
 
 # clarify
@@ -18,7 +20,8 @@ description: >
 Dos fases sobre `work/active/sm-<number>/hu.md`:
 
 - **Fase A — Detección de ambigüedades:** autochequeo de cada AC contra una checklist de
-  testabilidad/completitud. Si hay gaps, se resuelven con preguntas guiadas (patrón speckit).
+  testabilidad/completitud. Si hay gaps, se resuelven **todos** con preguntas guiadas
+  (patrón speckit), en bucle, una a la vez, hasta que no quede ningún unknown pendiente.
 - **Fase B — Contexto técnico:** preguntas guiadas para capturar conocimiento técnico que el
   desarrollador ya tiene (microservicio, artefactos reutilizables, patrones, restricciones).
 
@@ -51,12 +54,12 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 
 ## CRITICAL: Prerequisites
 
-### Step 1 — Extraer número de historia
+### Step 1 — Extract the story number
 
 Extraer `sm-<number>` del input. Si no está presente, preguntar:
 > "¿Para qué historia? (ej: sm-1933)"
 
-### Step 2 — Verificar que hu.md existe
+### Step 2 — Verify hu.md exists
 
 ```bash
 [ -f work/active/sm-<number>/hu.md ] && echo "OK" || echo "MISSING"
@@ -65,7 +68,7 @@ Extraer `sm-<number>` del input. Si no está presente, preguntar:
 Si NO existe → STOP:
 > "No encontré `work/active/sm-<number>/hu.md`. Ejecutá `/hu sm-<number>` primero."
 
-### Step 3 — Leer hu.md
+### Step 3 — Read hu.md
 
 Leer el archivo completo. Extraer y mantener en memoria:
 - Título de la historia
@@ -75,11 +78,16 @@ Leer el archivo completo. Extraer y mantener en memoria:
 - **Marcadores `[NEEDS CLARIFICATION: ...]`** insertados por `/hu` — cada uno es
   un unknown ya identificado que Fase A debe resolver y eliminar del archivo.
 
-### Step 4 — Verificar secciones existentes
+### Step 4 — Verify existing sections
 
-- Si ya existe `## Resolución de Ambigüedades` → Fase A ya se corrió antes. Anunciar:
+- Si ya existe `## Resolución de Ambigüedades` **y no quedan marcadores
+  `[NEEDS CLARIFICATION]` en el archivo** → Fase A ya se completó antes. Anunciar:
   "Ya hay ambigüedades resueltas para esta historia. Saltando a Fase B." y continuar
   directo en Fase B.
+- Si ya existe `## Resolución de Ambigüedades` **pero todavía quedan marcadores
+  `[NEEDS CLARIFICATION]`** → una corrida previa se interrumpió o difirió unknowns. Correr
+  Fase A solo sobre los marcadores restantes y **agregar** sus entradas a la sección
+  existente (no recrearla). Anunciar: "Retomando ambigüedades pendientes de sm-<number>."
 - Si ya existe `## Technical Context` → usar `AskUserQuestion` con
   `question: "Ya existe una sección Technical Context en hu.md. ¿Qué querés hacer?"`,
   header `"Tech Context"`, y opciones `"Sobreescribirla"` / `"Agregarle más información"`.
@@ -87,22 +95,22 @@ Leer el archivo completo. Extraer y mantener en memoria:
 
 ---
 
-## FASE A: Detección de ambigüedades
+## PHASE A: Ambiguity detection
 
-### Paso 0 — Recolectar los marcadores de /hu
+### Step 0 — Collect /hu's markers
 
 Antes del autochequeo, listar todos los `[NEEDS CLARIFICATION: ...]` presentes en
 `hu.md`. Cada uno ya es un unknown identificado por `/hu` — entran directo a la
 lista de unknowns con su texto de pregunta. Deben resolverse y **eliminarse** del
 archivo en esta fase (un marcador sin resolver bloquea `/design`).
 
-### Checklist de autochequeo
+### Self-check checklist
 
 Para CADA AC, evaluar internamente (no mostrar el chequeo crudo al usuario, solo el
 resultado). El checklist cubre cinco dimensiones — **happy path, edge cases,
 errores/fallos, testabilidad e inconsistencias**:
 
-| Dimensión | Pregunta | Qué buscar |
+| Dimension | Question | What to look for |
 |---|---|---|
 | **Testabilidad** | ¿Es verificable tal como está escrito? | Palabras como "razonable", "adecuado", "debería", "rápido" sin criterio objetivo |
 | **Testabilidad** | ¿Usa términos de negocio sin definición clara? | Ej: "activo", "vigente", "elegible" sin regla explícita |
@@ -112,27 +120,30 @@ errores/fallos, testabilidad e inconsistencias**:
 | **Inconsistencias** | ¿Contradice a otro AC o a una Regla de Negocio? | Dos ACs que se pisan, o un AC que viola una regla declarada |
 | **Cobertura** | ¿Hay un comportamiento descrito en prosa (Historia/Reglas) sin ningún AC que lo capture? | Requisito mencionado que no quedó como criterio verificable |
 
-### Construir lista de unknowns
+### Build the list of unknowns
 
 Combinar (a) los marcadores del Paso 0 y (b) los gaps detectados por el checklist,
 deduplicando (si un marcador y un gap apuntan al mismo hueco, es un solo unknown).
 
-Priorizar por impacto en este orden:
+Priorizar por impacto define el **orden** en que se resuelven (de mayor a menor), no un
+recorte de la lista:
 1. **Inconsistencias/contradicciones** entre ACs o reglas (bloquean todo lo demás)
 2. Gaps que **bloquean el diseño de DTOs o reglas de negocio** (happy path, términos)
 3. Comportamiento ante **errores y edge cases**
 4. Testabilidad de wording
 
-Si hay más de 5 unknowns, resolver los 5 de mayor prioridad en esta corrida y dejar
-los marcadores restantes en `hu.md` (el usuario puede re-ejecutar `/clarify`). Nunca
-eliminar un marcador sin resolverlo.
+Resolver **todos** los unknowns en esta corrida, sin tope — recorrer la lista completa en
+bucle, uno a la vez y en orden de prioridad, hasta que no quede ninguno pendiente. Nunca
+eliminar un marcador sin resolverlo, y nunca cerrar Fase A dejando unknowns sin tratar (a
+menos que el propio usuario decida diferir uno explícitamente).
 
 Si NO hay marcadores ni gaps → anunciar: "No se detectaron ambigüedades en los ACs."
 y pasar directo a FASE B.
 
-### Resolver unknowns (patrón speckit — uno a la vez)
+### Resolve unknowns (speckit pattern — one at a time, in a loop)
 
-Para cada unknown, llamar `AskUserQuestion` con una sola pregunta:
+Recorrer la lista de unknowns en bucle hasta vaciarla. Para cada unknown, llamar
+`AskUserQuestion` con una sola pregunta:
 
 - `question`: el unknown del AC, formulado como pregunta directa.
 - `header`: etiqueta corta (máx 12 caracteres) que identifique el AC (ej. "AC-2 código").
@@ -143,11 +154,14 @@ Para cada unknown, llamar `AskUserQuestion` con una sola pregunta:
   usuario fuera de las opciones listadas — no agregar una opción "Otra".
 
 **Reglas:**
-- Máximo 5 preguntas en esta fase
+- Sin tope de preguntas: procesar la lista completa de unknowns en bucle hasta vaciarla
 - Una llamada a `AskUserQuestion` por unknown — esperar la respuesta antes del siguiente
 - Nunca revelar preguntas futuras
+- Aplicar la resolución de cada unknown (editar el AC + eliminar su marcador) antes o
+  inmediatamente después de pasar al siguiente, para no perder el trabajo si la corrida se
+  interrumpe a mitad de la lista
 
-### Aplicar resoluciones
+### Apply resolutions
 
 Por cada unknown resuelto que implique reescribir o precisar un AC:
 1. Editar el AC correspondiente en `hu.md` con la redacción precisada.
@@ -164,14 +178,14 @@ Por cada unknown resuelto que implique reescribir o precisar un AC:
 
 No agregar la sección si no hubo ningún unknown.
 
-### Reformulación EARS (ofrecer cuando el AC falla testabilidad)
+### EARS rephrasing (offer when the AC fails testability)
 
 Cuando un AC resulta poco testable (wording vago, comportamiento implícito), además
 de precisarlo, **ofrecer** reescribirlo en notación **EARS** — el estándar de
 requisitos testables (patrón Kiro). EARS estructura el criterio en una de estas
 formas:
 
-| Patrón | Forma | Uso |
+| Pattern | Form | Use |
 |---|---|---|
 | Ubiquitous | `EL SISTEMA DEBE <respuesta>` | Regla siempre activa |
 | Event-driven | `CUANDO <evento>, EL SISTEMA DEBE <respuesta>` | Disparo por un evento |
@@ -195,13 +209,13 @@ que fallaron el checklist.
 
 ---
 
-## FASE B: Contexto técnico
+## PHASE B: Technical context
 
 Hacer cada pregunta **de a una**. Esperar respuesta antes de pasar a la siguiente.
 
 Si el usuario responde "skip", "-", "ninguno", "no sé" o similar → marcar ese campo como vacío y continuar.
 
-### Q1 — Microservicio(s) objetivo
+### Q1 — Target microservice(s)
 > "¿En qué microservicio(s) cae esta historia? (ej: sm-scheduling-ms)"
 
 Acepta uno o varios. Si menciona un nombre desconocido, continuar sin validar — el desarrollador es la fuente de verdad.
@@ -212,29 +226,29 @@ Acepta uno o varios. Si menciona un nombre desconocido, continuar sin validar �
 > `sm-audits-ms`/`sm-notifications-ms`), y el tool tiene un máximo de 4
 > opciones por pregunta — forzar un subconjunto sería arbitrario.
 
-### Q2 — Artefactos a reutilizar
+### Q2 — Artifacts to reuse
 > "¿Hay clases, repositorios, casos de uso o DTOs existentes que deberían reutilizarse?
 > (ej: AvailabilitySlotRepository, CreateSlotUseCase)"
 
 Acepta lista libre. Si el usuario da nombres con rutas, preservarlas tal como las escribe.
 
-### Q3 — Patrones obligatorios
+### Q3 — Mandatory patterns
 > "¿Hay patrones o estructuras que la implementación DEBE seguir?
 > (ej: caso de uso hexagonal, abstract class como token DI, naming específico)"
 
-### Q4 — Restricciones técnicas
+### Q4 — Technical constraints
 > "¿Hay algo que la implementación NO debe hacer o tiene limitaciones conocidas?
 > (ej: no modificar tabla X directamente, no romper contrato de API actual, usar solo conexión read-only)"
 
-### Q5 — Integraciones conocidas
+### Q5 — Known integrations
 > "¿La historia requiere llamadas a otros microservicios o sistemas externos que ya conocés?
 > (ej: HTTP GET a sm-capabilities-ms /zones/{id}, Redis Streams)"
 
-### Q6 — Deuda técnica relevante
+### Q6 — Relevant technical debt
 > "¿Hay deuda técnica en la zona de código afectada que el implementador debería conocer?
 > (ej: módulo X tiene bug con Y, servicio Z usa patrón obsoleto)"
 
-### Escribir la sección
+### Write the section
 
 1. Construir `## Technical Context` usando `references/tech-context-template.md`.
    Omitir cualquier subsección sin información.
@@ -262,7 +276,8 @@ grep -c 'NEEDS CLARIFICATION' work/active/sm-<number>/hu.md
   > "Historia clarificada en `work/active/sm-<number>/hu.md`. Sin marcadores
   > pendientes. Revisala y cuando estés listo ejecutá `/scan sm-<number>`."
 
-- Si quedan marcadores (se superó el tope de 5 por corrida) → advertir:
+- Si quedan marcadores (el usuario difirió alguno explícitamente o la corrida se
+  interrumpió antes de vaciar la lista) → advertir:
   > "Historia clarificada, pero quedan <N> marcadores `[NEEDS CLARIFICATION]`
   > sin resolver. `/design` no va a avanzar hasta que se resuelvan — volvé a
   > ejecutar `/clarify sm-<number>` para tratar los restantes."
@@ -280,7 +295,7 @@ clases, rutas de archivo, identificadores TypeScript y código — siempre en in
 
 ## Common Issues
 
-| Issue | Causa | Resolución |
+| Issue | Cause | Resolution |
 |-------|-------|------------|
 | hu.md no existe | /hu no ejecutado | STOP: indicar ejecutar `/hu sm-<number>` primero |
 | Ambigüedades ya resueltas antes | Re-ejecución sobre historia ya clarificada | Saltar Fase A, ir directo a Fase B |

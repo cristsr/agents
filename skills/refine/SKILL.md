@@ -113,12 +113,12 @@ If the target **is** `hu`: skip this step — `hu.md` is the artifact being edit
 
 Read the full input after the command and story number.
 
-- If the input contains a **description of a specific change** (field name, path correction, new endpoint, etc.) → **Modo Directo** → go to PHASE 3A
-- If the input has **no change description** → **Modo Guiado** → go to PHASE 3B
+- If the input contains a **description of a specific change** (field name, path correction, new endpoint, etc.) → **Direct Mode** → go to PHASE 3A
+- If the input has **no change description** → **Guided Mode** → go to PHASE 3B
 
 ---
 
-## PHASE 3A: Modo Directo (targeted change)
+## PHASE 3A: Direct Mode (targeted change)
 
 1. Read the full artifact from its file (per the Step 2 lookup table —
    `api` and `diagram` live under `docs/`, not at the story root)
@@ -134,7 +134,7 @@ Read the full input after the command and story number.
 
 ---
 
-## PHASE 3B: Modo Guiado (section-by-section review)
+## PHASE 3B: Guided Mode (section-by-section review)
 
 Read the artifact. Review **one section at a time** in this order:
 
@@ -285,7 +285,7 @@ Stop — do not start planning or building.
 
 ## Example
 
-### Modo Directo — refinando design.md
+### Direct Mode — refinando design.md
 
 **Input:**
 > `/refine design sm-1933` — el campo en el DTO debería ser `serviceTypeId` en vez de `type`
@@ -308,7 +308,7 @@ Stop — do not start planning or building.
 
 ---
 
-### Modo Directo — refinando hu.md
+### Direct Mode — refinando hu.md
 
 **Input:**
 > `/refine hu sm-1933` — el AC-2 debería decir "retorna lista vacía con código 200" en vez de solo "retorna lista vacía"
@@ -328,7 +328,7 @@ Stop — do not start planning or building.
 
 ---
 
-### Modo Guiado — refinando context.md
+### Guided Mode — refinando context.md
 
 **Input:**
 > `/refine context sm-1933`

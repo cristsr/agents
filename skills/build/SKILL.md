@@ -207,6 +207,10 @@ npx -y openapi-to-postmanv2 -s work/active/sm-<number>/docs/api.yaml -o work/act
 
 7. Stop — do not proceed further until the user responds.
 
+8. When the user approves the changes, suggest the closing step:
+   "Corré `/sync sm-<number>` para sincronizar la documentación y dejar el
+   PR listo."
+
 > Si más adelante aparece un defecto en este código y se origina en una
 > ambigüedad o gap de `hu.md`, no reabrir esta skill ni regenerar el plan —
 > usar `/hotfix sm-<number>`.

@@ -2,10 +2,13 @@
 name: design
 description: >
   Reads hu.md and context.md to produce a complete API-first technical design:
-  a Mermaid sequence diagram, an OpenAPI 3.1 contract, and data model if needed.
+  a Mermaid sequence diagram, a C4 Nivel 3 component diagram of the affected
+  module, an OpenAPI 3.1 contract, and data model if needed.
   Use when the user says "/design sm-XXX", "diseñar historia", "crear diseño",
   "especificación técnica", or has completed /scan and wants to define what to build.
   Do NOT use before /scan is complete. Do NOT use for planning tasks (use /plan).
+  Do NOT use for system-wide architecture (C4 Nivel 1/2 — actores, sistemas
+  externos, apps/microservicios) — that's /architecture, invoked by /sync.
 ---
 
 # design
@@ -22,6 +25,7 @@ exists — `/plan` generates DTOs that conform to it, never the reverse.
 **Output:**
 - `work/active/sm-<number>/docs/research.md` — alternativas técnicas evaluadas + rationale (solo si hay decisiones no triviales)
 - `work/active/sm-<number>/docs/diagram.md` — diagrama de secuencia
+- `work/active/sm-<number>/docs/component.md` — diagrama de componentes del módulo (C4 Nivel 3), casi siempre
 - `work/active/sm-<number>/docs/api.yaml` — contrato OpenAPI (fuente de verdad)
 - `work/active/sm-<number>/docs/data-model.md` — entidad TypeORM + migración SQL (solo si hay tabla nueva)
 - `work/active/sm-<number>/design.md` — resumen narrativo (incluye validación de quality gates)
@@ -264,7 +268,30 @@ Rules for the diagram:
 - Include the actor (Usuario/Sistema) as the initiator
 - If a microservice calls another internally, show that hop too
 
-### File 2 — docs/api.yaml (always, if any endpoint is new or changes)
+### File 2 — docs/component.md (C4 Nivel 3, casi siempre)
+
+Muestra los building blocks internos del módulo afectado: caso(s) de
+uso/handler(s), agregado(s)/entidad(es) de dominio, puerto(s)/repositorio(s)
+y los adapters de infraestructura que los implementan. Esta es la vista C4
+Nivel 3 — vive dentro del módulo, no en `docs/architecture/` (eso es Nivel
+1-2, gestionado por `/architecture`, invocado por `/sync`).
+
+Reglas:
+- Resolver el destino promovido del módulo con `DOCS_MODULE_ARTIFACTS`
+  (`apps/<app>/docs/<module>/component.md`). Si ya existe (una historia
+  anterior lo dejó), **leerlo primero** y actualizarlo quirúrgicamente:
+  agregar los componentes nuevos de esta historia sin borrar los que siguen
+  vigentes — es un documento vivo por módulo, igual que `containers.md` lo es
+  a nivel de sistema.
+- Si no existe todavía, generarlo desde cero a partir de los componentes
+  existentes del módulo en `context.md` + lo que esta historia agrega.
+- Formato `DIAGRAM_FORMAT`, agrupado por capa (`domain` / `application` /
+  `infrastructure`), un nodo por componente.
+- Se omite solo si la historia no agrega ni modifica ningún componente
+  interno del módulo (por ejemplo, un cambio puramente de configuración) —
+  no debería ser el caso típico.
+
+### File 3 — docs/api.yaml (always, if any endpoint is new or changes)
 
 The actual contract — OpenAPI 3.1, API-first: this is written and approved
 **before** any NestJS code exists. `/plan` will generate DTOs that conform
@@ -277,7 +304,7 @@ Build it from:
 - Answers recorded in `## Decisiones de Diseño` (new fields)
 - NEVER invent a field not backed by one of the two sources above
 
-### File 3 — docs/data-model.md (conditional, only if a new/changed DB table is needed)
+### File 4 — docs/data-model.md (conditional, only if a new/changed DB table is needed)
 
 The TypeORM entity + migration SQL, full definitions. Consult
 `references/data-model-template.md` for the exact structure.
@@ -289,13 +316,35 @@ Build it from:
 
 If no new/changed table is needed, skip this file entirely — do not create it.
 
-### File 4 — design.md (narrative summary, links to docs/)
+### File 5 — design.md (narrative summary, links to docs/)
 
 Consult `references/design-template.md` for the exact structure.
 
 Contains:
 - `## Decisiones de Diseño` (if PHASE 3 resolved any unknowns)
 - A short prose summary of the flow + link to `docs/diagram.md`
+- `## Componentes del módulo` — 1 sentence naming the new/modified
+  component(s), linking to `docs/component.md` for the full diagram
+- `## Impacto en Arquitectura Global` — **always present** (never
+  conditional). This is what lets `/sync` promote instead of having to
+  re-detect anything from a git diff. State explicitly:
+  - **¿Toca arquitectura global? Sí/No.**
+  - If **Sí**, name exactly what changed and at which C4 level:
+    - Nuevo app/microservicio, o nueva integración con un sistema/actor
+      externo real → **Nivel 1 (Context)**.
+    - Nuevo módulo dentro de un app existente, nueva lib compartida, o
+      nueva/eliminada integración entre containers ya existentes (otro app,
+      un broker, una API externa) → **Nivel 2 (Container)**.
+    - Include the specific node/edge to add or remove — `/sync` and
+      `/architecture` apply this verbatim, they don't re-derive it.
+  - If **No**, one sentence confirming the change is scoped to this module's
+    internals — no new app/module/integration crosses the module boundary.
+
+  Determine this by comparing against what `context.md` (loaded in PHASE 1)
+  already listed as existing modules/apps/integrations: if what this story
+  introduces isn't already there, it's a **Sí**. Never leave it ambiguous —
+  if genuinely unsure, ask the user as part of PHASE 3 rather than writing a
+  vague answer here.
 - A per-microservice endpoint table (method + path + business description)
   linking to `docs/api.yaml` for the full schemas
 - `## Modelado de datos` (conditional — only if `docs/data-model.md` was
@@ -305,6 +354,8 @@ Contains:
 Save:
 - `work/active/sm-<number>/docs/research.md` (if PHASE 3.5 produced it)
 - `work/active/sm-<number>/docs/diagram.md`
+- `work/active/sm-<number>/docs/component.md` (unless the story adds/changes
+  zero internal components)
 - `work/active/sm-<number>/docs/api.yaml`
 - `work/active/sm-<number>/docs/data-model.md` (if applicable)
 - `work/active/sm-<number>/design.md`
@@ -356,13 +407,17 @@ After saving the files:
    - Schemas nuevos creados
    - Si incluye modelo de datos o no (y si se generó `docs/data-model.md`)
    - Si se generó `docs/research.md` (y cuántas decisiones documenta)
+   - Veredicto de "Impacto en Arquitectura Global" (Sí/No, y si Sí, qué
+     nivel C4 y qué nodo/arista — esto es lo que `/sync` va a leer para
+     invocar `/architecture` sin volver a analizarlo)
    - Resultado de la validación de Quality Gates (todos ✅, o cuáles ⚠️ con excepción)
    - Si no había constitución, mención de que `/constitution` la haría exigible
 
 2. Show the full content of `docs/research.md` (if generated), `docs/diagram.md`,
-   `docs/api.yaml`, `docs/data-model.md` (if generated), and `design.md` for
-   review — with `api.yaml` being the contract the user most needs to validate
-   carefully, and the Quality Gates table the compliance summary to confirm.
+   `docs/component.md` (if generated), `docs/api.yaml`, `docs/data-model.md`
+   (if generated), and `design.md` for review — with `api.yaml` being the
+   contract the user most needs to validate carefully, and the Quality Gates
+   table the compliance summary to confirm.
 
 3. Say:
    > "**STOP:** Revisá el contrato completo (`docs/api.yaml`), el diagrama y el modelo
@@ -386,5 +441,7 @@ After saving the files:
 | Campo en schema no definido | HU ambigua | Preguntar en PHASE 3 antes de diseñar |
 | Micro afectado no identificado | context.md incompleto | Preguntar al usuario antes de continuar |
 | Diagrama sin nombres de schema en flechas | Falta información de contratos | Resolver en PHASE 3 antes de diagramar |
+| `component.md` ya existe de una historia anterior del mismo módulo | Es un documento vivo por módulo, se acumula entre historias | Leerlo primero y actualizarlo quirúrgicamente — nunca regenerarlo desde cero, perdería componentes de historias anteriores |
+| No está claro si la historia toca arquitectura global | El módulo/integración es ambiguo respecto a lo ya listado en `context.md` | Resolver en PHASE 3 como una pregunta más — nunca dejar "Impacto en Arquitectura Global" en un estado ambiguo, `/sync` y `/architecture` confían en esa respuesta tal cual |
 | Tabla nueva no confirmada | HU ambigua sobre persistencia | Preguntar como una de las 5 preguntas |
 | api.yaml modificado después de /plan | Cambio de contrato post-aprobación | Advertir: ejecutar `/plan sm-<number>` de nuevo para regenerar las DTOs |

@@ -73,9 +73,9 @@ components:
 
 ## Rules
 
-- **Un endpoint nuevo o modificado por la historia → una `path` + `operationId`.** No documentar endpoints que la historia no toca.
-- **Cada campo nuevo debe venir de una decisión registrada en `## Decisiones de Diseño`** o de un campo ya existente en `context.md` — nunca inventar un campo sin que esté en alguno de los dos.
-- **Las descripciones de respuestas HTTP deben ser específicas del caso de negocio**, no genéricas ("Éxito", "Error"). Ejemplo correcto: `"Zona sin franjas activas para el tipo de servicio solicitado"`.
-- **`required` define obligatoriedad** — todo campo no listado en `required` se interpreta como opcional (`@IsOptional()` en la DTO de NestJS que generará `/plan`).
-- **Usar `format` siempre que aplique:** `uuid`, `date-time`, `email` — estos mapean directo a validadores de NestJS (ver `plan/references/openapi-to-dto-mapping.md`).
-- **Usar `enum` para valores cerrados** en vez de `type: string` con una descripción que enumera opciones en texto libre.
+- **One new/changed endpoint from the story → one `path` + `operationId`.** Don't document endpoints the story doesn't touch.
+- **Every new field must come from a decision recorded in `## Decisiones de Diseño`** or from a field that already exists in `context.md` — never invent a field not backed by one of the two.
+- **HTTP response descriptions must be specific to the business case**, not generic ("Success", "Error"). Correct example: `"Zona sin franjas activas para el tipo de servicio solicitado"`.
+- **`required` defines mandatoriness** — any field not listed in `required` is interpreted as optional (`@IsOptional()` on the NestJS DTO `/plan` will generate).
+- **Use `format` whenever it applies:** `uuid`, `date-time`, `email` — these map directly to NestJS validators (see `plan/references/openapi-to-dto-mapping.md`).
+- **Use `enum` for closed value sets** instead of `type: string` with a description that enumerates options in free text.

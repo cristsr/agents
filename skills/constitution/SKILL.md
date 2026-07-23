@@ -1,14 +1,14 @@
 ---
 name: constitution
 description: >
-  Crea o enmienda la constitución de un proyecto — el documento de principios
-  no-negociables que gobierna diseño, implementación y revisión. Genérica:
-  sirve para cualquier proyecto, no solo este workspace. Entrevista al
-  desarrollador por categorías (arquitectura, testing, seguridad, calidad de
-  código, datos, dependencias, entrega), toma lo mejor de Spec Kit (artículos,
-  quality gates, gobernanza con versionado semántico) y Kiro (principios
-  testables estilo EARS, modos de inclusión), y produce un constitution.md
-  pulido. Use when the user says "/constitution", "crear constitución",
+  Creates or amends a project's constitution — the document of non-negotiable
+  principles governing design, implementation, and review. Generic: works for
+  any project, not just this workspace. Interviews the developer by category
+  (architecture, testing, security, code quality, data, dependencies,
+  delivery), takes the best of Spec Kit (articles, quality gates,
+  semantic-versioned governance) and Kiro (EARS-style testable principles,
+  inclusion modes), and produces a polished constitution.md.
+  Use when the user says "/constitution", "crear constitución",
   "definir principios del proyecto", "generar constitution.md", "enmendar la
   constitución", "actualizar principios", "reglas no-negociables del proyecto",
   or wants to establish or amend project-wide governing principles that other
@@ -51,9 +51,9 @@ se cumple; apuntar a 6–10 artículos de alto impacto.
 
 ---
 
-## PHASE 1: Resolver destino y modo
+## PHASE 1: Resolve destination and mode
 
-### Step 1 — Determinar la ruta del archivo
+### Step 1 — Determine the file path
 
 Preguntar/elegir dónde vive la constitución, con este orden de preferencia:
 1. Si el usuario pasó una ruta explícita → usarla.
@@ -64,7 +64,7 @@ Preguntar/elegir dónde vive la constitución, con este orden de preferencia:
    la raíz que las skills leen. El usuario puede overridear a otra ruta
    (ej. `docs/constitution.md`) si lo prefiere.
 
-### Step 2 — Detectar crear vs enmendar
+### Step 2 — Detect create vs. amend
 
 ```bash
 CONST=<ruta resuelta>
@@ -80,7 +80,7 @@ else echo "NO_EXISTE"; fi
   `"Enmendar (agregar/ajustar artículos)"` / `"Reescribir desde cero"`).
   En modo Enmendar, **preservar** los artículos que el usuario no toca.
 
-### Step 3 — Sembrar desde documentación existente (opcional)
+### Step 3 — Seed from existing documentation (optional)
 
 Si el proyecto ya tiene documentación de convenciones/arquitectura, ofrecer
 extraer candidatos a principios de ahí antes de entrevistar — evita repreguntar
@@ -96,7 +96,7 @@ nada, continuar con la entrevista limpia.
 
 ---
 
-## PHASE 2: Entrevista por categorías
+## PHASE 2: Interview by category
 
 Recorrer las categorías **de a una**. Por cada una, hacer **una** pregunta
 abierta corta y esperar la respuesta antes de la siguiente. El usuario puede
@@ -106,9 +106,9 @@ Para cada respuesta, ayudar a convertirla en un principio **testable** (ver
 PHASE 3) — si la respuesta es vaga ("buen código"), repreguntar por el criterio
 objetivo ("¿qué regla concreta hace que un cambio se rechace en review?").
 
-### Categorías (adaptar el orden al tipo de proyecto)
+### Categories (adapt the order to the project type)
 
-| # | Categoría | Pregunta guía |
+| # | Category | Guiding question |
 |---|-----------|---------------|
 | C1 | **Arquitectura** | "¿Qué patrón/estructura es obligatorio y qué está prohibido? (ej: hexagonal, no lógica de negocio en controllers, abstract class como token DI)" |
 | C2 | **Testing** | "¿Cuál es la disciplina de tests innegociable? (ej: TDD test-first, cobertura mínima, contract tests obligatorios para endpoints)" |
@@ -123,7 +123,7 @@ objetivo ("¿qué regla concreta hace que un cambio se rechace en review?").
 > pública / semver"; para un frontend, C3 puede incluir accesibilidad. La
 > tabla es una guía, no un formulario rígido.
 
-### Regla de foco
+### Focus rule
 
 Después de la entrevista, si hay más de ~10 principios candidatos, priorizar
 con el usuario: quedarse con los que, si se violan, **rompen el sistema o
@@ -131,7 +131,7 @@ generan retrabajo caro**. El resto se relega a `docs/`.
 
 ---
 
-## PHASE 3: Redactar principios testables
+## PHASE 3: Draft testable principles
 
 Cada artículo se redacta como principio **verificable**, no como deseo. Tomar
 el estilo EARS/normativo:
@@ -150,13 +150,13 @@ Por cada artículo capturar tres campos (ver `references/constitution-template.m
 
 ---
 
-## PHASE 4: Definir los Quality Gates obligatorios
+## PHASE 4: Define the mandatory Quality Gates
 
 Independientes de los artículos, la constitución declara **gates** que las
 skills de diseño/plan aplican como checklist binaria. Proponer estos cuatro
 (tomados de Spec Kit) y dejar que el usuario los active/edite/quite:
 
-| Gate | Qué obliga | Default |
+| Gate | What it enforces | Default |
 |------|-----------|---------|
 | **Simplicity Gate** | No introducir capas/proyectos/abstracciones sin un caso de uso presente que lo justifique | Activo |
 | **Anti-Abstraction Gate** | Usar el framework/librería directamente antes de envolverlo en una abstracción propia | Activo |
@@ -168,7 +168,7 @@ El usuario puede renombrar, desactivar o agregar gates propios (ej. un
 
 ---
 
-## PHASE 5: Escribir el archivo
+## PHASE 5: Write the file
 
 1. Consultar `references/constitution-template.md` para la estructura exacta.
 2. Rellenar front-matter:
@@ -183,11 +183,11 @@ El usuario puede renombrar, desactivar o agregar gates propios (ej. un
 
 ---
 
-## PHASE 6: Versionado y cierre
+## PHASE 6: Versioning and close
 
-### Regla de versión semántica (modo Enmendar)
+### Semantic version rule (Amend mode)
 
-| Cambio | Bump |
+| Change | Bump |
 |--------|------|
 | Se elimina o redefine un principio de forma incompatible | **MAJOR** (x+1.0.0) |
 | Se agrega un principio o gate nuevo, o una sección | **MINOR** (x.y+1.0) |
@@ -220,7 +220,7 @@ Los nombres de los gates pueden quedar en inglés (son términos de arte).
 
 ## Common Issues
 
-| Issue | Causa | Resolución |
+| Issue | Cause | Resolution |
 |-------|-------|------------|
 | Principios vagos ("buen código") | Respuesta no testable | Repreguntar por el criterio objetivo de rechazo en review |
 | Demasiados artículos (>10) | Se mezcló lo negociable con lo no-negociable | Priorizar; mover lo negociable a `docs/` |

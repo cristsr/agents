@@ -17,7 +17,8 @@ instead.
 
 > Generado por /design. Input para /plan.
 > Investigación técnica (si aplica): `docs/research.md`.
-> Diagrama completo: `docs/diagram.md`. Contrato completo: `docs/api.yaml`.
+> Diagrama de secuencia: `docs/diagram.md`. Diagrama de componentes (C4 Nivel
+> 3) del módulo: `docs/component.md`. Contrato completo: `docs/api.yaml`.
 > Modelado de datos (si aplica): `docs/data-model.md`.
 > Revisá todo antes de ejecutar `/plan sm-<number>`.
 
@@ -32,6 +33,30 @@ instead.
 ## Flujo entre microservicios
 
 <resumen de 1-2 oraciones de qué hace el flujo — el diagrama completo está en `docs/diagram.md`>
+
+## Componentes del módulo
+
+<1 oración: qué componente(s) nuevo(s)/modificado(s) introduce esta historia
+(caso de uso, agregado, puerto, adapter) — el diagrama completo (C4 Nivel 3,
+todo el módulo, no solo el delta) está en `docs/component.md`>.
+
+## Impacto en Arquitectura Global
+
+<!-- SIEMPRE presente, nunca condicional — es lo que permite que /sync
+     promueva sin tener que re-detectar nada desde un git diff. -->
+
+**¿Toca arquitectura global?** Sí / No.
+
+<!-- Si Sí: nombrar exactamente qué cambia y en qué nivel C4, con el
+     nodo/arista concreto a agregar o quitar — /sync y /architecture lo
+     aplican tal cual, no lo vuelven a inferir.
+     Si No: una oración confirmando que el alcance es interno al módulo. -->
+
+- **Nivel:** Context (Nivel 1) / Container (Nivel 2) / N/A
+- **Cambio:** <nuevo app/microservicio | nuevo módulo | nueva integración
+  externa | integración eliminada | actor nuevo | ninguno>
+- **Nodo/arista concreto:** <lo que /architecture debe agregar/quitar, o
+  "N/A" si la respuesta fue No>
 
 ## Contratos por microservicio
 
