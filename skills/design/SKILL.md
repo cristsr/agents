@@ -304,6 +304,67 @@ Build it from:
 - Answers recorded in `## Decisiones de Diseño` (new fields)
 - NEVER invent a field not backed by one of the two sources above
 
+#### Post-generation validation (mandatory, before continuing)
+
+After writing `docs/api.yaml`, run this validation in order. If any check
+fails, **fix the file and re-validate** (max 3 retries). If the failure
+persists after 3 attempts, report it in `design.md` as a known risk.
+
+**Check 1 — YAML is syntactically valid:**
+
+```bash
+python -c "import yaml; yaml.safe_load(open('work/active/sm-<number>/docs/api.yaml', encoding='utf-8'))" 2>&1
+```
+
+If Python + PyYAML is not available, use Node:
+
+```bash
+node -e "const fs=require('fs');const yaml=require('js-yaml');yaml.load(fs.readFileSync('work/active/sm-<number>/docs/api.yaml','utf8'))" 2>&1
+```
+
+If neither is available, use `npx js-yaml`:
+
+```bash
+npx js-yaml work/active/sm-<number>/docs/api.yaml > nul 2>&1 && echo OK || echo FAIL
+```
+
+If parsing fails → fix the syntax error the parser reports and re-run the check.
+
+**Check 2 — Unresolved placeholders:**
+
+```bash
+grep -n '<[a-z]' work/active/sm-<number>/docs/api.yaml
+```
+
+There must be no matches. Any `<description>`, `<number>`,
+`<microservice-X>`, etc. left unreplaced must be removed or filled in
+with the actual value.
+
+**Check 3 — Internal references resolve:**
+
+Every `$ref: '#/components/schemas/<Name>'` must point to a schema that
+exists in `components.schemas` with that exact name. Perform a manual
+review: read `docs/api.yaml` and confirm that for every `$ref` there is
+a matching entry in `components/schemas`.
+
+**Check 4 — Required contract fields:**
+
+Confirm that:
+- `openapi: 3.1.0` is at the document root
+- `info.title` starts with `sm-` followed by the story number
+- `tags` has at least one entry with `name` and `description`
+- All `paths` start with `/`
+- Every operation has `operationId`, `summary`, and at least one `response`
+- Every `requestBody` declaring `application/json` has a `schema`
+
+**Check 5 — Format consistency:**
+
+If a field uses `format: uuid`, `format: date-time`, or `format: email`,
+its parent `type` must be `string`. If a field uses `enum`, it must not
+declare a redundant `type` (it is inferred from the enum values).
+
+Only proceed to the next files once all 5 checks pass.
+
 ### File 4 — docs/data-model.md (conditional, only if a new/changed DB table is needed)
 
 The TypeORM entity + migration SQL, full definitions. Consult
