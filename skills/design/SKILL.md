@@ -114,7 +114,7 @@ planning begins.
    non-negotiable principles and the quality gates validated in PHASE 4.5:
 
    ```bash
-   [ -s constitution.md ] && echo "FOUND" || echo "NONE"
+    [ -s docs/rules.md ] && echo "FOUND" || echo "NONE"
    ```
 
    If found, load its Articles and its active Quality Gates. If it does not

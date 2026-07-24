@@ -15,13 +15,6 @@ instead.
 ```markdown
 # design: sm-<number>
 
-> Generado por /design. Input para /plan.
-> Investigación técnica (si aplica): `docs/research.md`.
-> Diagrama de secuencia: `docs/diagram.md`. Diagrama de componentes (C4 Nivel
-> 3) del módulo: `docs/component.md`. Contrato completo: `docs/api.yaml`.
-> Modelado de datos (si aplica): `docs/data-model.md`.
-> Revisá todo antes de ejecutar `/plan sm-<number>`.
-
 ## Decisiones de Diseño
 
 <!-- OPTIONAL: Include only if PHASE 3 resolved at least one unknown via

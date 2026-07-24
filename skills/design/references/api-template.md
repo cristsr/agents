@@ -14,7 +14,7 @@ openapi: 3.1.0
 info:
   title: sm-<number> API
   version: "1.0.0"
-  description: Contrato generado por /design para sm-<number>: <título de la historia>.
+  description: sm-<number>: <título de la historia>.
 tags:
   - name: <microservice-1>
     description: Endpoints expuestos por <microservice-1>

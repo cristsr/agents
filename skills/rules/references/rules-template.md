@@ -1,4 +1,4 @@
-# Constitution Template
+# Rules Template
 
 Produce exactly this structure. Replace all `<placeholders>` with real content.
 Remove optional articles/sections that have no content. Keep the document

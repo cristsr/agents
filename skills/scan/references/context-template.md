@@ -1,8 +1,5 @@
 # context: sm-<number>
 
-> Generado por /scan. Input para /design y /plan.
-> No editar manualmente — re-ejecutar /scan si el contexto cambió.
-
 ## Historia resumida
 
 **Como** <rol>

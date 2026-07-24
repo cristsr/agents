@@ -122,8 +122,11 @@ git log --oneline -10
 - Split the changes into (a) ones that belong to this story and (b)
   unrelated changes (other work in progress on the same branch). When in
   doubt, ask the user — don't assume.
-- Confirm the repo's commit style from `git log --oneline -10` (e.g.
-  `type(scope): message`).
+- **Always use conventional commits**, regardless of past repo style. Every
+  message is `type(scope): description` — imperative mood, no period at end,
+  description in **English**. Scopes match the module/package name (e.g.
+  `finances`, `ledger`, `core`, `shared`). See
+  [conventionalcommits.org](https://www.conventionalcommits.org/).
 
 ## Step 3: Group and execute commits
 
@@ -131,7 +134,8 @@ For each logical group (aligned with `plan.md`'s tasks, never one giant
 commit):
 
 1. Apply the "Verify the index before every single commit" checklist.
-2. `git commit -m "..."` following the repo's style.
+2. `git commit -m "..."` using conventional-commit format:
+   `type(scope): description` in English.
 3. Repeat for the next group.
 
 The commit covering the `work/done/hu-<number>/` archive (the `Move-Item`
@@ -143,40 +147,44 @@ final summary so the user decides what to do with them.
 
 ## Step 4: Draft the PR (text only, not executed)
 
-**Title** — repo style plus the story key:
+**Title** — conventional commit plus the story key (in English):
 
 ```
-feat(<scope>): HU-0009 <título corto de la historia>
+feat(<scope>): hu-0009 <short story title in English>
 ```
 
-**Body** (markdown, language per `OUTPUT_LANGUAGE`):
+**Body** (markdown, always in English):
 
 ```markdown
-## Resumen
-<Como/Quiero/Para de hu.md, condensado en 2-3 líneas>
+## Summary
+<As/I want/So that from hu.md, condensed in 2-3 lines>
 
-## Criterios de aceptación
+## Implemented features
+- <feature 1 based on ACs>
+- <feature 2 based on ACs>
+
+## Acceptance criteria
 - [x] AC1 …
 - [x] AC2 …
 
-## Cambios principales
-- <módulo/tarea> — <qué se hizo>
+## Main changes
+- <module/task> — <what was done>
 
-## Documentación
-- Historia archivada en `work/done/hu-<number>/` (por /sync)
+## Documentation
+- Story archived in `work/done/hu-<number>/` (via /sync)
 
 ## Testing
-- `nx run-many -t test --projects=…` ✓ (resultado del Step 2 de /sync)
+- `nx run-many -t test --projects=…` ✓ (result from /sync Step 2)
 
-## Migraciones
-- `<timestamp>-<Nombre>` — <qué crea/altera> (o "Sin migraciones")
+## Migrations
+- `<timestamp>-<Name>` — <what it creates/alters> (or "None")
 ```
 
 Print the title and the full body in the chat, and close with the
 ready-to-run command (not executed):
 
 ```bash
-gh pr create --base master --title "<título>" --body "<cuerpo>"
+gh pr create --base master --title "<title>" --body "<body>"
 ```
 
 ## Step 5: Close-out summary
@@ -204,10 +212,10 @@ Actions:
    session that don't belong to this story; warn the user and
    `git restore --staged` those two before continuing.
 3. `git add` Task 1's files, `git status --porcelain` to confirm the index,
-   `git commit -m "feat(movement): …"`.
+   `git commit -m "feat(movement): add transfers between own accounts"`.
 4. Repeat for Task 2 and for the archive commit.
-5. Print the title `feat(movement): HU-0009 transferencias entre cuentas
-   propias`, the PR body, and `gh pr create --base master …` without
+5. Print the title `feat(movement): hu-0009 add transfers between own
+   accounts`, the PR body, and `gh pr create --base master …` without
    running it.
 
 Result: 3 real commits on the branch, clean working tree except for the

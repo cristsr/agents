@@ -5,8 +5,6 @@ Every plan MUST start with this exact header structure:
 ```markdown
 # sm-<numero>: [Feature Name] — Plan de Implementación
 
-> **Para Claude:** USA el skill /build para implementar este plan tarea por tarea.
-
 **Historia:** `work/active/sm-<numero>/`
 **Microservicio(s):** `<nombre-del-micro>`
 **Objetivo:** [Una oración describiendo qué construye esto]

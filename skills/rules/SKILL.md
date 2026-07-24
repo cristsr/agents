@@ -1,28 +1,27 @@
 ---
-name: constitution
+name: rules
 description: >
-  Creates or amends a project's constitution — the document of non-negotiable
+  Creates or amends a project's rules document — the non-negotiable
   principles governing design, implementation, and review. Generic: works for
   any project, not just this workspace. Interviews the developer by category
   (architecture, testing, security, code quality, data, dependencies,
   delivery), takes the best of Spec Kit (articles, quality gates,
   semantic-versioned governance) and Kiro (EARS-style testable principles,
-  inclusion modes), and produces a polished constitution.md.
-  Use when the user says "/constitution", "crear constitución",
-  "definir principios del proyecto", "generar constitution.md", "enmendar la
-  constitución", "actualizar principios", "reglas no-negociables del proyecto",
-  or wants to establish or amend project-wide governing principles that other
-  skills (design, plan) must validate against.
+  inclusion modes), and produces a polished rules.md under docs/.
+  Use when the user says "/rules", "/constitution", "crear reglas",
+  "definir principios del proyecto", "generar rules.md", "reglas no-negociables
+  del proyecto", or wants to establish or amend project-wide governing
+  principles that other skills (design, plan) must validate against.
   Do NOT use to edit a single user story's artifacts (use /refine), to capture
   per-story technical context (use /clarify), or to document code conventions
   that are descriptive rather than governing (those live in docs/).
 ---
 
-# constitution
+# rules
 
 ## Perfil del proyecto (leer primero, siempre)
 
-Esta skill ya es agnóstica (sirve para cualquier proyecto). Aun así, leé
+Leé
 `.agents/profile.md` (en la raíz del proyecto actual) para tomar el `OUTPUT_LANGUAGE` (idioma de salida) y el
 `PROJECT_NAME`. La constitución que produce es la fuente que valida el resto del
 flujo: `/design` chequea sus quality gates y `/plan` la respeta.
@@ -43,7 +42,7 @@ para crear la constitución de cualquier proyecto.
 **Announce at start:** "Vamos a definir la constitución del proyecto." (o
 "…enmendar la constitución del proyecto." si ya existe).
 
-**Output:** un `constitution.md` (ruta configurable — ver PHASE 1).
+**Output:** un `docs/rules.md` (ruta configurable — ver PHASE 1).
 
 **Core principle:** capturar solo lo **no-negociable**. Si algo es "preferible
 pero negociable", va en `docs/`, no acá. Una constitución con 30 artículos no
@@ -57,12 +56,12 @@ se cumple; apuntar a 6–10 artículos de alto impacto.
 
 Preguntar/elegir dónde vive la constitución, con este orden de preferencia:
 1. Si el usuario pasó una ruta explícita → usarla.
-2. Si ya existe un `constitution.md` en la raíz donde corre Claude Code (el
-   directorio de trabajo primario) → usar ese.
-3. Si no, el default es `constitution.md` en la raíz del proyecto (junto a
-   `CLAUDE.md`). Es la ubicación estándar: visible, versionada con el repo y en
-   la raíz que las skills leen. El usuario puede overridear a otra ruta
-   (ej. `docs/constitution.md`) si lo prefiere.
+2. Si ya existe un `docs/rules.md` en el proyecto donde corre Claude Code (el
+    directorio de trabajo primario) → usar ese.
+3. Si no, el default es `docs/rules.md` en el proyecto (junto a
+    `CLAUDE.md`). Es la ubicación estándar: visible, versionada con el repo y en
+    la ruta que las skills leen. El usuario puede overridear a otra ruta
+    (ej. `rules-personalizado.md`) si lo prefiere.
 
 ### Step 2 — Detect create vs. amend
 
@@ -142,7 +141,7 @@ el estilo EARS/normativo:
 - Bueno: "Toda regla de negocio DEBE vivir en `application/` — un controller
   que contenga lógica de negocio se rechaza en review."
 
-Por cada artículo capturar tres campos (ver `references/constitution-template.md`):
+Por cada artículo capturar tres campos (ver `references/rules-template.md`):
 - **Principio** (la regla MUST/SHALL, testable).
 - **Razón** (por qué es no-negociable — 1 oración).
 - **Cómo se verifica** (en qué gate/fase se chequea: review, `/design`,
@@ -170,7 +169,7 @@ El usuario puede renombrar, desactivar o agregar gates propios (ej. un
 
 ## PHASE 5: Write the file
 
-1. Consultar `references/constitution-template.md` para la estructura exacta.
+1. Consultar `references/rules-template.md` para la estructura exacta.
 2. Rellenar front-matter:
    - **modo Crear** → `version: 1.0.0`, `ratified: <fecha de hoy>`,
      `last_amended: <fecha de hoy>`.
@@ -211,7 +210,7 @@ Stop — no iniciar diseño ni plan.
 
 ## CRITICAL: Output Language
 
-El contenido del `constitution.md` en el idioma que use el resto de la
+El contenido del `docs/rules.md` en el idioma que use el resto de la
 documentación del proyecto (para este workspace: español). Excepción:
 identificadores técnicos, nombres de archivos/rutas y código siempre en inglés.
 Los nombres de los gates pueden quedar en inglés (son términos de arte).
@@ -235,7 +234,7 @@ Los nombres de los gates pueden quedar en inglés (son términos de arte).
 **Input:** `/constitution`
 
 **Flujo (modo Crear, este workspace):**
-1. PHASE 1: resuelve `constitution.md` en la raíz (no existe → modo Crear,
+1. PHASE 1: resuelve `docs/rules.md` en el proyecto (no existe → modo Crear,
    v1.0.0). Detecta `docs/architecture/conventions.md` y `testing.md` → ofrece
    sembrar. Usuario acepta.
 2. PHASE 2: entrevista. C1 → "hexagonal obligatorio, abstract class como token DI";
@@ -244,9 +243,9 @@ Los nombres de los gates pueden quedar en inglés (son términos de arte).
    C7 → "conventional commits, nunca build en main". C3/C4/C8 → defaults.
 3. PHASE 3: redacta cada uno como principio testable con razón + cómo se verifica.
 4. PHASE 4: activa los 4 gates por default.
-5. PHASE 5: escribe `constitution.md` v1.0.0.
+5. PHASE 5: escribe `docs/rules.md` v1.0.0.
 6. PHASE 6: resumen — 6 artículos, 4 gates, v1.0.0.
 
 **Salida:**
-> "Constitución guardada en `constitution.md` (v1.0.0). Las skills
+> "Constitución guardada en `docs/rules.md` (v1.0.0). Las skills
 > `/design` y `/plan` la validan como fuente de principios no-negociables."

@@ -49,9 +49,9 @@ Remove sections marked as optional if there is no content for them.
 
 ## Hotfixes
 
-<!-- OPTIONAL: Only added by /hotfix, never by /hu. A defect found AFTER
-     /build already produced code, traced back to a missing/ambiguous AC.
-     Omit entirely if /hotfix was never run for this story. -->
+<!-- OPTIONAL: A defect found AFTER /build already produced code, traced
+     back to a missing/ambiguous AC. Omit entirely if /hotfix was never run
+     for this story. -->
 
 - **HOTFIX-N (AC-N):** <qué estaba mal o faltaba en el AC> → <corrección aplicada al AC> — implementado en `plan.md` Tarea HOTFIX-N.
 

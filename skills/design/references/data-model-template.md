@@ -15,8 +15,6 @@ directly, field by field).
 ```markdown
 # Modelado de datos: sm-<number>
 
-> Generado por /design. Consumido por /plan para la tarea de entidad + migración.
-
 ## NombreEntidad
 
 ### Entidad TypeORM

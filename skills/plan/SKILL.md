@@ -115,7 +115,7 @@ Extract the story number from user input. Then verify:
     Quality Gates, so here just avoid producing tasks that violate an Article:
 
     ```bash
-    [ -s constitution.md ] && echo "FOUND" || echo "NONE"
+    [ -s docs/rules.md ] && echo "FOUND" || echo "NONE"
     ```
 
 7. Read `docs/architecture/testing.md` — apply TDD task format and test commands throughout.
@@ -327,8 +327,6 @@ After saving `work/active/sm-<number>/plan.md`:
 
 ```markdown
 # sm-1933: Filtrar zonas por tipo de servicio — Plan de Implementación
-
-> **Para Claude:** USA el skill /build para implementar este plan tarea por tarea.
 
 **Historia:** `work/active/sm-1933/`
 **Microservicio(s):** `sm-capabilities-ms`
