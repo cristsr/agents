@@ -24,6 +24,8 @@ de historia, las rutas de artefactos, el idioma de salida, el **stack objetivo**
 el **framework de tests** (esta skill ejecuta una tarea con disciplina TDD). Si no
 existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
 
+**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+
 **Los literales de este documento son solo un ejemplo de resolución** (el perfil de Smart Mobility).
 Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
 
@@ -31,6 +33,7 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 |---|---|
 | `sm-<number>` | `STORY_ID_PATTERN` |
 | `work/active/sm-<number>/` | `WORKDIR_ACTIVE` |
+| «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
 | Jest / `*.spec.ts` | `TEST_FRAMEWORK` |
 | NestJS · TypeORM | sección 7 «Stack y arquitectura» |
 
@@ -111,7 +114,7 @@ lo maneja el usuario.
    > "**AC-N actual:** '<texto>' — **Propuesta:** '<texto corregido>'."
 
    Si es un AC faltante, proponer el texto del AC nuevo siguiendo el
-   formato de `references/hu-template.md` (numeración siguiente a la última).
+   formato de `../hu/references/hu-template.md` (numeración siguiente a la última).
 
    Confirmar con `AskUserQuestion`: `question: "¿Confirmás esta corrección del AC-N?"`,
    `header: "AC-N"`, options `"Confirmar"` / `"Ajustar el texto"`. Si elige
@@ -172,7 +175,8 @@ Si elige la opción recomendada, detenerse y redirigir — no continuar con el f
 Agregar al final de `plan.md`, bajo un header `## Hotfixes` (crearlo si no
 existe), una tarea con la misma estructura que
 `docs/architecture` ya define para tareas normales — consultar
-`../plan/references/task-structure-template.md` — pero numerada `HOTFIX-N`
+`<STACK_REFS>/task-structure-template.md` (default: `../plan/references/task-structure-template.md`
+local — genérica) — pero numerada `HOTFIX-N`
 en vez de un número secuencial de tarea:
 
 ```markdown
@@ -206,7 +210,8 @@ Misma disciplina TDD que `/build` Step 2, pero acotada a esta única tarea:
 2. Test de regresión → confirmar que falla → implementar el fix mínimo →
    confirmar que pasa
 3. Marcar `### Tarea HOTFIX-N: ... [X]` en `plan.md`
-4. Correr el suite completo del módulo afectado:
+4. Correr el suite completo del módulo afectado — `MODULE_TEST_CMD` del profile
+   (sección 10 — default):
 
 ```bash
 cd <microservicio>
@@ -221,7 +226,8 @@ Esperado: PASS — incluyendo el test de regresión nuevo y todos los existentes
 
 ## PHASE 6: Coherence check + close
 
-1. Si el defecto también implica que `docs/api.yaml`, `docs/diagram.md` o
+1. Si el defecto también implica que `<api-artifact>` (el contrato: `api.delta.yaml`
+   o `api.yaml` según `API_CONTRACT_MODE`), `docs/diagram.md` o
    `docs/data-model.md` quedaron desalineados (ej: el AC corregido cambia un
    código de respuesta o un campo del contrato) → advertir, NO corregirlos
    automáticamente:

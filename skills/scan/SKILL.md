@@ -30,6 +30,8 @@ de historia, las rutas de artefactos, la rama base, el **stack objetivo** y los
 código (estructura de módulos, entidades, DTOs, servicios) sale de la sección 7
 del perfil. Si no existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
 
+**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+
 **Los literales de este documento son solo un ejemplo de resolución** (el perfil de Smart Mobility).
 Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
 
@@ -41,8 +43,9 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 | `develop` | `BASE_BRANCH` |
 | `docs/architecture/services.md` | `DOCS_COMPONENTS_INDEX` |
 | `docs/services/<micro>/README.md`, `.../architecture.md` | `DOCS_COMPONENT_README`, `DOCS_COMPONENT_ARCH` |
-| `src/modules/` y artefactos NestJS/TypeORM (entidad, module.ts, DTO, servicio abstracto) | sección 7 «Stack y arquitectura» |
+| `src/modules/` y artefactos NestJS/TypeORM (entidad, module.ts, DTO, servicio abstracto) | sección 7 «Stack y arquitectura» + `<STACK_REFS>` (templates por stack) |
 | subagente `code-explorer` | `EXPLORER_SUBAGENT` (si el agente no soporta subagentes, explorar inline) |
+| grafo indexado `.codegraph/` + tool `codegraph_explore` (MCP) / CLI `codegraph explore` | `CODEGRAPH` (sección 9) |
 
 ---
 
@@ -80,7 +83,7 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 `/scan` never mutates git state — it does not checkout branches or pull. It only
 **checks** whether each affected microservice is on the base branch (`develop`)
 and up to date, so the scan reads current code. Preparing the repos (checkout +
-pull) is the job of the dedicated `/sync` skill.
+pull) is the job of the dedicated `/prepare` skill.
 
 For EACH microservice identified in PHASE 1, inspect (read-only):
 
@@ -95,7 +98,7 @@ git -C <microservice> fetch --dry-run 2>&1 | head -1   # ¿hay algo por traer?
   running `/sync` first:
   > "`<microservice>` no está en `develop` actualizado (rama actual: `<rama>`).
   > El scan va a leer el código tal como está. Si querés escanear sobre la base
-  > fresca, ejecutá `/sync <microservice>` primero y volvé a correr el scan."
+  > fresca, ejecutá `/prepare` primero y volvé a correr el scan."
 
 - If everything is clean and current → continue silently.
 
@@ -104,7 +107,50 @@ so the developer decides whether the current code is the right base to scan.
 
 ---
 
-## PHASE 3: Scan each affected microservice
+## PHASE 3: Query the code graph (CodeGraph-first)
+
+Si el proyecto está indexado con CodeGraph (existe `.codegraph/` en la raíz — ver
+`CODEGRAPH` en profile.md), consultá el grafo **directo**. No delegués la exploración
+a un subagente que lee archivos: CodeGraph solo ayuda cuando se consulta directo —
+un subagente que lee archivos lo convierte en overhead (medido en los benchmarks
+del propio proyecto).
+
+Para CADA módulo afectado, una llamada al tool MCP `codegraph_explore` (o el CLI
+`codegraph explore <query>`) con el nombre del módulo + keywords de la historia.
+Devuelve en una sola llamada:
+
+- Símbolos relevantes con su **fuente verbatim**, agrupados por archivo
+- **Call paths** entre ellos (incluye hops de dispatch dinámico que grep no sigue)
+- **Blast radius** — quién depende de qué símbolo y qué tests lo cubren
+- **Routes** de framework (NestJS `@Controller` + `@Get/@Post`, GraphQL resolvers,
+  `@MessagePattern`, etc.)
+
+Con los resultados:
+
+1. Identificar los archivos clave del módulo entre los devueltos: entidad
+   (`*.entity.ts`), registro del módulo (`*.module.ts`), caso de uso canónico,
+   barrel de DTOs (`dtos/index.ts`), puerto/servicio abstracto (`*.service.ts`).
+2. Leer **solo esos archivos puntuales** con Read, aplicando progressive
+   disclosure de `<STACK_REFS>/scan-guide.md` (default si `STACK_REFS` no está
+   definido: `references/scan-guide.md` local — genérica) — no explorar el
+   árbol completo.
+3. Inventariar los hallazgos para PHASE 5 (módulo, entidad + campos, providers,
+   caso de uso + patrón de inyección, DTOs exportados, firmas del puerto,
+   gaps de documentación, unknowns).
+
+Si más de un módulo está afectado, una llamada `codegraph_explore` por módulo,
+**en paralelo**.
+
+### Fallback — CodeGraph no disponible
+
+Si NO existe `.codegraph/` ni el tool `codegraph_explore`:
+
+1. Sugerir al usuario inicializarlo (una sola vez, barato): `codegraph init` en la
+   raíz — después queda auto-sincronizado y `/scan` deja de escanear el árbol por HU.
+2. Mientras tanto, usar el modo legado de exploración: delegar al subagente
+   `code-explorer` (ver abajo) — funciona pero es el modo costoso que esto reemplaza.
+
+### Modo legado — subagente `code-explorer`
 
 Delegate the exploration to the `code-explorer` subagent — it runs
 read-only and returns structured findings, keeping the heavy file reading
@@ -129,7 +175,8 @@ For each affected microservice, invoke `Agent` with:
      `docs/services/<microservice>/architecture.md`
   3. Instruction to locate the affected module under
      `<microservice>/src/modules/` using the story keywords
-  4. Instruction to consult `references/scan-guide.md` for exact paths and
+  4. Instruction to consult `<STACK_REFS>/scan-guide.md` (default:
+     `references/scan-guide.md` local) for exact paths and
      what to read/skip per file type
   5. Instruction to check `docs/services/<microservice>/` for documentation
      gaps
@@ -175,7 +222,9 @@ If no unknowns → proceed directly to PHASE 5.
 
 ## PHASE 5: Write context.md
 
-Consult `references/context-template.md` for the exact file structure to produce.
+Consult `<STACK_REFS>/context-template.md` (default si `STACK_REFS` no está
+definido: `references/context-template.md` local — genérica) for the exact file
+structure to produce.
 
 Save the filled template to `work/active/sm-<number>/context.md`.
 

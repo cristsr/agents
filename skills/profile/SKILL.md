@@ -28,6 +28,9 @@ stack, language, etc.).
 3. Ask the developer:
    - Story ID prefix / pattern (e.g. `hu-<number>`)
    - Project name
+   - Working directory — absolute path where the project lives
+     (e.g. `D:\Cristian\Nest\admin-back`); all skills verify they are in
+     this directory before running any command
    - Base branch
    - Language and framework
    - Output language for artifacts

@@ -93,7 +93,10 @@ rules below).
 
 ---
 
-## docs/api.yaml — Mutability Rules
+## Contrato API (`docs/<api-artifact>`) — Mutability Rules
+
+> `<api-artifact>` = `api.delta.yaml` si `API_CONTRACT_MODE = delta` (default),
+> si no `api.yaml`. Las reglas de abajo aplican al archivo que corresponda.
 
 ### Mutable sections
 

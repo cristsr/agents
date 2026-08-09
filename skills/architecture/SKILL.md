@@ -27,12 +27,15 @@ Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyect
 usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del
 proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
 
+**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+
 **Los literales de este documento son solo un ejemplo de resolución** (el perfil de admin-back).
 Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
 
 | En este documento | Clave en profile.md |
 |---|---|
 | `hu-<number>` | `STORY_ID_PATTERN` |
+| «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
 | `work/done/hu-<number>/` | `WORKDIR_DONE` |
 | Mermaid | `DIAGRAM_FORMAT` |
 | salida en español | `OUTPUT_LANGUAGE` |
@@ -112,14 +115,15 @@ service, or a broker). For each lib: identify which apps consume it.
 Also identify real external systems (identity provider, payment gateways,
 third-party APIs) — those go in `context.md`, not each internal app.
 
-If the repo has an Nx project graph, it can be used as extra reference:
+If the repo defines `PROJECT_GRAPH_CMD` (profile, sección 10), it can be used
+as extra reference:
 
 ```bash
 npx nx graph --file=/tmp/graph.json 2>/dev/null
 ```
 
-Not required — if unavailable, the manual survey of `apps/`/`libs/` is
-enough.
+Not required — if unavailable (or the key is `—`), the manual survey of
+`apps/`/`libs/` is enough.
 
 ### Step 2: Generate `context.md` (C4 Level 1)
 

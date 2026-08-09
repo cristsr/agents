@@ -21,7 +21,7 @@ problems to debug in production. Apply them in every service, use case, and repo
 
 For detailed patterns, see:
 - `references/nestjs-exceptions.md` — custom exception hierarchy and NestJS filters
-- `references/async-error-patterns.md` — async/await failure scenarios
+- `references/nestjs-exceptions.md` — NestJS exception hierarchy & filters
 
 ---
 

@@ -6,57 +6,54 @@
 **Quiero** <acción>
 **Para** <beneficio>
 
-## Microservicios afectados
+## Componentes afectados
 
-- <microservice-1>
-- <microservice-2>  ← si aplica
+- <component-1>
+- <component-2>  ← si aplica
 
 ---
 
-## <microservice-1>
+## <component-1>
 
 ### Módulo afectado
 `<absolute-path-to-module>/`
 
-### Entidad TypeORM
-**Archivo:** `<absolute-path>.entity.ts`
+### Entidad / modelo de persistencia
+**Archivo:** `<absolute-path>` (según `ORM` del profile)
 **Campos:**
-- `<field_name>`: `<type>` — <column constraint si relevante>
+- `<field_name>`: `<type>` — <constraint si relevante>
 - `<field_name>`: `<type>`
 
-### Module providers
-**Archivo:** `<absolute-path>.module.ts`
-**Providers registrados:**
+### Registro del módulo (providers)
+**Archivo:** `<absolute-path>` (según el framework)
+**Registrados:**
 - `<ProviderName>`
 - `<ProviderName>`
 
-### Patrón de inyección (use case de referencia)
-**Archivo:** `<absolute-path>.use-case.ts`
-**Constructor:**
-```typescript
-constructor(
-  private readonly <dependency>: <Type>,
-  private readonly <dependency>: <Type>,
-) {}
+### Patrón de inyección (caso de uso de referencia)
+**Archivo:** `<absolute-path>`
+**Constructor / init:**
+```<language>
+<dependencias inyectadas, nombre y tipo>
 ```
 
 ### DTOs existentes
-**Barrel:** `<absolute-path>/dtos/index.ts`
+**Barrel:** `<absolute-path>/dtos/index`
 **Exportados:**
 - `<DtoClassName>`
 - `<DtoClassName>`
 
-### Servicio abstracto
-**Archivo:** `<absolute-path>.service.ts`
+### Puerto / servicio abstracto
+**Archivo:** `<absolute-path>`
 **Métodos:**
 - `<methodName>(<params>): <returnType>`
 
 ### Documentación disponible
-<path a docs si existe, o "Sin documentación en docs/services/<microservice>/">
+<path a docs si existe, o "Sin documentación para <component-1>">
 
 ---
 
-## <microservice-2>  ← repetir sección si hay más de uno
+## <component-2>  ← repetir sección si hay más de uno
 
 <misma estructura>
 

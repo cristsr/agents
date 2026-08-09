@@ -30,6 +30,8 @@ artefactos, el idioma de salida, el **stack objetivo** y el **framework de tests
 que gobierna el ciclo TDD (rojo → verde → refactor). Si no existe, avisá que lo
 creen desde la plantilla y detené.
 
+**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+
 **Los literales de este documento son solo un ejemplo de resolución** (el perfil de Smart Mobility).
 Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
 
@@ -37,6 +39,7 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 |---|---|
 | `sm-<number>` | `STORY_ID_PATTERN` |
 | `work/active/sm-<number>/` | `WORKDIR_ACTIVE` |
+| «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
 | Jest / `*.spec.ts` | `TEST_FRAMEWORK` |
 | NestJS · TypeORM · `src/modules/` | sección 7 «Stack y arquitectura» |
 
@@ -146,13 +149,16 @@ The only valid reasons to stop mid-execution:
 
 After ALL tasks are complete:
 
-1. Run the full test suite for each affected microservice:
+1. Run the full test suite for each affected microservice — corré `FULL_TEST_CMD`
+   del profile (sección 10 — default):
 
 ```bash
 cd <microservice>
 npx jest --no-coverage
 cd ..
 ```
+
+   Si `FULL_TEST_CMD` está en `—` → correr `MODULE_TEST_CMD` por módulo afectado.
 
 2. Delegate a conventions check to the `conventions-reviewer` subagent —
    it runs read-only against the diff and keeps the verbose review out of
@@ -176,20 +182,25 @@ cd ..
    explain why before declaring the plan complete. Do not mark an AC ✓ just
    because its task is [X] — verify the test actually exercises that AC's behavior.
 
-4. **Generate the Postman collection** from the approved contract — never hand-write it:
+4. **Generate the Postman collection** from the approved contract — never hand-write it.
+   `<api-artifact>` = `docs/api.delta.yaml` si `API_CONTRACT_MODE = delta`, si no
+   `docs/api.yaml` (profile, sección 8). Corré `POSTMAN_GEN_CMD` del profile
+   (sección 10 — default):
 
 ```bash
-npx -y openapi-to-postmanv2 -s work/active/sm-<number>/docs/api.yaml -o work/active/sm-<number>/docs/postman_collection.json -p
+npx -y openapi-to-postmanv2 -s work/active/sm-<number>/docs/<api-artifact> -o work/active/sm-<number>/docs/postman_collection.json -p
 ```
 
    Esperado: `docs/postman_collection.json` creado/actualizado.
 
-   - If `docs/api.yaml` does not exist (story had no new/changed endpoints) → skip this
+   - Si `POSTMAN_GEN_CMD` está en `—` (proyecto sin esta tool) → omitir este paso
+     y sugerir importar `<api-artifact>` directo en Postman; no bloquear el cierre.
+   - If `<api-artifact>` does not exist (story had no new/changed endpoints) → skip this
      step silently, no Postman collection to generate.
    - If the command fails because the package isn't available via `npx`, try installing
      it once (`npm i -g openapi-to-postmanv2`) and retry. If it still fails, report:
      "No pude generar el Postman collection automáticamente (<error>). Podés importar
-     `docs/api.yaml` directamente en Postman como alternativa." — do not block the rest
+     `<api-artifact>` directamente en Postman como alternativa." — do not block the rest
      of the completion flow on this.
 
 5. Show a completion summary:
@@ -201,15 +212,18 @@ npx -y openapi-to-postmanv2 -s work/active/sm-<number>/docs/api.yaml -o work/act
    - Postman collection generado en `docs/postman_collection.json` (o motivo si se omitió)
    - Hallazgos de convenciones del subagente (si hay)
 
-6. Say:
-   "Todas las tareas completadas. Revisá los cambios y
-   decime si hay algo que ajustar."
+6. Say (incluí la sugerencia del siguiente paso en el mismo resumen):
+   "Todas las tareas completadas. Revisá los cambios y decime si hay algo que
+   ajustar. Cuando estén OK, el siguiente paso es `/sync sm-<number>` para
+   cerrar la documentación del módulo (y después `/commit sm-<number>` para los
+   commits y el PR)."
 
 7. Stop — do not proceed further until the user responds.
 
-8. When the user approves the changes, suggest the closing step:
-   "Corré `/sync sm-<number>` para sincronizar la documentación y dejar el
-   PR listo."
+8. When the user approves the changes, reaffirm the closing step:
+   "Corré `/sync sm-<number>` para reconciliar la documentación del módulo; el
+   cierre de git (commits + PR) queda para `/commit sm-<number>`, después de
+   `/sync`."
 
 > Si más adelante aparece un defecto en este código y se origina en una
 > ambigüedad o gap de `hu.md`, no reabrir esta skill ni regenerar el plan —
@@ -243,8 +257,8 @@ Quick summary:
 | Use case not injected | Module registration missing | Check module.ts providers array |
 | AC sin tarea en la tabla de trazabilidad | `/plan` generó el plan antes de este cambio, o se saltó PHASE 3.5 | STOP en Step 1.3, pedir regenerar el plan con `/plan sm-<number>` |
 | Tarea `[P]` modifica un archivo ya tocado por otro grupo | Agrupación incorrecta en `/plan` | Abortar el batch paralelo, continuar el resto en modo secuencial |
-| `openapi-to-postmanv2` no disponible | Paquete no instalado y sin acceso a npm registry | Reportar el fallo, sugerir importar `docs/api.yaml` directo en Postman, no bloquear el cierre |
-| `docs/api.yaml` no existe | Historia sin endpoints nuevos/modificados | Omitir la generación de Postman silenciosamente |
+| `openapi-to-postmanv2` no disponible o `POSTMAN_GEN_CMD` en `—` | Tool no instalada o proyecto sin ella | Omitir el paso, sugerir importar `<api-artifact>` directo en Postman, no bloquear el cierre |
+| `<api-artifact>` no existe | Historia sin endpoints nuevos/modificados | Omitir la generación de Postman silenciosamente |
 
 ---
 
@@ -266,7 +280,7 @@ Ejecutando plan sm-1933.
 → Marcando Tarea 1 como [X]
 
 [Tarea 2] Puerto de dominio...
-  ✓ npx jest ... → PASS (2 tests)
+  ✓ <MODULE_TEST_CMD> → PASS (2 tests)
 → Marcando Tarea 2 como [X]
 ```
 
@@ -276,4 +290,6 @@ Ejecutando plan sm-1933.
 ```
 
 **Salida final:**
-> Todas las tareas completadas. Revisá los cambios y decime si hay algo que ajustar.
+> Todas las tareas completadas. Revisá los cambios y decime si hay algo que
+> ajustar. Cuando estén OK, el siguiente paso es `/sync sm-<number>` para cerrar
+> la documentación del módulo (y después `/commit sm-<number>` para los commits y el PR).

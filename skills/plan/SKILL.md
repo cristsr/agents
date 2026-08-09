@@ -29,6 +29,8 @@ artefactos, el idioma de salida, el **stack objetivo** (framework, ORM, estilo d
 DTOs) y el **framework de tests** que ancla el ciclo TDD. Si no existe, avisá que
 lo creen desde la plantilla y detené.
 
+**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+
 **Los literales de este documento son solo un ejemplo de resolución** (el perfil de Smart Mobility).
 Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
 
@@ -38,7 +40,7 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 | `work/active/sm-<number>/` | `WORKDIR_ACTIVE` |
 | microservicio | `COMPONENT_TERM` |
 | Jest / `*.spec.ts` | `TEST_FRAMEWORK` |
-| NestJS · DTOs · OpenAPI→DTO | sección 7 «Stack y arquitectura» + `API_CONTRACT` |
+| NestJS · DTOs · OpenAPI→DTO | sección 7 «Stack y arquitectura» + `API_CONTRACT` + `<STACK_REFS>` |
 
 ---
 
@@ -46,12 +48,15 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 
 Extract the story number from user input. Then verify:
 
+`<api-artifact>` = `docs/api.delta.yaml` si `API_CONTRACT_MODE = delta` (default
+en profile, sección 8), si no `docs/api.yaml`.
+
 ```bash
 [ -f work/active/sm-<number>/hu.md ]          || echo "MISSING: hu.md"
 [ -f work/active/sm-<number>/context.md ]      || echo "MISSING: context.md"
 [ -f work/active/sm-<number>/design.md ]       || echo "MISSING: design.md"
 [ -f work/active/sm-<number>/docs/diagram.md ] || echo "MISSING: docs/diagram.md"
-[ -f work/active/sm-<number>/docs/api.yaml ]   || echo "MISSING: docs/api.yaml"
+[ -f work/active/sm-<number>/docs/<api-artifact> ] || echo "MISSING: docs/<api-artifact>"
 ```
 
 - If `hu.md` missing → stop:
@@ -62,7 +67,7 @@ Extract the story number from user input. Then verify:
   "No encontré `work/active/sm-<number>/context.md`.
   Ejecutá `/scan sm-<number>` primero."
 
-- If `design.md`, `docs/diagram.md` or `docs/api.yaml` are missing → stop:
+- If `design.md`, `docs/diagram.md` or `<api-artifact>` are missing → stop:
   "No encontré los artefactos de diseño completos para sm-<number>.
   Ejecutá `/design sm-<number>` primero."
 
@@ -94,8 +99,9 @@ Extract the story number from user input. Then verify:
 4. Read `work/active/sm-<number>/docs/diagram.md` — the sequence diagram
    determines microservice implementation order (PHASE 2).
 
-5. Read `work/active/sm-<number>/docs/api.yaml` — this is the **source of
-   truth** for DTOs, never `design.md`:
+5. Read `work/active/sm-<number>/docs/<api-artifact>` (resuelto por
+   `API_CONTRACT_MODE`: `api.delta.yaml` si `delta`, `api.yaml` si `full`) —
+   this is the **source of truth** for DTOs, never `design.md`:
    - Every path + operation → the endpoint a controller task must expose
    - Every schema in `components.schemas` → one DTO class, field-by-field
    - Every response code + description → the HTTP response cases a task must test
@@ -121,9 +127,12 @@ Extract the story number from user input. Then verify:
 7. Read `docs/architecture/testing.md` — apply TDD task format and test commands throughout.
 8. Read `docs/architecture/conventions.md` — apply naming conventions throughout.
 9. Consult `references/plan-header-template.md` — required header format.
-10. Consult `references/task-structure-template.md` — required task format.
-11. Consult `references/openapi-to-dto-mapping.md` — exact mapping from
-    `api.yaml` schema fields to NestJS decorators for the DTO task(s).
+10. Consult `<STACK_REFS>/task-structure-template.md` (default si `STACK_REFS`
+    no está definido: `references/task-structure-template.md` local — genérica)
+    — required task format.
+11. Consult `<STACK_REFS>/openapi-to-dto-mapping.md` (default:
+    `references/openapi-to-dto-mapping.md` local — genérica) — exact mapping from
+    the API contract schema fields to the project's DTO style for the DTO task(s).
 
 ---
 
@@ -181,10 +190,10 @@ git -C <microservice> checkout -b <branch-name>
 ```
 
 Note: preparing the base branch (`git checkout develop` + `git pull`) is done by
-the dedicated `/sync` skill, not by `/scan`. Tarea 0 assumes each affected
+the dedicated `/prepare` skill, not by `/scan`. Tarea 0 assumes each affected
 microservice is already on an up-to-date `develop` — if the developer skipped
-`/sync`, the branch is created off whatever is currently checked out. Do not add
-checkout/pull-of-develop steps here; if the base looks stale, recommend `/sync`.
+`/prepare`, the branch is created off whatever is currently checked out. Do not add
+checkout/pull-of-develop steps here; if the base looks stale, recommend `/prepare`.
 
 ### Tasks per microservice (in sequence diagram order)
 
@@ -239,7 +248,7 @@ Each task MUST have:
 
 ### Final task — Run full test suite
 
-Always include as the last task:
+Always include as the last task — `MODULE_TEST_CMD` del profile (sección 10 — default):
 
 ```bash
 cd <microservice>
@@ -270,13 +279,13 @@ do NOT skip it even if the plan "looks complete":
 
 2. **DTO field consistency:** every field name used in a task's DTO code
    must match exactly (name and type, per `references/openapi-to-dto-mapping.md`)
-   the field defined in `docs/api.yaml`'s `components.schemas`. If a
-   mismatch is found, fix the task — `api.yaml` is the source of truth,
+   the field defined in `<api-artifact>`'s `components.schemas`. If a
+   mismatch is found, fix the task — the API contract is the source of truth,
    never invent a different name in the plan.
 
-3. **Endpoint coverage:** every path + operation in `docs/api.yaml` must
+3. **Endpoint coverage:** every path + operation in `<api-artifact>` must
    have a corresponding controller task. Every response code documented
-   in `api.yaml` must have a corresponding test case in some task.
+   in the contract must have a corresponding test case in some task.
 
 4. **Entity field consistency:** if `docs/data-model.md` exists, verify every
    field appears in the entity task and the migration task with the same

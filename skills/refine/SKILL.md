@@ -25,6 +25,8 @@ Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyect
 de historia, las rutas de artefactos, el idioma de salida y el stack objetivo. Si
 no existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
 
+**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+
 **Los literales de este documento son solo un ejemplo de resolución** (el perfil de Smart Mobility).
 Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
 
@@ -32,6 +34,7 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 |---|---|
 | `sm-<number>` | `STORY_ID_PATTERN` |
 | `work/active/sm-<number>/` | `WORKDIR_ACTIVE` |
+| «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
 | salida en español | `OUTPUT_LANGUAGE` |
 | entidad TypeORM · migración · `api.yaml` OpenAPI · diagrama Mermaid | sección 7 + `API_CONTRACT`/`DIAGRAM_FORMAT` |
 
@@ -56,7 +59,7 @@ Parse the input for an explicit type keyword: `hu`, `context`, `design`,
 | `hu` | `work/active/sm-<number>/hu.md` |
 | `context` | `work/active/sm-<number>/context.md` |
 | `design` | `work/active/sm-<number>/design.md` |
-| `api` | `work/active/sm-<number>/docs/api.yaml` |
+| `api` | `work/active/sm-<number>/docs/<api-artifact>` — `api.delta.yaml` si `API_CONTRACT_MODE=delta` (default), si no `api.yaml` |
 | `diagram` | `work/active/sm-<number>/docs/diagram.md` |
 | `data-model` | `work/active/sm-<number>/docs/data-model.md` |
 | `research` | `work/active/sm-<number>/docs/research.md` |

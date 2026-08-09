@@ -2,7 +2,8 @@
 name: sync
 description: >
   Closes the documentation half of a story at the end of the pipeline:
-  promotes the design's artifacts to the affected module's docs folder,
+  reconciles the design delta (LikeC4 model + OpenAPI + per-flow docs) into the
+  affected module's living docs (SYNC_MODE=reconcile; legacy mode promotes files),
   appends design.md's "Decisiones de Diseño" section (if any) to the
   cumulative docs/decisions.md log, and reads the "Impacto en Arquitectura
   Global" section /design already left in design.md — if it says yes,
@@ -36,7 +37,7 @@ drafting the PR) is `/commit`'s job, meant to run right after this one.
 
 **Output:**
 
-- Artefactos del design promovidos a `apps/<app>/docs/<module>/` (o `docs/<module>/` en raíz si son transversales).
+- Delta del design reconciliado en los docs vivos del módulo (`SYNC_MODE=reconcile`): OpenAPI canónico mergeado (+`API_DIFF_TOOL`), modelo `<module>.c4` actualizado y `flows/*.md` upserteados en `apps/<app>/docs/<module>/`. (En modo legado `promote`: artefactos copiados tal cual.)
 - `docs/decisions.md` (raíz del repo) con una entrada nueva si `design.md` tenía sección "Decisiones de Diseño" (o sin cambios, si no aplicó).
 - `docs/architecture/` actualizado por `/architecture` si la historia tocó arquitectura global (o sin cambios, si no aplicó).
 - Carpeta `work/active/hu-<number>/` movida a `work/done/hu-<number>/`.
@@ -56,6 +57,8 @@ de historia, las rutas de artefactos, la rama base, la convención de docs por m
 Si no existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md`
 del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
 
+**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+
 **Los literales de este documento son solo un ejemplo de resolución** (el perfil de admin-back).
 Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
 
@@ -63,6 +66,7 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 |---|---|
 | `hu-<number>` | `STORY_ID_PATTERN` |
 | `work/active/hu-<number>/` | `WORKDIR_ACTIVE` |
+| «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
 | `work/done/hu-<number>/` | `WORKDIR_DONE` |
 | `master` | `BASE_BRANCH` |
 | `apps/<app>/docs/<module>/` | `DOCS_MODULE_ARTIFACTS` |
@@ -114,17 +118,109 @@ Read from `work/active/hu-<number>/`:
 2. `git status --porcelain` and `git diff --stat` (read-only) — inventory of
    what the story changed.
 3. Offer to run the same gates as CI before closing the story. **Ask first** —
-   it takes minutes:
+   it takes minutes. Corré `CI_GATES_CMD` del profile (sección 10 — default):
 
    ```bash
    npx nx run-many -t lint,test,build --projects=<apps afectadas>
    ```
 
+   Si `CI_GATES_CMD` está en `—` (proyecto sin comando declarado) → ofrecer
+   correr los gates por app (lint/test/build individuales) o continuar el
+   cierre con un aviso explícito.
+
    If any gate fails → stop: the story is not ready to close. Report the
    failure; fix it directly, or use `/hotfix hu-<number>` if it traces back to
    a spec gap.
 
-## Step 3: Promote design artifacts to module docs
+## Step 3: Reconcile the design delta into the living module docs
+
+El comportamiento depende de `SYNC_MODE` (profile.md), con **granularidad por
+artefacto**: el contrato se mergea si `API_CONTRACT_MODE = delta` (default) y se
+copia si `full`; el modelo se reconcilia si `DESIGN_OUTPUT_MODE = delta` y se
+promueve (copia) si `full`. Un proyecto puede mezclar ambos ejes (p. ej. contrato
+delta + diagramas Markdown) — en ese caso el contrato se mergea acá y los
+diagramas se copian en la sección promote.
+
+### When `SYNC_MODE = reconcile` (docs-as-code with LikeC4 — solo si el profile lo declara; default es `promote`)
+
+El delta de `/design` (`docs/model.delta.c4`, `docs/api.delta.yaml`, `docs/flows/*.md`)
+**no se copia**: se **fusiona** en los docs vivos del módulo. La unidad es el flujo, no la HU.
+
+> Si el proyecto mezcla modos (`API_CONTRACT_MODE=full` y/o `DESIGN_OUTPUT_MODE=full`),
+> el/los artefacto(s) en `full` se **copian** en vez de mergearse — ver la sección
+> promote de abajo; el resto se reconcilia acá.
+
+**Identity keys & duplicate guard (correr ANTES de fusionar).** Cada entidad viva tiene una
+clave estable: el flujo = `use_case` (slug de `flows/*.md`), la vista = `viewId` en el `.c4`,
+el endpoint = `path`+método / `operationId` en `api.yaml`. Antes de escribir nada, por cada
+flujo del delta chequear contra los docs vivos del módulo:
+
+- Si el `use_case`/`viewId`/`operationId` del delta **ya existe** → es una modificación:
+  reemplazar/actualizar **in place** (pasos de abajo). Correcto, no es duplicado.
+- Si el delta trae un `use_case`/`viewId`/`operationId` **nuevo** pero su `entrypoint`+`command`
+  (o el evento, para triggers no-REST) **coincide con un flujo vivo existente** → **STOP**: es un
+  duplicado (el `/design` nombró distinto un flujo que ya existía). No fusionar. Reportar el
+  choque y pedir corregir el delta para que reuse el slug/viewId/operationId vigente, o usar
+  `/refine` sobre el design. Nunca resolver el choque creando `<slug>-v2.md` ni una vista paralela.
+
+Por cada módulo afectado (identificado en `design.md`; si es ambiguo → preguntar, no adivinar):
+
+1. **OpenAPI canónico** (`DOCS_MODULE_API` = `apps/<app>/docs/<module>/api.yaml`):
+   - Guardar una copia del canónico previo (para el diff).
+   - Mergear `docs/api.delta.yaml`: agregar/reemplazar cada `path` y cada `components.schemas`
+     del delta; conservar todo lo que el delta no toca. No cambiar el `info.title` canónico del módulo.
+   - Correr `API_DIFF_TOOL` (sección 10 — default `oasdiff`) entre el canónico
+     previo y el nuevo. Si `API_DIFF_TOOL` está en `—` → comparación manual del
+     diff. Registrar en el
+     cuerpo del PR el veredicto: **no-breaking** (evolución in-place) o **breaking** (→ señalar que
+     amerita versión de path `/vN`; no versionar automáticamente).
+
+2. **Modelo LikeC4** (`DOCS_MODULE_MODEL` = `apps/<app>/docs/<module>/<module>.c4`):
+   - Si no existe → crearlo con el contenido de `docs/model.delta.c4`.
+   - Si existe → aplicar el delta quirúrgicamente:
+     - Elementos nuevos (`extend`) → insertarlos en el bloque del módulo sin tocar los vigentes.
+       Traen `metadata { introducedIn 'hu-<number>' }` del delta; copiarlo tal cual.
+     - `dynamic view` con `viewId` nuevo → agregarla.
+     - `dynamic view` con `viewId` existente → reemplazarla (git guarda la versión previa; **no** crear `<view>-v2`).
+   - **Normalización de los marcadores de revisión del delta (obligatorio).** El delta resalta lo
+     nuevo/cambiado con señales efímeras que **no** deben aterrizar en el `.c4` vivo — al fusionar,
+     stripearlas para dejar el estilo estándar:
+     - Quitar los tags `#delta-new` / `#delta-changed` de cada elemento que se copie o se toque.
+       Si un `modify` venía como `extend <fqn> { #delta-changed metadata { changedIn ... } }` cuyo
+       **único** aporte era el tag y la procedencia, no dejes un `extend` vacío: aplicá el
+       `changedIn` al elemento vivo (regla de abajo) y descartá el bloque `extend` de resaltado.
+     - Quitar el prefijo `[NEW] ` / `[CHANGED] ` del `title` de cada `dynamic view` reconciliada
+       (p. ej. `title '[NEW] Abrir cuenta · trigger REST'` → `title 'Abrir cuenta · trigger REST'`).
+     - La procedencia permanente (`metadata.introducedIn` / `metadata.changedIn`) **se conserva** —
+       es el registro que sobrevive; los tags y prefijos no.
+   - **Fusión de procedencia (`changedIn`).** Si el delta trae `metadata { changedIn 'hu-<number>' }`
+     sobre un elemento **ya existente**:
+     - Conservar su `introducedIn` intacto.
+     - Anexar esta HU a la lista `changedIn` del elemento vivo (crear la clave si no existía),
+       separada por coma y en orden cronológico, **sin duplicar** si ya figura. Ej.: un elemento
+       con `changedIn 'hu-0005'` que esta historia (hu-0007) modifica → `changedIn 'hu-0005, hu-0007'`.
+    - Validar con `MODEL_VALIDATE_CMD` (sección 10 — default `npx likec4 validate`)
+      que el modelo completo sigue compilando. Si la clave está en `—` → revisión
+      manual del `.c4`.
+
+3. **Flows** (`DOCS_MODULE_FLOWS` = `apps/<app>/docs/<module>/flows/<slug>.md`), por cada
+   `docs/flows/<slug>.md` del delta:
+   - No existe en el módulo → crearlo.
+   - Existe → actualizar prosa/metadata y **bumpear `last_modified_by`**; conservar `introduced_by`.
+     Nunca crear `<slug>-v2.md`.
+   - `status: deprecated`/`removed` → marcarlo en el frontmatter, no borrar el archivo.
+
+4. **README del módulo** (`DOCS_MODULE_README`): actualizar la tabla de casos de uso (agregar la
+   fila del flujo nuevo) y, solo si cambian, las secciones de invariantes / lenguaje ubicuo.
+   No reescribirlo entero en cada historia.
+
+5. **Export de vistas:** correr el export de LikeC4 a `assets/` si el proyecto lo tiene cableado,
+   o dejarlo a CI. No bloquear el cierre si el export no está configurado.
+
+El delta original permanece en la carpeta de la historia como registro puntual — viaja a
+`work/done/` en el Step 5.
+
+### When `SYNC_MODE` is unset or `promote` (default — copiar artefactos Markdown tal cual)
 
 For each file under `work/active/hu-<number>/docs/`:
 
@@ -139,6 +235,10 @@ For each file under `work/active/hu-<number>/docs/`:
      in the PR body that the module docs were updated by this story.
 4. The original stays inside the story folder as a point-in-time record — it
    travels to `work/done/` in Step 4.
+
+> En proyectos mixtos (`API_CONTRACT_MODE=delta` + `DESIGN_OUTPUT_MODE=full`),
+> acá se copian solo los diagramas (`diagram.md`/`component.md`); el contrato
+> (`api.delta.yaml`) se mergea según la sección reconcile.
 
 Stories without design artifacts (no `docs/` folder) skip this step silently;
 note it in the final summary.
@@ -175,8 +275,8 @@ significant decision to record.
 
 Move the whole folder (filesystem operation, not a git mutation):
 
-```powershell
-Move-Item work/active/hu-<number> work/done/hu-<number>
+```bash
+mv work/active/hu-<number> work/done/hu-<number>
 ```
 
 `work/` is tracked by git, so the move shows up in `git status` — `/commit`
@@ -187,7 +287,7 @@ picks it up from there as part of its own commit grouping.
 `/design` already determined, at design time, whether the story touches
 global architecture — it's documented explicitly in `design.md`'s
 **`## Impacto en Arquitectura Global`** section (always present, never
-conditional — see PHASE 4/`references/design-template.md` of `/design`).
+conditional — see PHASE 4/`../design/references/design-template.md` of `/design`).
 Sync does **not** re-derive this from a git diff — it just reads the
 answer and promotes it.
 
@@ -240,13 +340,13 @@ Actions:
    fully done (`[X]` on every task).
 2. `git branch --show-current` → `feat/hu-0009-transfers`; `git status
    --porcelain` → 14 files changed, all from the story.
-3. With the user's go-ahead, run `npx nx run-many -t lint,test,build
-   --projects=finances` → all green.
+3. With the user's go-ahead, run `CI_GATES_CMD` (`npx nx run-many -t lint,test,build
+   --projects=finances`) → all green.
 4. Promote `docs/diagram.md` and `docs/api.yaml` to
    `apps/finances/docs/movement/` (design points to the `movement` module).
 5. `design.md` has a "Decisiones de Diseño" section → append a new entry at
    the top of `docs/decisions.md`.
-6. `Move-Item work/active/hu-0009 work/done/hu-0009`.
+6. `mv work/active/hu-0009 work/done/hu-0009`.
 7. `design.md`'s "Impacto en Arquitectura Global" says **No** → skip
    silently, no need to inspect the diff.
 8. Suggest: "Corré `/commit hu-0009` para agrupar y ejecutar los commits y

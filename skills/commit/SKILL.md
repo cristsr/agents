@@ -23,6 +23,8 @@ de historia, las rutas de artefactos, la rama base y el idioma de salida. Si no
 existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md`
 del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
 
+**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+
 **Los literales de este documento son solo un ejemplo de resolución** (el perfil de admin-back).
 Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
 
@@ -138,7 +140,7 @@ commit):
    `type(scope): description` in English.
 3. Repeat for the next group.
 
-The commit covering the `work/done/hu-<number>/` archive (the `Move-Item`
+The commit covering the `work/done/hu-<number>/` archive (the `mv`
 `/sync` already ran) goes in its own `docs(<scope>):` commit, or gets folded
 into the last one — decide explicitly and say so in the summary.
 
@@ -174,7 +176,7 @@ feat(<scope>): hu-0009 <short story title in English>
 - Story archived in `work/done/hu-<number>/` (via /sync)
 
 ## Testing
-- `nx run-many -t test --projects=…` ✓ (result from /sync Step 2)
+- `CI_GATES_CMD` (tests) ✓ (result from /sync Step 2)
 
 ## Migrations
 - `<timestamp>-<Name>` — <what it creates/alters> (or "None")

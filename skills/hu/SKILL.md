@@ -28,6 +28,8 @@ Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyect
 de historia, el intake, las rutas de artefactos y el idioma de salida de este
 proyecto. Si no existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
 
+**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+
 **Los literales de este documento son solo un ejemplo de resolución** (el perfil de Smart Mobility).
 Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
 
@@ -35,6 +37,7 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 |---|---|
 | `sm-<number>` | `STORY_ID_PATTERN` |
 | `SM-XXXX`, formato del PDF de Jira | sección 2-3 (intake) |
+| modo de ID (siguiente libre / slug / clave tracker) | `STORY_ID_MODE` (sección 2) |
 | `work/active/sm-<number>/` | `WORKDIR_ACTIVE` |
 | salida en español | `OUTPUT_LANGUAGE` |
 
@@ -79,9 +82,18 @@ Then proceed directly — do NOT ask the user to re-paste anything already in th
 
 Collect these three inputs. Ask for any that are missing — one question at a time.
 
-**Input 1 — Número**
-Look for `sm-XXXX` or a plain number in the user input.
-If not found, ask: "¿Cuál es el número de la historia? (ej: 1933)"
+**Input 1 — Número / ID**
+El modo de ID sale de `STORY_ID_MODE` (profile, sección 2):
+
+- `sequential` (default): buscar `sm-XXXX` o un número en el input. Si no viene,
+  proponer el **siguiente número libre**: listar `work/active/` y `work/done/`,
+  tomar el mayor `<prefijo><n>` existente y sumar 1. Anunciar:
+  "Siguiente ID disponible: `<prefijo><n+1>`. ¿Lo uso?" (confirmar antes de escribir).
+- `name`: el ID es un slug del título (`STORY_ID_PREFIX` + kebab-case del título).
+  Si el input no trae ID, derivarlo del título al momento de guardar.
+- `tracker-code`: el ID es la clave del tracker (ej. `SM-1933`, `ABC-42`).
+  Si no viene en el input, preguntar: "¿Cuál es la clave de la historia en <TRACKER>?
+  (ej: SM-1933)" — la carpeta usa la clave en minúscula.
 
 **Input 2 — Título**
 The exact name of the story as it appears in Jira.
@@ -184,11 +196,12 @@ After saving `work/active/sm-<number>/hu.md`:
    - **Con marcadores:** "Historia guardada en `work/active/sm-<number>/hu.md`
      con <N> marcadores `[NEEDS CLARIFICATION]`. Ejecutá `/clarify sm-<number>`
      para resolverlos antes de seguir — `/design` no avanza mientras queden
-     marcadores sin resolver."
+     marcadores sin resolver. Podés correr `/prepare sm-<number>` antes, para
+     dejar la rama base fresca."
    - **Sin marcadores:** "Historia guardada en `work/active/sm-<number>/hu.md`.
-     Revisala y cuando estés listo ejecutá `/clarify sm-<number>` (recomendado,
-     detecta ambigüedades antes del scan) o directamente `/scan sm-<number>` si
-     la historia es simple."
+     Revisala y cuando estés listo ejecutá `/prepare sm-<number>` (deja la base
+     fresca) y luego `/clarify sm-<number>` (recomendado, detecta ambigüedades
+     antes del scan) o directamente `/scan sm-<number>` si la historia es simple."
 
 3. Stop — do not start scanning.
 
@@ -208,7 +221,7 @@ technical identifiers, and code always in English.
 | Título no proporcionado | Usuario pegó solo el contenido | Preguntar explícitamente por el título de Jira |
 | ACs sin numerar en el input | Historia mal formateada | Numerarlos en orden de aparición |
 | Historia ya existe | Re-ejecución sobre historia activa | Confirmar sobreescritura antes de continuar |
-| Número no identificable | Input sin formato sm-XXXX | Preguntar el número explícitamente |
+| Número no identificable | Input sin formato sm-XXXX | Resolver según `STORY_ID_MODE`: proponer siguiente libre (sequential), slug del título (name) o pedir la clave del tracker (tracker-code) |
 
 ---
 

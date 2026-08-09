@@ -40,6 +40,8 @@ Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyect
 de historia, las rutas de artefactos, el idioma de salida y el stack objetivo. Si
 no existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
 
+**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+
 **Los literales de este documento son solo un ejemplo de resolución** (el perfil de Smart Mobility).
 Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
 
@@ -47,6 +49,7 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 |---|---|
 | `sm-<number>` | `STORY_ID_PATTERN` |
 | `work/active/sm-<number>/` | `WORKDIR_ACTIVE` |
+| «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
 | salida en español | `OUTPUT_LANGUAGE` |
 | microservicio · artefactos de código (entidad, módulo, DTO, servicio) | sección 7 «Stack y arquitectura» |
 

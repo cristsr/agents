@@ -1,9 +1,10 @@
 ---
 name: design
 description: >
-  Reads hu.md and context.md to produce a complete API-first technical design:
-  a Mermaid sequence diagram, a C4 Nivel 3 component diagram of the affected
-  module, an OpenAPI 3.1 contract, and data model if needed.
+  Reads hu.md and context.md to produce an API-first technical design delta
+  (DESIGN_OUTPUT_MODE): a LikeC4 model fragment (components + one dynamic view per
+  use case), per-flow docs, an OpenAPI delta scoped to the story, and a data model
+  if needed. /sync reconciles the delta into the module's living docs.
   Use when the user says "/design sm-XXX", "diseñar historia", "crear diseño",
   "especificación técnica", or has completed /scan and wants to define what to build.
   Do NOT use before /scan is complete. Do NOT use for planning tasks (use /plan).
@@ -22,13 +23,24 @@ exists — `/plan` generates DTOs that conform to it, never the reverse.
 
 **Announce at start:** "Diseñando especificación técnica para sm-<number>."
 
-**Output:**
+**Output** — dos ejes independientes, ambos en el profile (sección 8):
+
+**Eje 1 — `API_CONTRACT_MODE` (contrato OpenAPI, default `delta`):**
+- `delta` (default): `work/active/sm-<number>/docs/api.delta.yaml` — **solo** los paths
+  y schemas que la HU agrega o cambia (agrupados por módulo/tag). `/sync` lo mergea en
+  el `api.yaml` canónico del módulo (lo crea si no existe).
+- `full`: `work/active/sm-<number>/docs/api.yaml` — contrato completo por historia;
+  `/sync` lo copia tal cual.
+
+**Eje 2 — `DESIGN_OUTPUT_MODE` (diagramas/modelo, default `full`):**
+- `full` (default, Markdown/Mermaid): `docs/diagram.md` + `docs/component.md` por historia.
+- `delta` (solo si el proyecto adoptó docs-as-code LikeC4): `docs/model.delta.c4` +
+  `docs/flows/<use-case>.md` — delta acotado a la HU que `/sync` reconcilia.
+
+En ambos modos se producen además, según aplique:
 - `work/active/sm-<number>/docs/research.md` — alternativas técnicas evaluadas + rationale (solo si hay decisiones no triviales)
-- `work/active/sm-<number>/docs/diagram.md` — diagrama de secuencia
-- `work/active/sm-<number>/docs/component.md` — diagrama de componentes del módulo (C4 Nivel 3), casi siempre
-- `work/active/sm-<number>/docs/api.yaml` — contrato OpenAPI (fuente de verdad)
-- `work/active/sm-<number>/docs/data-model.md` — entidad TypeORM + migración SQL (solo si hay tabla nueva)
-- `work/active/sm-<number>/design.md` — resumen narrativo (incluye validación de quality gates)
+- `work/active/sm-<number>/docs/data-model.md` — entidad + migración (solo si hay tabla/tipo de dato nuevo)
+- `work/active/sm-<number>/design.md` — resumen narrativo + flujos afectados + validación de quality gates
 
 ---
 
@@ -40,6 +52,8 @@ diagrama**, el **stack objetivo** (lenguaje del código de dominio, ORM, estilo 
 migración) y la constitución del proyecto que valida los quality gates. Si no
 existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
 
+**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+
 **Los literales de este documento son solo un ejemplo de resolución** (el perfil de Smart Mobility).
 Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
 
@@ -47,8 +61,10 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 |---|---|
 | `sm-<number>` | `STORY_ID_PATTERN` |
 | `work/active/sm-<number>/` | `WORKDIR_ACTIVE` |
+| «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
 | salida en español | `OUTPUT_LANGUAGE` |
-| OpenAPI 3.1 (`api.yaml`) | `API_CONTRACT` |
+| `OpenAPI 3.1 (`api.yaml`)` | `API_CONTRACT` |
+| templates por stack (`STACK_REFS`) | sección 7 — `<ruta del pack>/references/`; default: `references/` locales (genéricas) |
 | diagrama Mermaid | `DIAGRAM_FORMAT` |
 | entidad TypeORM + migración SQL manual | `ORM`, `MIGRATIONS` (sección 7) |
 | NestJS / DTOs | sección 7 «Stack y arquitectura» |
@@ -231,7 +247,7 @@ Anything decided here that changes a field or flow must stay consistent with
 
 ---
 
-## PHASE 4: Produce design.md, docs/research.md, docs/diagram.md, docs/api.yaml and docs/data-model.md
+## PHASE 4: Produce design.md, docs/research.md, docs/diagram.md, <api-artifact> and docs/data-model.md
 
 After all unknowns are resolved, generate the complete design. Never embed the
 diagram, the schemas, or the entity/SQL inline in `design.md`:
@@ -239,6 +255,288 @@ diagram, the schemas, or the entity/SQL inline in `design.md`:
 ```bash
 mkdir -p work/active/sm-<number>/docs/
 ```
+
+---
+
+## PHASE 4 — DELTA MODE (when `DESIGN_OUTPUT_MODE = delta`)
+
+Este modo **reemplaza** las secciones legadas «File 1/2/3» de abajo. La unidad de
+documentación es el **caso de uso (flujo)**, no la HU. La HU es un conjunto de
+operaciones sobre flujos: `create` | `modify` | `deprecate`.
+
+**Algoritmo:**
+
+1. **Derivar los casos de uso afectados.** De `hu.md`, mapear cada AC a un flujo:
+   `(módulo, use-case, trigger)`. `trigger ∈ TRIGGER_TAXONOMY` (`rest`, `cron`,
+   `queue`, `domain-event`, `cli`). Determinar el `entrypoint` (ruta REST, nombre de
+   cron/job/evento) y el `command`/query que dispara.
+
+2. **Reconciliation lookup — resolver identidad contra los docs vivos (evita duplicados).**
+   Antes de marcar nada, por cada módulo afectado leer sus docs vivos e inventariar las
+   **claves de identidad** existentes:
+   - `DOCS_MODULE_FLOWS` (`flows/*.md`) → todos los `use_case` (slug), su `entrypoint` y `command`.
+   - `DOCS_MODULE_MODEL` (`<module>.c4`) → todos los `viewId` de las `dynamic view`.
+   - `DOCS_MODULE_API` (`api.yaml`) → todos los `path` + método y sus `operationId`.
+
+   Para cada caso de uso derivado en el paso 1, buscar coincidencia por **cualquiera** de
+   estas claves (más fuerte a más débil): mismo `entrypoint`+`command` → mismo `operationId`
+   / `path`+método → mismo slug por intención. Regla dura: **si el endpoint, el command o el
+   evento ya existen, NUNCA es `create` — es `modify` del flujo existente.**
+
+   - **Coincide → `modify`:** reusar **verbatim** el `use_case` (slug), el `view` id y el
+     `operationId` existentes. El delta se superpone al flujo vigente, no crea uno paralelo.
+     Leer el `flows/<slug>.md` vigente para respetar su `introduced_by` e historia.
+   - **No coincide → `create`:** acuñar un slug kebab nuevo que **no colisione** con ningún
+     slug/viewId/operationId del inventario.
+   - **Baja → `deprecate`/`remove`:** marcar el flujo existente por su slug; no inventar uno nuevo.
+
+   Si dudás entre `create` y `modify` (el endpoint es parecido pero no idéntico), tratalo como
+   `modify` y anotá la ambigüedad en `design.md` para que el revisor confirme — es más barato
+   fusionar de más que duplicar.
+
+3. **Emitir `docs/model.delta.c4`** — fragmento LikeC4, no un modelo completo:
+   - Por cada componente nuevo: un bloque `extend <app>.<module> { <id> = component '...' { ... } }`
+     (o `extend` del módulo si ya existe). Nunca redefinir elementos ya presentes en el `.c4` vivo.
+   - **Procedencia obligatoria — bloque `metadata` por elemento (nuevo o modificado):** cada
+     elemento (módulo/componente) lleva un bloque `metadata` que rastrea en qué historia nació
+     y en cuáles cambió. LikeC4 solo admite `metadata` en **elementos**, no en `dynamic view`.
+     - Elemento **nuevo** (`create`): `metadata { introducedIn 'hu-<number>' }`.
+     - Elemento **modificado** (`modify` — cambia su descripción, tecnología o relaciones):
+       agregar en el delta `metadata { changedIn 'hu-<number>' }` como el **incremento** a aplicar;
+       `/sync` lo fusiona anexando esta HU al `changedIn` vigente (sin tocar `introducedIn`).
+     - Claves: `introducedIn` = string con **una** HU; `changedIn` = string con la **lista** de
+       HUs separadas por coma, en orden cronológico (p. ej. `'hu-0005, hu-0007'`).
+
+     ```
+     openHandler = component 'OpenAccountHandler' {
+       technology 'Application · CommandHandler'
+       metadata {
+         introducedIn 'hu-0003'
+       }
+     }
+     ```
+   - **Resaltado visual del delta (efímero, obligatorio) — tag `#delta-new` / `#delta-changed`:**
+     además de la procedencia en `metadata`, marcá cada elemento tocado con un tag de revisión que
+     lo pinta de naranja (definidos en `docs/architecture/landscape.c4`: `delta-new` y
+     `delta-changed`, `color #F97316`). Sirven para que el revisor vea de un vistazo, en
+     `likec4 start`, qué es nuevo/cambiado mientras el delta vive en `work/active/`. **`/sync` los
+     remueve** al reconciliar (la procedencia permanente es `metadata`, no el tag).
+     - Elemento **nuevo** (`create`): agregar `#delta-new` al componente.
+     - Elemento **modificado** (`modify`): si el elemento ya existe en el `.c4` vivo, resaltarlo con
+       un `extend <fqn> { #delta-changed }` (no lo redefinas para taggearlo); si el `modify` también
+       agrega un componente nuevo, ese lleva `#delta-new`.
+
+     ```
+     // componente NUEVO
+     openHandler = component 'OpenAccountHandler' {
+       technology 'Application · CommandHandler'
+       #delta-new
+       metadata {
+         introducedIn 'hu-0015'
+       }
+     }
+     // componente ya EXISTENTE que esta HU modifica (resaltado + incremento de procedencia)
+     extend admin.ledger.accounts.confirmHandler {
+       #delta-changed
+       metadata {
+         changedIn 'hu-0015'
+       }
+     }
+     ```
+   - Por cada caso de uso `create`/`modify`: una `dynamic view <viewId> { title '<Módulo> · <caso> · trigger <trigger>' ... }`
+     con los pasos del flujo. El `viewId` es estable (se reusa entre historias) para que `/sync`
+     reemplace la vista existente en `modify`. **Las dynamic view no aceptan `metadata`**: su
+     procedencia vive en el frontmatter de `flows/<slug>.md` (`introduced_by` / `last_modified_by`),
+     que es la fuente de verdad para flujos — no la dupliques en el `.c4`.
+   - **Prefijo de revisión en el `title` de la dynamic view (efímero, obligatorio):** prefijá el
+     título del flujo con `[NEW] ` (caso de uso `create`) o `[CHANGED] ` (caso de uso `modify`),
+     p. ej. `title '[NEW] Abrir cuenta · trigger REST'`. Es la contraparte textual del tag naranja
+     para el revisor; **`/sync` lo remueve** al reconciliar la vista en el `.c4` vivo. No prefijes
+     las vistas que la HU no toca.
+   - Referenciar los nodos compartidos por su FQN (`<app>.shared.commandBus`, etc.).
+   - **Convención de navegación (organiza la app LikeC4) — obligatoria:**
+     - **Carpeta por módulo (bloque `views '<Módulo>' { ... }`):** todas las vistas del módulo van
+       dentro de un bloque `views '<Módulo>' { ... }`. LikeC4 crea una carpeta con ese nombre en el
+       panel de navegación (usa el prefijo como path; también acepta `/` en el `title` para anidar).
+       **No** uses `·` como prefijo de título: solo ordena alfabéticamente, no crea carpeta.
+     - **Vista de componentes del módulo:** dentro de ese bloque, si el módulo aún no tiene su overview,
+       crear `view <module>Components of <app>.<module> { title 'Componentes' include <app>.<module>, <app>.<module>.* }`.
+       El `of <elemento>` hace que al hacer click en el módulo (en el landscape) se entre a esta vista
+       — navegación por jerarquía, no grid plano.
+     - **Títulos limpios:** como la carpeta ya da el módulo, el `title` de cada vista es solo el nombre
+       del caso de uso (p. ej. `title 'Abrir cuenta · trigger REST'`, `title 'Componentes'`), sin repetir el módulo.
+
+     ```
+     views 'Accounts' {
+       view accountsComponents of admin.ledger.accounts {
+         title 'Componentes'
+         include admin.ledger.accounts, admin.ledger.accounts.*
+       }
+       dynamic view openAccount {
+         title 'Abrir cuenta · trigger REST'
+         ...
+       }
+     }
+     ```
+
+4. **Emitir el contrato API según `API_CONTRACT_MODE`** — ver la sección
+   «PHASE 4 — Contrato API» más abajo (aplica igual en ambos modos de diseño).
+
+5. **Emitir `docs/flows/<slug>.md`** por cada flujo tocado, siguiendo `references/flow-template.md`:
+   frontmatter obligatorio (`use_case`, `module`, `trigger`, `entrypoint`, `command`, `view`,
+   `invariants`, `introduced_by`, `last_modified_by`, `status`) + prosa (reglas, errores, respuesta).
+   Para `create`: `introduced_by` = `last_modified_by` = esta HU. Para `modify`: conservar
+   `introduced_by`, poner `last_modified_by` = esta HU.
+
+6. **`design.md` referencia los flujos por su `view`/slug** — nunca embebe un diagrama-monstruo
+   que abarque varios módulos. La sección «Componentes del módulo» lista el delta de componentes
+   y enlaza a `model.delta.c4`; la sección «Flujos afectados» lista `create`/`modify`/`deprecate`
+   con su trigger y entrypoint.
+
+7. **Validar el modelo:** correr `MODEL_VALIDATE_CMD` del profile (sección 10 —
+   default `npx likec4 validate`) para confirmar que el modelo completo (no solo
+   el delta) compila sin nuevos errores. Si `MODEL_VALIDATE_CMD` está en `—`
+   (proyecto sin LikeC4) → revisión manual del `.c4` y anotar en `design.md` que
+   no hubo validación automática. La fusión real contra el modelo vivo la valida
+   `/sync`.
+
+   **Regla crítica — relaciones dentro del bloque extend:** toda relación que referencie un
+   elemento **definido via `extend`** (ya sea en el delta o en el `.c4` vivo) debe ir
+   **dentro** del bloque `extend { ... }`, no fuera. LikeC4 no resuelve referencias a
+   elementos `extend`-ed desde afuera del bloque — ni siquiera en el mismo archivo.
+   Ejemplo correcto:
+
+   ```likec4
+   extend admin.ledger.shared {
+     readModel = store 'ReadModelStore' { ... }
+
+     // ✅ relaciones dentro del extend
+     admin.ledger.shared.queryBus -> admin.ledger.shared.readModel 'lee proj_*'
+   }
+   ```
+
+   Incorrecto (genera `Could not resolve reference`):
+   ```likec4
+   extend admin.ledger.shared {
+     readModel = store 'ReadModelStore' { ... }
+   }
+   // ❌ referencia a readModel no resuelta fuera del extend
+   admin.ledger.shared.queryBus -> admin.ledger.shared.readModel 'lee proj_*'
+   ```
+
+   Las referencias dentro de `views { dynamic view ... { ... } }` no tienen esta
+   limitación — funcionan sin importar dónde esté definido el elemento.
+
+   Si `MODEL_VALIDATE_CMD` (default `npx likec4 validate`) reporta errores
+   nuevos (vs. el estado pre-diseño), corregir el `.c4` antes de continuar.
+   Errores pre-existentes documentados
+   (como los deltas archivados en `work/done/`) no bloquean, pero deben anotarse
+   como riesgo conocido.
+
+Luego saltar a **PHASE 4.5** (quality gates). Las secciones «File 1/2» de abajo son el
+modo default (`full`/Markdown-Mermaid) y no se ejecutan en modo delta; el contrato API
+(«PHASE 4 — Contrato API») aplica en ambos modos.
+
+---
+
+## PHASE 4 — Contrato API (aplica en ambos modos de diseño)
+
+El artefacto del contrato se produce según `API_CONTRACT_MODE` (profile, sección 8).
+En cualquiera de los dos modos es **API-first**: se escribe y aprueba **antes** de
+que exista código. `/plan` genera DTOs que conforman a este archivo campo por
+campo, nunca al revés. Consultar `<STACK_REFS>/api-template.md` (default si
+`STACK_REFS` no está definido: `references/api-template.md` local — genérica)
+para la estructura y reglas.
+
+Construirlo desde:
+- `context.md` campos de entidad/DTO existentes (reusar nombres y tipos exactos)
+- Respuestas registradas en `## Decisiones de Diseño` (campos nuevos)
+- NUNCA inventar un campo que no salga de una de esas dos fuentes
+
+### Cuando `API_CONTRACT_MODE = delta` (default)
+
+Emitir `docs/api.delta.yaml` — OpenAPI 3.1 con **solo** los `paths` y
+`components.schemas` nuevos o modificados, agrupados por `tags` (uno por módulo).
+Si un endpoint **modifica** un contrato ya publicado, anotarlo en `design.md` para
+que `/sync` corra `API_DIFF_TOOL` (sección 10 del profile — default `oasdiff`) y
+clasifique si es breaking.
+
+### Cuando `API_CONTRACT_MODE = full`
+
+Emitir `docs/api.yaml` — el contrato completo, OpenAPI 3.1, API-first. El `info.title`
+empieza con `sm-<number>`.
+
+### Post-generation validation (mandatory, before continuing)
+
+`<api-artifact>` = `docs/api.delta.yaml` si `API_CONTRACT_MODE = delta`, o
+`docs/api.yaml` si `full`.
+
+After writing `<api-artifact>`, run this validation in order. If any check
+fails, **fix the file and re-validate** (max 3 retries). If the failure
+persists after 3 attempts, report it in `design.md` as a known risk.
+
+**Check 1 — YAML is syntactically valid:**
+
+Corré `YAML_VALIDATE_CMD` del profile (sección 10). El default es una cadena de
+validadores: Python + PyYAML, si no Node + js-yaml, si no `npx js-yaml`:
+
+```bash
+python -c "import yaml; yaml.safe_load(open('work/active/sm-<number>/docs/<api-artifact>', encoding='utf-8'))" 2>&1
+```
+
+If Python + PyYAML is not available, use Node:
+
+```bash
+node -e "const fs=require('fs');const yaml=require('js-yaml');yaml.load(fs.readFileSync('work/active/sm-<number>/docs/<api-artifact>','utf8'))" 2>&1
+```
+
+If neither is available, use `npx js-yaml`:
+
+```bash
+npx js-yaml work/active/sm-<number>/docs/<api-artifact> > /dev/null 2>&1 && echo OK || echo FAIL
+```
+
+Si `YAML_VALIDATE_CMD` está en `—` (proyecto sin validador declarado) → validación
+manual: revisar el archivo en busca de errores de indentación/sintaxis.
+
+If parsing fails → fix the syntax error the parser reports and re-run the check.
+
+**Check 2 — Unresolved placeholders:**
+
+```bash
+grep -n '<[a-z]' work/active/sm-<number>/docs/<api-artifact>
+```
+
+There must be no matches. Any `<description>`, `<number>`,
+`<microservice-X>`, etc. left unreplaced must be removed or filled in
+with the actual value.
+
+**Check 3 — Internal references resolve:**
+
+Every `$ref: '#/components/schemas/<Name>'` must point to a schema that
+exists in `components.schemas` with that exact name. Perform a manual
+review: read `<api-artifact>` and confirm that for every `$ref` there is
+a matching entry in `components.schemas`.
+
+**Check 4 — Required contract fields:**
+
+Confirm that:
+- `openapi: 3.1.0` is at the document root
+- `info.title` starts with `sm-` followed by the story number
+- `tags` has at least one entry with `name` and `description`
+- All `paths` start with `/`
+- Every operation has `operationId`, `summary`, and at least one `response`
+- Every `requestBody` declaring `application/json` has a `schema`
+
+**Check 5 — Format consistency:**
+
+If a field uses `format: uuid`, `format: date-time`, or `format: email`,
+its parent `type` must be `string`. If a field uses `enum`, it must not
+declare a redundant `type` (it is inferred from the enum values).
+
+Only proceed to the next files once all 5 checks pass.
+
+---
 
 ### File 1 — docs/diagram.md (always)
 
@@ -263,7 +561,7 @@ sequenceDiagram
 Rules for the diagram:
 - Show every microservice in the flow, in order
 - Label each arrow with: HTTP method + path + schema name (matching the
-  operation/schema names used in `docs/api.yaml`)
+  operation/schema names used in `<api-artifact>`, el contrato producido)
 - Use `-->>` for responses, `->>` for requests
 - Include the actor (Usuario/Sistema) as the initiator
 - If a microservice calls another internally, show that hop too
@@ -291,84 +589,11 @@ Reglas:
   interno del módulo (por ejemplo, un cambio puramente de configuración) —
   no debería ser el caso típico.
 
-### File 3 — docs/api.yaml (always, if any endpoint is new or changes)
+### File 3 — docs/data-model.md (conditional, only if a new/changed DB table is needed)
 
-The actual contract — OpenAPI 3.1, API-first: this is written and approved
-**before** any NestJS code exists. `/plan` will generate DTOs that conform
-to this file field-by-field, never the other way around.
-
-Consult `references/api-template.md` for the exact structure and rules.
-
-Build it from:
-- `context.md` existing entity/DTO fields (reuse names and types exactly)
-- Answers recorded in `## Decisiones de Diseño` (new fields)
-- NEVER invent a field not backed by one of the two sources above
-
-#### Post-generation validation (mandatory, before continuing)
-
-After writing `docs/api.yaml`, run this validation in order. If any check
-fails, **fix the file and re-validate** (max 3 retries). If the failure
-persists after 3 attempts, report it in `design.md` as a known risk.
-
-**Check 1 — YAML is syntactically valid:**
-
-```bash
-python -c "import yaml; yaml.safe_load(open('work/active/sm-<number>/docs/api.yaml', encoding='utf-8'))" 2>&1
-```
-
-If Python + PyYAML is not available, use Node:
-
-```bash
-node -e "const fs=require('fs');const yaml=require('js-yaml');yaml.load(fs.readFileSync('work/active/sm-<number>/docs/api.yaml','utf8'))" 2>&1
-```
-
-If neither is available, use `npx js-yaml`:
-
-```bash
-npx js-yaml work/active/sm-<number>/docs/api.yaml > nul 2>&1 && echo OK || echo FAIL
-```
-
-If parsing fails → fix the syntax error the parser reports and re-run the check.
-
-**Check 2 — Unresolved placeholders:**
-
-```bash
-grep -n '<[a-z]' work/active/sm-<number>/docs/api.yaml
-```
-
-There must be no matches. Any `<description>`, `<number>`,
-`<microservice-X>`, etc. left unreplaced must be removed or filled in
-with the actual value.
-
-**Check 3 — Internal references resolve:**
-
-Every `$ref: '#/components/schemas/<Name>'` must point to a schema that
-exists in `components.schemas` with that exact name. Perform a manual
-review: read `docs/api.yaml` and confirm that for every `$ref` there is
-a matching entry in `components/schemas`.
-
-**Check 4 — Required contract fields:**
-
-Confirm that:
-- `openapi: 3.1.0` is at the document root
-- `info.title` starts with `sm-` followed by the story number
-- `tags` has at least one entry with `name` and `description`
-- All `paths` start with `/`
-- Every operation has `operationId`, `summary`, and at least one `response`
-- Every `requestBody` declaring `application/json` has a `schema`
-
-**Check 5 — Format consistency:**
-
-If a field uses `format: uuid`, `format: date-time`, or `format: email`,
-its parent `type` must be `string`. If a field uses `enum`, it must not
-declare a redundant `type` (it is inferred from the enum values).
-
-Only proceed to the next files once all 5 checks pass.
-
-### File 4 — docs/data-model.md (conditional, only if a new/changed DB table is needed)
-
-The TypeORM entity + migration SQL, full definitions. Consult
-`references/data-model-template.md` for the exact structure.
+Schema definition (per the project's ORM) + migration SQL, full definitions. Consult
+`<STACK_REFS>/data-model-template.md` (default si `STACK_REFS` no está definido:
+`references/data-model-template.md` local — genérica) for the exact structure.
 
 Build it from:
 - `context.md` existing entity fields (reuse names/types exactly when extending a table)
@@ -377,7 +602,7 @@ Build it from:
 
 If no new/changed table is needed, skip this file entirely — do not create it.
 
-### File 5 — design.md (narrative summary, links to docs/)
+### File 4 — design.md (narrative summary, links to docs/)
 
 Consult `references/design-template.md` for the exact structure.
 
@@ -407,19 +632,19 @@ Contains:
   if genuinely unsure, ask the user as part of PHASE 3 rather than writing a
   vague answer here.
 - A per-microservice endpoint table (method + path + business description)
-  linking to `docs/api.yaml` for the full schemas
+  linking to `<api-artifact>` (el contrato producido) for the full schemas
 - `## Modelado de datos` (conditional — only if `docs/data-model.md` was
   produced; here just name the new table(s) and link to `docs/data-model.md`
   for the full entity/SQL — do not repeat the code)
 
 Save:
 - `work/active/sm-<number>/docs/research.md` (if PHASE 3.5 produced it)
-- `work/active/sm-<number>/docs/diagram.md`
-- `work/active/sm-<number>/docs/component.md` (unless the story adds/changes
-  zero internal components)
-- `work/active/sm-<number>/docs/api.yaml`
+- `work/active/sm-<number>/docs/diagram.md` (si `DESIGN_OUTPUT_MODE = full`)
+- `work/active/sm-<number>/docs/component.md` (si `DESIGN_OUTPUT_MODE = full`, unless the story adds/changes zero internal components)
+- `work/active/sm-<number>/docs/api.delta.yaml` (si `API_CONTRACT_MODE = delta`) o `docs/api.yaml` (si `full`)
 - `work/active/sm-<number>/docs/data-model.md` (if applicable)
 - `work/active/sm-<number>/design.md`
+- Solo modo `DESIGN_OUTPUT_MODE = delta`: `docs/model.delta.c4` + `docs/flows/*.md`
 
 ---
 
@@ -464,7 +689,7 @@ After saving the files:
 
 1. Show a summary:
    - Microservicios diseñados
-   - Endpoints nuevos por micro (paths de `docs/api.yaml`)
+   - Endpoints nuevos por micro (paths de `<api-artifact>`)
    - Schemas nuevos creados
    - Si incluye modelo de datos o no (y si se generó `docs/data-model.md`)
    - Si se generó `docs/research.md` (y cuántas decisiones documenta)
@@ -475,13 +700,14 @@ After saving the files:
    - Si no había constitución, mención de que `/constitution` la haría exigible
 
 2. Show the full content of `docs/research.md` (if generated), `docs/diagram.md`,
-   `docs/component.md` (if generated), `docs/api.yaml`, `docs/data-model.md`
-   (if generated), and `design.md` for review — with `api.yaml` being the
+   `docs/component.md` (if generated), `<api-artifact>` (`api.delta.yaml` o `api.yaml`,
+   según `API_CONTRACT_MODE`), `docs/data-model.md`
+   (if generated), and `design.md` for review — with the API contract being the
    contract the user most needs to validate carefully, and the Quality Gates
    table the compliance summary to confirm.
 
 3. Say:
-   > "**STOP:** Revisá el contrato completo (`docs/api.yaml`), el diagrama y el modelo
+   > "**STOP:** Revisá el contrato completo (`<api-artifact>`), el diagrama y el modelo
    > de datos (si aplica) antes de continuar.
    > Una vez aprobado, `/plan` genera las DTOs y la entidad/migración de NestJS a partir
    > de estos archivos — un cambio posterior implica regenerarlas.

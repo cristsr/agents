@@ -1,4 +1,4 @@
-# Task Structure Template
+# Task Structure Template (generic — stack-agnostic)
 
 Every task after Task 0 must follow this exact structure:
 
@@ -6,15 +6,15 @@ Every task after Task 0 must follow this exact structure:
 ### Tarea N: [Nombre del componente]
 
 **Archivos:**
-- Crear: `sm-<micro>/src/exact/path/to/file.ts`
-- Modificar: `sm-<micro>/src/exact/path/to/existing.ts:123-145`
-- Test: `sm-<micro>/src/exact/path/to/file.spec.ts`
+- Crear: `<component>/<exact path>/<file>.<ext>`
+- Modificar: `<component>/<exact path>/<existing>.<ext>:123-145`
+- Test: `<component>/<exact path>/<file>.<test-suffix>`
 
 **Step 1: Escribir el test que falla**
 
-En `sm-<micro>/src/path/to/file.spec.ts`:
+En `<component>/<path>/<file>.<test-suffix>`:
 
-```typescript
+```<language>
 describe('ClassName', () => {
   it('should [behavior]', async () => {
     // arrange
@@ -29,25 +29,27 @@ describe('ClassName', () => {
 
 **Step 2: Ejecutar y confirmar que falla**
 
+> Comando del profile: `MODULE_TEST_CMD` (sección 10) — correrlo sobre el spec puntual.
+
 ```bash
-cd sm-<micro>
-npx jest src/path/to/file.spec.ts --no-coverage
+cd <component>
+<MODULE_TEST_CMD o equivalente sobre el spec>
 cd ..
 ```
 Esperado: FAIL — "Cannot find module" o "X is not a function"
 
 **Step 3: Implementar el mínimo código**
 
-En `sm-<micro>/src/path/to/file.ts`:
+En `<component>/<path>/<file>.<ext>`:
 
-```typescript
+```<language>
 // minimum necessary name
 ```
 
 **Step 4: Ejecutar y confirmar que pasa**
 
 ```bash
-npx jest src/path/to/file.spec.ts --no-coverage
+<MODULE_TEST_CMD o equivalente sobre el spec>
 ```
 Esperado: PASS
 ```
@@ -63,7 +65,7 @@ Esperado: PASS
 
 ## `[P]` marker (parallel execution)
 
-If PHASE 2 of `/plan` detected independent microservice groups, mark every task
+If PHASE 2 of `/plan` detected independent component groups, mark every task
 header belonging to those groups with a trailing `[P]`:
 
 ```markdown

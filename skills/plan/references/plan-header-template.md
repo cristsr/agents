@@ -9,7 +9,7 @@ Every plan MUST start with this exact header structure:
 **Microservicio(s):** `<nombre-del-micro>`
 **Objetivo:** [Una oración describiendo qué construye esto]
 **Arquitectura:** [2-3 oraciones sobre el enfoque y patrones usados]
-**Stack:** NestJS · TypeScript · TypeORM · PostgreSQL · Redis · Jest
+**Stack:** <lenguaje> · <framework> · <ORM> · <DB> · <test framework>  ← del profile sección 7
 **Grupos de implementación:** [Solo incluir esta línea si PHASE 2 detectó grupos
 independientes. Ej: "Grupo A: sm-capabilities-ms, sm-graphql-fb-ms (secuencial) ∥
 Grupo B: sm-users-ms (paralelo, sin dependencia con Grupo A)". Omitir la línea
