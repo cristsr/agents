@@ -444,7 +444,7 @@ modo default (`full`/Markdown-Mermaid) y no se ejecutan en modo delta; el contra
 El artefacto del contrato se produce según `API_CONTRACT_MODE` (profile, sección 8).
 En cualquiera de los dos modos es **API-first**: se escribe y aprueba **antes** de
 que exista código. `/plan` genera DTOs que conforman a este archivo campo por
-campo, nunca al revés. Consultar `<STACK_REFS>/api-template.md` (default si
+campo, nunca al revés. Consultar `<STACK_REFS>/references/api-template.md` (default si
 `STACK_REFS` no está definido: `references/api-template.md` local — genérica)
 para la estructura y reglas.
 
@@ -592,7 +592,7 @@ Reglas:
 ### File 3 — docs/data-model.md (conditional, only if a new/changed DB table is needed)
 
 Schema definition (per the project's ORM) + migration SQL, full definitions. Consult
-`<STACK_REFS>/data-model-template.md` (default si `STACK_REFS` no está definido:
+`<STACK_REFS>/references/data-model-template.md` (default si `STACK_REFS` no está definido:
 `references/data-model-template.md` local — genérica) for the exact structure.
 
 Build it from:

@@ -127,10 +127,10 @@ en profile, sección 8), si no `docs/api.yaml`.
 7. Read `docs/architecture/testing.md` — apply TDD task format and test commands throughout.
 8. Read `docs/architecture/conventions.md` — apply naming conventions throughout.
 9. Consult `references/plan-header-template.md` — required header format.
-10. Consult `<STACK_REFS>/task-structure-template.md` (default si `STACK_REFS`
+10. Consult `<STACK_REFS>/references/task-structure-template.md` (default si `STACK_REFS`
     no está definido: `references/task-structure-template.md` local — genérica)
     — required task format.
-11. Consult `<STACK_REFS>/openapi-to-dto-mapping.md` (default:
+11. Consult `<STACK_REFS>/references/openapi-to-dto-mapping.md` (default:
     `references/openapi-to-dto-mapping.md` local — genérica) — exact mapping from
     the API contract schema fields to the project's DTO style for the DTO task(s).
 

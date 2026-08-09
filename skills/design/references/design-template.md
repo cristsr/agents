@@ -4,8 +4,8 @@ Save to `work/active/sm-<number>/design.md` using exactly this structure.
 Remove sections marked as conditional if they do not apply.
 
 `design.md` is the narrative summary — full machine-readable contracts live
-in `work/active/sm-<number>/docs/` (see `<STACK_REFS>/api-template.md` for the
-API contract and `<STACK_REFS>/data-model-template.md` for `docs/data-model.md`).
+in `work/active/sm-<number>/docs/` (see `<STACK_REFS>/references/api-template.md` for the
+API contract and `<STACK_REFS>/references/data-model-template.md` for `docs/data-model.md`).
 Never embed the full diagram, DTO/schema definitions, or the
 entity/migration SQL inline here — reference the files in `docs/`
 instead.

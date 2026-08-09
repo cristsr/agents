@@ -175,7 +175,7 @@ Si elige la opción recomendada, detenerse y redirigir — no continuar con el f
 Agregar al final de `plan.md`, bajo un header `## Hotfixes` (crearlo si no
 existe), una tarea con la misma estructura que
 `docs/architecture` ya define para tareas normales — consultar
-`<STACK_REFS>/task-structure-template.md` (default: `../plan/references/task-structure-template.md`
+`<STACK_REFS>/references/task-structure-template.md` (default: `../plan/references/task-structure-template.md`
 local — genérica) — pero numerada `HOTFIX-N`
 en vez de un número secuencial de tarea:
 

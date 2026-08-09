@@ -43,6 +43,8 @@ mapa. Validá el ecosistema con `/healthcheck`.
 | `/architecture` | C4 Nivel 1/2 (`docs/architecture/`) — invocado por `/sync` |
 | `/healthcheck` | valida el ecosistema (script + checks) |
 | `/status` | diagnóstico de etapa de una historia |
+| `/hexagonal-architecture` | BUILD — estructura hexagonal (reglas en `references/rules.md`, sintaxis por stack en `<STACK_REFS>/architecture/`) |
+| `/hexagonal-audit` | AUDIT — 13 dimensiones, reporte rankeado + genera `hu.md` en `work/active/` (bridge al pipeline) |
 
 ## Claves del profile por skill
 
@@ -71,11 +73,14 @@ proyecto: `CODEGRAPH`, `MODEL_VALIDATE_CMD`, `API_DIFF_TOOL`, `POSTMAN_GEN_CMD`,
 
 ## Packs por stack (`STACK_REFS`)
 
-Templates por stack en `~/.agents/stacks/<stack>/references/`:
-`api-template`, `data-model-template`, `scan-guide`, `context-template`,
-`task-structure-template`, `openapi-to-dto-mapping`. Packs actuales:
-`generic` (default), `typescript-nestjs`. Sin `STACK_REFS` → las `references/`
-locales de cada skill (genéricas).
+Templates por stack en `~/.agents/stacks/<stack>/`:
+- `references/`: `api-template`, `data-model-template`, `scan-guide`, `context-template`,
+  `task-structure-template`, `openapi-to-dto-mapping`.
+- `architecture/`: concreción hexagonal por stack — `module-blueprint`, `nestjs-binding`,
+  `errors-and-logging`, `audit-scan.sh`, `audit-smells` (refs opcionales: alcanza un pack).
+
+Packs actuales: `generic` (default), `typescript-nestjs`. Sin `STACK_REFS` → las
+`references/` locales de cada skill (genéricas).
 
 ## Cambios recientes
 

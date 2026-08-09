@@ -131,7 +131,7 @@ Con los resultados:
    (`*.entity.ts`), registro del módulo (`*.module.ts`), caso de uso canónico,
    barrel de DTOs (`dtos/index.ts`), puerto/servicio abstracto (`*.service.ts`).
 2. Leer **solo esos archivos puntuales** con Read, aplicando progressive
-   disclosure de `<STACK_REFS>/scan-guide.md` (default si `STACK_REFS` no está
+   disclosure de `<STACK_REFS>/references/scan-guide.md` (default si `STACK_REFS` no está
    definido: `references/scan-guide.md` local — genérica) — no explorar el
    árbol completo.
 3. Inventariar los hallazgos para PHASE 5 (módulo, entidad + campos, providers,
@@ -175,7 +175,7 @@ For each affected microservice, invoke `Agent` with:
      `docs/services/<microservice>/architecture.md`
   3. Instruction to locate the affected module under
      `<microservice>/src/modules/` using the story keywords
-  4. Instruction to consult `<STACK_REFS>/scan-guide.md` (default:
+  4. Instruction to consult `<STACK_REFS>/references/scan-guide.md` (default:
      `references/scan-guide.md` local) for exact paths and
      what to read/skip per file type
   5. Instruction to check `docs/services/<microservice>/` for documentation
@@ -222,7 +222,7 @@ If no unknowns → proceed directly to PHASE 5.
 
 ## PHASE 5: Write context.md
 
-Consult `<STACK_REFS>/context-template.md` (default si `STACK_REFS` no está
+Consult `<STACK_REFS>/references/context-template.md` (default si `STACK_REFS` no está
 definido: `references/context-template.md` local — genérica) for the exact file
 structure to produce.
 

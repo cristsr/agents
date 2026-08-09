@@ -17,7 +17,7 @@ NOT_META="-not -path */skill-creator/* -not -path */skill-evaluator/*"
 STOP_KEYS='^(AC|ACs|API|CI|DTO|DTOs|EARS|FAIL|FTS5|NEW|NEXT|OK|PASS|PR|REST|SQL|TDD|TODO|UI|UUID|YAML|X|Y|Z|M|N|P|A|B|C)$'
 key_re='`\K[A-Z][A-Z0-9_]{2,}(?=`)'
 refs_re='references/[A-Za-z0-9_./-]+\.md'
-stack_re='<STACK_REFS>/\K[A-Za-z0-9_./-]+\.md'
+stack_re='<STACK_REFS>/\K[A-Za-z0-9_./-]+\.(md|sh)'
 
 issues=0
 
@@ -45,14 +45,27 @@ while IFS= read -r file; do
 done < <(find "$SKILLS" -type f -name '*.md' $NOT_META)
 
 # --- 4. Rutas <STACK_REFS>/<file> ---
+# Las refs ya llevan el subcarpeta del pack: `references/<f>` (obligatorio en TODOS
+# los packs) o `architecture/<f>` (por stack — alcanza con que exista en UNO).
 while IFS= read -r file; do
   while IFS= read -r f; do
-    for pack in $PACKS; do
-      if [ ! -f "$STACKS/$pack/references/$f" ]; then
-        echo "ISSUE [$file]: falta en pack $pack: $f"
+    if [[ "$f" == architecture/* ]]; then
+      found=0
+      for pack in $PACKS; do
+        [ -f "$STACKS/$pack/$f" ] && found=1
+      done
+      if [ "$found" -eq 0 ]; then
+        echo "ISSUE [$file]: $f no existe en ningún pack"
         issues=$((issues+1))
       fi
-    done
+    else
+      for pack in $PACKS; do
+        if [ ! -f "$STACKS/$pack/$f" ]; then
+          echo "ISSUE [$file]: falta en pack $pack: $f"
+          issues=$((issues+1))
+        fi
+      done
+    fi
   done < <(grep -oP "$stack_re" "$file")
 done < <(find "$SKILLS" -type f -name '*.md' $NOT_META)
 
