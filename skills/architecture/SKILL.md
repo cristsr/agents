@@ -7,7 +7,7 @@ description: >
   document a single module — each story's sequence diagram and component
   diagram (C4 Level 3) are produced by /design and promoted by /sync
   directly to apps/<app>/docs/<module>/.
-  Use when the user says "/architecture", "/architecture hu-XXXX",
+  Use when the user says "/architecture", "/architecture spec-XXXX",
   "bootstrapear la documentación de arquitectura", "actualizar el diagrama de
   arquitectura", or when /sync reads that a closed story's design.md flagged
   "Sí" in its "Impacto en Arquitectura Global" section (new module/app,
@@ -34,9 +34,9 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 
 | En este documento | Clave en profile.md |
 |---|---|
-| `hu-<number>` | `STORY_ID_PATTERN` |
+| `spec-<number>` | `STORY_ID_PATTERN` |
 | «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
-| `work/done/hu-<number>/` | `WORKDIR_DONE` |
+| `work/done/spec-<number>/` | `WORKDIR_DONE` |
 | Mermaid | `DIAGRAM_FORMAT` |
 | salida en español | `OUTPUT_LANGUAGE` |
 | `docs/architecture/` | `DOCS_ARCHITECTURE` |
@@ -65,7 +65,7 @@ not global architecture.
 
 1. **Bootstrap** — `docs/architecture/` doesn't exist or is empty. Scans the
    repo and generates initial `context.md` + `containers.md`.
-2. **Update** — invoked with `hu-<number>` (normally `/sync` invokes it
+2. **Update** — invoked with `spec-<number>` (normally `/sync` invokes it
    automatically when it reads a "Sí" in design.md's "Impacto en
    Arquitectura Global" section). Surgically edits whichever file applies
    (`context.md` if an actor/external integration changed, `containers.md`
@@ -73,7 +73,7 @@ not global architecture.
    node/edge `design.md` already specified.
 
 **Announce at start:** "Bootstrapeando `docs/architecture/`." (Bootstrap
-mode) or "Actualizando `docs/architecture/` con hu-<number>." (Update mode).
+mode) or "Actualizando `docs/architecture/` con spec-<number>." (Update mode).
 
 **Output:** `docs/architecture/context.md` and/or
 `docs/architecture/containers.md` created or updated.
@@ -161,7 +161,7 @@ many apps/libs/DBs for `containers.md`.
 
 ## Mode B: Update
 
-Triggers with `/architecture hu-<number>` — invoked by the user or, more
+Triggers with `/architecture spec-<number>` — invoked by the user or, more
 often, by `/sync` when closing a story whose `design.md` already answered
 **Sí** in its `## Impacto en Arquitectura Global` section (`/design`
 determines this at design time; `/sync` only reads and promotes it — no
@@ -170,11 +170,11 @@ heuristic detection involved).
 ### Step 1: Read the already-archived story
 
 ```
-work/done/hu-<number>/design.md
-work/done/hu-<number>/context.md
+work/done/spec-<number>/design.md
+work/done/spec-<number>/context.md
 ```
 
-(If the story is still in `work/active/hu-<number>/` because this was
+(If the story is still in `work/active/spec-<number>/` because this was
 invoked before `/sync` archived it, read from there — not an error, it just
 means this is running manually before the full close.)
 
@@ -258,5 +258,5 @@ untouched because the change didn't belong there.
 | Unclear whether the change is Context or Container | The design wasn't explicit about scope | Default to Container (the level that changes more often); only touch Context if there's a genuinely new actor/external system |
 | The delta isn't clear from `design.md` | The design wasn't explicit about the change's scope | Ask the user which node/edge to add/remove — don't guess |
 | Asked to "regenerate the whole diagram" | Scope confusion | Remember Update is surgical; a full rebootstrap is a different, destructive action toward manual annotations — confirm explicitly with the user first |
-| `design.md` marked "No" but it actually touched global architecture | `/design` misjudged the impact at design time | Fix the "Impacto en Arquitectura Global" section in `design.md` and run `/architecture hu-<number>` manually — there's no `/sync` heuristic to compensate |
+| `design.md` marked "No" but it actually touched global architecture | `/design` misjudged the impact at design time | Fix the "Impacto en Arquitectura Global" section in `design.md` and run `/architecture spec-<number>` manually — there's no `/sync` heuristic to compensate |
 | Asked for a design-decisions log | Out of this skill's scope | That's `docs/decisions.md` (repo root), maintained by `/sync` directly in its Step 4 — it doesn't live inside `docs/architecture/` |

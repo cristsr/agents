@@ -10,7 +10,7 @@ description: >
   invokes /architecture with the node/edge already specified (sync detects
   nothing on its own, it only promotes what /design already documented) —
   and moves the work/active folder to work/done. Doesn't touch git — that's
-  /commit's job. Use when the user says "/sync hu-XXXX", "sincronizar
+  /commit's job. Use when the user says "/sync spec-XXXX", "sincronizar
   documentación", "cerrar historia" or "finalizar historia", or after /build
   completes all plan tasks and the user approves the changes.
   Do NOT use to execute plan tasks (use /build), fix post-build defects
@@ -33,15 +33,15 @@ anymore — `/design` already determined and documented it; sync only promotes.
 That's the whole scope — the git side (grouping and executing commits,
 drafting the PR) is `/commit`'s job, meant to run right after this one.
 
-**Announce at start:** "Sincronizando documentación de hu-<number>."
+**Announce at start:** "Sincronizando documentación de spec-<number>."
 
 **Output:**
 
 - Delta del design reconciliado en los docs vivos del módulo (`SYNC_MODE=reconcile`): OpenAPI canónico mergeado (+`API_DIFF_TOOL`), modelo `<module>.c4` actualizado y `flows/*.md` upserteados en `apps/<app>/docs/<module>/`. (En modo legado `promote`: artefactos copiados tal cual.)
 - `docs/decisions.md` (raíz del repo) con una entrada nueva si `design.md` tenía sección "Decisiones de Diseño" (o sin cambios, si no aplicó).
 - `docs/architecture/` actualizado por `/architecture` si la historia tocó arquitectura global (o sin cambios, si no aplicó).
-- Carpeta `work/active/hu-<number>/` movida a `work/done/hu-<number>/`.
-- Sugerencia de correr `/commit hu-<number>` como siguiente paso.
+- Carpeta `work/active/spec-<number>/` movida a `work/done/spec-<number>/`.
+- Sugerencia de correr `/commit spec-<number>` como siguiente paso.
 
 **Core principle:** sync sincroniza documentación, nada más — no propone ni
 ejecuta commits ni PR. Sigue leyendo `status`/`diff`/`log` en modo solo
@@ -64,10 +64,10 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 
 | En este documento | Clave en profile.md |
 |---|---|
-| `hu-<number>` | `STORY_ID_PATTERN` |
-| `work/active/hu-<number>/` | `WORKDIR_ACTIVE` |
+| `spec-<number>` | `STORY_ID_PATTERN` |
+| `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
 | «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
-| `work/done/hu-<number>/` | `WORKDIR_DONE` |
+| `work/done/spec-<number>/` | `WORKDIR_DONE` |
 | `master` | `BASE_BRANCH` |
 | `apps/<app>/docs/<module>/` | `DOCS_MODULE_ARTIFACTS` |
 | salida en español | `OUTPUT_LANGUAGE` |
@@ -78,12 +78,12 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 
 Extract the story number from user input. Then verify, in order:
 
-1. `work/active/hu-<number>/` exists.
-   If missing, check `work/done/hu-<number>/` — if it is already there, the
+1. `work/active/spec-<number>/` exists.
+   If missing, check `work/done/spec-<number>/` — if it is already there, the
    story was already synced: report it and stop.
 2. `plan.md` exists and **all** its tasks are marked `[X]`.
    If there are pending tasks → stop:
-   "El plan todavía tiene tareas sin completar. Ejecutá `/build hu-<number>` primero."
+   "El plan todavía tiene tareas sin completar. Ejecutá `/build spec-<number>` primero."
 3. `design.md` exists — defines the destination of each artifact. If missing,
    ask the user whether to skip doc promotion; do not invent module docs.
 
@@ -106,7 +106,7 @@ immediately and ask the user to switch to the working branch first.
 
 ## Step 1: Read the story artifacts
 
-Read from `work/active/hu-<number>/`:
+Read from `work/active/spec-<number>/`:
 
 - `design.md` — affected apps and modules → defines each artifact's destination.
 - `docs/` — artifacts to promote (`diagram.md` sequence diagram,
@@ -129,7 +129,7 @@ Read from `work/active/hu-<number>/`:
    cierre con un aviso explícito.
 
    If any gate fails → stop: the story is not ready to close. Report the
-   failure; fix it directly, or use `/hotfix hu-<number>` if it traces back to
+   failure; fix it directly, or use `/hotfix spec-<number>` if it traces back to
    a spec gap.
 
 ## Step 3: Reconcile the design delta into the living module docs
@@ -144,7 +144,7 @@ diagramas se copian en la sección promote.
 ### When `SYNC_MODE = reconcile` (docs-as-code with LikeC4 — solo si el profile lo declara; default es `promote`)
 
 El delta de `/design` (`docs/model.delta.c4`, `docs/api.delta.yaml`, `docs/flows/*.md`)
-**no se copia**: se **fusiona** en los docs vivos del módulo. La unidad es el flujo, no la HU.
+**no se copia**: se **fusiona** en los docs vivos del módulo. La unidad es el flujo, no el ítem.
 
 > Si el proyecto mezcla modos (`API_CONTRACT_MODE=full` y/o `DESIGN_OUTPUT_MODE=full`),
 > el/los artefacto(s) en `full` se **copian** en vez de mergearse — ver la sección
@@ -179,7 +179,7 @@ Por cada módulo afectado (identificado en `design.md`; si es ambiguo → pregun
    - Si no existe → crearlo con el contenido de `docs/model.delta.c4`.
    - Si existe → aplicar el delta quirúrgicamente:
      - Elementos nuevos (`extend`) → insertarlos en el bloque del módulo sin tocar los vigentes.
-       Traen `metadata { introducedIn 'hu-<number>' }` del delta; copiarlo tal cual.
+       Traen `metadata { introducedIn 'spec-<number>' }` del delta; copiarlo tal cual.
      - `dynamic view` con `viewId` nuevo → agregarla.
      - `dynamic view` con `viewId` existente → reemplazarla (git guarda la versión previa; **no** crear `<view>-v2`).
    - **Normalización de los marcadores de revisión del delta (obligatorio).** El delta resalta lo
@@ -193,10 +193,10 @@ Por cada módulo afectado (identificado en `design.md`; si es ambiguo → pregun
        (p. ej. `title '[NEW] Abrir cuenta · trigger REST'` → `title 'Abrir cuenta · trigger REST'`).
      - La procedencia permanente (`metadata.introducedIn` / `metadata.changedIn`) **se conserva** —
        es el registro que sobrevive; los tags y prefijos no.
-   - **Fusión de procedencia (`changedIn`).** Si el delta trae `metadata { changedIn 'hu-<number>' }`
+   - **Fusión de procedencia (`changedIn`).** Si el delta trae `metadata { changedIn 'spec-<number>' }`
      sobre un elemento **ya existente**:
      - Conservar su `introducedIn` intacto.
-     - Anexar esta HU a la lista `changedIn` del elemento vivo (crear la clave si no existía),
+     - Anexar este ítem a la lista `changedIn` del elemento vivo (crear la clave si no existía),
        separada por coma y en orden cronológico, **sin duplicar** si ya figura. Ej.: un elemento
        con `changedIn 'hu-0005'` que esta historia (hu-0007) modifica → `changedIn 'hu-0005, hu-0007'`.
     - Validar con `MODEL_VALIDATE_CMD` (sección 10 — default `npx likec4 validate`)
@@ -222,7 +222,7 @@ El delta original permanece en la carpeta de la historia como registro puntual �
 
 ### When `SYNC_MODE` is unset or `promote` (default — copiar artefactos Markdown tal cual)
 
-For each file under `work/active/hu-<number>/docs/`:
+For each file under `work/active/spec-<number>/docs/`:
 
 1. Identify the affected app and module from `design.md` (and `context.md` if
    needed). If it is ambiguous → ask the user, do not guess.
@@ -258,7 +258,7 @@ If `design.md` has a `## Decisiones de Diseño` section:
    **top** of the log:
 
    ```markdown
-   ## HU-<number> — <título corto de la historia> (<fecha de cierre>)
+   ## ítem-<number> — <título corto de la historia> (<fecha de cierre>)
 
    <contenido literal de la sección "Decisiones de Diseño" de design.md>
 
@@ -276,7 +276,7 @@ significant decision to record.
 Move the whole folder (filesystem operation, not a git mutation):
 
 ```bash
-mv work/active/hu-<number> work/done/hu-<number>
+mv work/active/spec-<number> work/done/spec-<number>
 ```
 
 `work/` is tracked by git, so the move shows up in `git status` — `/commit`
@@ -293,7 +293,7 @@ answer and promotes it.
 
 1. Read `## Impacto en Arquitectura Global` from `design.md`.
 2. If it says **Sí**: invoke the `architecture` skill in Update mode with
-   this story's number (`hu-<number>`), passing along the level (Context/
+   this story's number (`spec-<number>`), passing along the level (Context/
    Container), the change, and the concrete node/edge already specified
    there — `architecture` applies it, it doesn't have to infer it.
 3. If it says **No**: skip silently, note "sin cambios de arquitectura
@@ -315,17 +315,17 @@ Report, in this order:
 1. Artifacts promoted (destination paths) — or "no artifacts to promote".
 2. Entry added to `docs/decisions.md` (its title) — or "no design decisions
    to record".
-3. Folder archived under `work/done/hu-<number>/`.
+3. Folder archived under `work/done/spec-<number>/`.
 4. `docs/architecture/` updated (what changed) — or "no global architecture
    changes".
-5. Explicitly suggest: "Corré `/commit hu-<number>` para agrupar y
+5. Explicitly suggest: "Corré `/commit spec-<number>` para agrupar y
    ejecutar los commits y dejar el PR redactado."
 
 Then stop — grouping/executing commits and drafting the PR is `/commit`'s job,
 not this skill's.
 
 > Si después del cierre aparece un defecto originado en una ambigüedad o gap de
-> `hu.md`, no reabrir esta skill — usar `/hotfix hu-<number>`.
+> `spec.md`, no reabrir esta skill — usar `/hotfix spec-<number>`.
 
 ---
 
@@ -399,7 +399,7 @@ next steps.
 
 | Issue | Cause | Resolution |
 |---|---|---|
-| `plan.md` has tasks without `[X]` | `/build` didn't finish | Stop — suggest `/build hu-<number>` |
+| `plan.md` has tasks without `[X]` | `/build` didn't finish | Stop — suggest `/build spec-<number>` |
 | Folder is already in `work/done/` | sync already ran for this story | Report it and stop |
 | No `docs/` folder in the story | Story with no API/diagram changes | Skip Step 3, note it in the final summary |
 | `design.md` has no "Decisiones de Diseño" section | Story with no significant decisions | Skip Step 4 silently — not every story has a decision worth recording |
@@ -408,7 +408,7 @@ next steps.
 | Module can't be identified | `design.md` doesn't name it | Ask the user — don't guess |
 | Current branch is the base branch | The user forgot to switch branches | Stop immediately, ask them to switch to the working branch |
 | lint/test/build fails in Step 2 | Regression at close time | Stop — fix directly, or `/hotfix` if it traces back to a spec gap |
-| User asks to group/execute commits or draft the PR right here | Scope confusion after the skill split | Explain that's `/commit hu-<number>`, meant to run right after |
+| User asks to group/execute commits or draft the PR right here | Scope confusion after the skill split | Explain that's `/commit spec-<number>`, meant to run right after |
 | `design.md` has no "Impacto en Arquitectura Global" section | Story designed before this convention existed | Don't guess from the diff — ask the user directly whether the story touched global architecture |
-| The section says "Sí" but the node/edge isn't clear | `/design` didn't specify it in enough detail | Invoke `/architecture hu-<number>` anyway and let it ask for precision, or ask the user before invoking |
+| The section says "Sí" but the node/edge isn't clear | `/design` didn't specify it in enough detail | Invoke `/architecture spec-<number>` anyway and let it ask for precision, or ask the user before invoking |
 | User asks to bootstrap `docs/architecture/` from here | Out of this skill's scope | Explain that's `/architecture` (with no arguments), not `/sync` |

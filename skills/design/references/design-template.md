@@ -19,7 +19,7 @@ instead.
 
 <!-- OPTIONAL: Include only if PHASE 3 resolved at least one unknown via
      questions. Omit this section entirely if design.md was produced with
-     zero ambiguities (everything was already defined in hu.md/context.md). -->
+     zero ambiguities (everything was already defined in spec.md/context.md). -->
 
 - **<unknown resuelto>:** <opción elegida> — <razón breve>
 

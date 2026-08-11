@@ -2,7 +2,7 @@
 name: hotfix
 description: >
   Fixes a post-build defect that originated from an ambiguity or a
-  clarification gap in hu.md — corrects or adds the affected AC and applies
+  clarification gap in spec.md — corrects or adds the affected AC and applies
   the fix as a single targeted task on plan.md and the already-built code,
   without regenerating the full plan or re-running /build from scratch.
   Use when the user says "/hotfix sm-XXX", "esto quedó mal porque no se
@@ -43,18 +43,18 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 
 Bridge between `/refine` (corrige artefactos) y `/build` (ejecuta planes) para
 un caso específico: **el código ya existe**, `plan.md` ya tiene tareas `[X]`,
-y el defecto se debe a que `hu.md` no clarificó bien un AC (o le faltaba uno).
+y el defecto se debe a que `spec.md` no clarificó bien un AC (o le faltaba uno).
 
 En vez de re-ejecutar `/plan` (que regeneraría el plan completo, perdiendo
 los `[X]` existentes) o `/refine` (que no toca código ni plan.md), esta skill:
-1. Corrige/agrega el AC en `hu.md`
+1. Corrige/agrega el AC en `spec.md`
 2. Agrega UNA tarea puntual `Tarea HOTFIX-N` al final de `plan.md`
 3. Ejecuta solo esa tarea con disciplina TDD
 4. Actualiza la trazabilidad AC → Tarea
 
 **Announce at start:** "Aplicando hotfix sobre sm-<number>."
 
-**Output:** `hu.md` (AC corregido/agregado + sección `## Hotfixes`),
+**Output:** `spec.md` (AC corregido/agregado + sección `## Hotfixes`),
 `plan.md` (tarea HOTFIX-N agregada y marcada `[X]`), código corregido.
 
 ---
@@ -101,7 +101,10 @@ lo maneja el usuario.
 1. Si el usuario no describió el defecto, preguntar:
    > "¿Qué está pasando? Describí el comportamiento incorrecto observado."
 
-2. Leer `work/active/sm-<number>/hu.md` completo — ACs, Reglas de Negocio,
+> **Ítems legados.** Si la carpeta tiene `hu.md` en vez de `spec.md`, es el mismo
+> artefacto con su nombre anterior: trabajarlo en su lugar, sin renombrarlo.
+
+2. Leer `work/active/sm-<number>/spec.md` completo — ACs, Reglas de Negocio,
    sección `## Hotfixes` si ya existe (para numerar `HOTFIX-N` correctamente).
 
 3. Clasificar el defecto:
@@ -114,14 +117,14 @@ lo maneja el usuario.
    > "**AC-N actual:** '<texto>' — **Propuesta:** '<texto corregido>'."
 
    Si es un AC faltante, proponer el texto del AC nuevo siguiendo el
-   formato de `../hu/references/hu-template.md` (numeración siguiente a la última).
+   formato de `../spec/references/spec-template.md` (numeración siguiente a la última).
 
    Confirmar con `AskUserQuestion`: `question: "¿Confirmás esta corrección del AC-N?"`,
    `header: "AC-N"`, options `"Confirmar"` / `"Ajustar el texto"`. Si elige
    "Ajustar el texto", seguir en texto libre hasta llegar a una redacción
-   confirmada antes de tocar `hu.md`.
+   confirmada antes de tocar `spec.md`.
 
-5. Esperar confirmación antes de tocar `hu.md`.
+5. Esperar confirmación antes de tocar `spec.md`.
 
 ### Size check (important)
 
@@ -139,7 +142,7 @@ Si elige la opción recomendada, detenerse y redirigir — no continuar con el f
 
 ---
 
-## PHASE 2: Correct hu.md
+## PHASE 2: Correct spec.md
 
 1. Aplicar la corrección/adición del AC con Edit (misma disciplina que
    `/refine` Modo Directo — texto exacto, sin inventar alcance).
@@ -182,7 +185,7 @@ en vez de un número secuencial de tarea:
 ```markdown
 ### Tarea HOTFIX-N: <descripción breve del fix>
 
-**AC relacionado:** AC-N (corregido/agregado en hu.md)
+**AC relacionado:** AC-N (corregido/agregado en spec.md)
 
 **Archivos:**
 - Modificar: `sm-<micro>/src/exact/path/to/file.ts:123-145`
@@ -245,7 +248,7 @@ Esperado: PASS — incluyendo el test de regresión nuevo y todos los existentes
    - Hallazgos de convenciones (si hay)
 
 4. Decir:
-   > "Hotfix aplicado. `hu.md` y `plan.md` actualizados con HOTFIX-N. Revisá
+   > "Hotfix aplicado. `spec.md` y `plan.md` actualizados con HOTFIX-N. Revisá
    > los cambios y decime si hay algo que ajustar."
 
 5. Detener — no continuar con más cambios sin confirmación.
@@ -272,7 +275,7 @@ Esperado: PASS — incluyendo el test de regresión nuevo y todos los existentes
 **Flujo:**
 1. Verifica `plan.md` → existe, 6 tareas, 6 marcadas `[X]`. Confirma caso post-build.
 2. Rama actual: `feat/SM-1933-filter-zones-by-service-type` (no es main). Continúa.
-3. Lee `hu.md` → AC-2: "Si no hay resultados, retorna lista vacía." — ambiguo, no especifica código HTTP. Propone:
+3. Lee `spec.md` → AC-2: "Si no hay resultados, retorna lista vacía." — ambiguo, no especifica código HTTP. Propone:
    > "**AC-2 actual:** 'Si no hay resultados, retorna lista vacía.' — **Propuesta:** 'Si no hay resultados, retorna lista vacía con código 200.'"
    y llama `AskUserQuestion` (header "AC-2", opciones "Confirmar" / "Ajustar el texto").
 4. Usuario elige "Confirmar". PHASE 2: edita AC-2, agrega:
@@ -285,4 +288,4 @@ Esperado: PASS — incluyendo el test de regresión nuevo y todos los existentes
 6. PHASE 4: agrega `### Tarea HOTFIX-1: Corregir código de respuesta en lista vacía` con test de regresión que pega al endpoint sin resultados y espera `200` + `[]`. Actualiza la fila de AC-2 en la tabla de trazabilidad para incluir `Tarea HOTFIX-1`.
 7. PHASE 5: test falla (devuelve 404) → corrige el controller → test pasa. Suite completo del módulo: PASS.
 8. PHASE 6: el código 200 ya estaba documentado en `api.yaml`, solo el código no lo respetaba — sin impacto de contrato. Cierra:
-   > "Hotfix aplicado. `hu.md` y `plan.md` actualizados con HOTFIX-1. Revisá los cambios y decime si hay algo que ajustar."
+   > "Hotfix aplicado. `spec.md` y `plan.md` actualizados con HOTFIX-1. Revisá los cambios y decime si hay algo que ajustar."

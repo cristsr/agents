@@ -22,7 +22,7 @@ completa si solo hay un grupo.]
 | AC-1 | Tarea N |
 | AC-2 | Tarea N, Tarea M |
 
-> Toda AC de `hu.md` debe aparecer al menos una vez en esta tabla. Si falta alguna,
+> Toda AC de `spec.md` debe aparecer al menos una vez en esta tabla. Si falta alguna,
 > agregar la tarea correspondiente antes de guardar el plan (ver PHASE 3.5).
 
 ---

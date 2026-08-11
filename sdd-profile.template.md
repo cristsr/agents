@@ -1,8 +1,8 @@
 # SDD Profile — plantilla
 
 Copiar a `.agents/profile.md` en la **raíz del proyecto** y rellenar. Las skills
-SDD (`hu, prepare, clarify, scan, design, plan, build, refine, hotfix, sync, commit,
-architecture, constitution`) viven en `~/.agents/skills/` y son globales:
+SDD (`spec, prepare, clarify, scan, design, plan, build, refine, hotfix, sync, commit,
+architecture, rules`) viven en `~/.agents/skills/` y son globales:
 **este archivo es lo único que las adapta a un proyecto**. Sin él, las skills
 se detienen.
 
@@ -15,17 +15,36 @@ se detienen.
 | `PROJECT_NAME` | <nombre> |
 | `ORG` | <organización> |
 
-## 2. Identificación de historias
+## 2. Identificación de ítems de trabajo
 
 | Clave | Valor | Ejemplo |
 |---|---|---|
-| `STORY_ID_MODE` | `sequential` (auto: `hu-<n>` siguiente libre) / `name` (slug del título) / `tracker-code` (clave del tracker, p.ej. Jira) | |
+| `STORY_ID_MODE` | `sequential` (auto: `<prefijo><n>` siguiente libre) / `name` (slug del título) / `tracker-code` (clave del tracker, p.ej. Jira) | |
 | `STORY_ID_PREFIX` | `<xx->` | prefijo de carpeta, minúscula |
-| `STORY_ID_PATTERN` | `<xx-<number>>` | `sm-1933` |
-| `STORY_KEY_PATTERN` | `<XX-<number>>` | `SM-1933` (clave del tracker) |
+| `STORY_ID_PATTERN` | `<xx-<number>>` | `spec-0026` |
+| `STORY_KEY_PATTERN` | `<XX-<number>>` | `SPEC-0026` (clave del tracker) |
+| `STORY_ID_LEGACY_PREFIXES` | <prefijos antiguos que siguen siendo válidos al leer, separados por coma; `—` si no hay> | `hu-` |
 | `TRACKER` | <Jira / Linear / GitHub Issues / …> | |
 
-## 3. Intake de historias
+### Tipos de ítem (`ITEM_TYPES`)
+
+El pipeline es agnóstico al tipo de trabajo: lo que consume aguas abajo son
+**criterios de aceptación verificables**, no el molde narrativo. El tipo vive como
+campo `tipo` en el frontmatter de `spec.md` y solo determina el **bloque de
+encuadre** que reemplaza al «Como/Quiero/Para».
+
+| Tipo | Para qué | Bloque de encuadre |
+|---|---|---|
+| `feat` | Funcionalidad nueva o cambio de comportamiento visible | Como / Quiero / Para |
+| `bug` | Defecto en algo ya entregado | Síntoma · Reproducción · Esperado vs. actual · Impacto |
+| `debt` | Deuda técnica, refactor, mejora estructural | Situación actual · Riesgo o costo · Estado deseado |
+| `incident` | Falla en ejecución que requiere remediación | Impacto · Detección · Mitigación aplicada · Causa raíz |
+| `chore` | Mantenimiento sin cambio de comportamiento (deps, tooling, config) | Motivación · Alcance |
+
+Ajustá o recortá la lista según el proyecto. Si un proyecto solo hace features,
+declarar `ITEM_TYPES: feat` y el campo `tipo` se vuelve implícito.
+
+## 3. Intake de ítems
 
 `INTAKE_FORMATS`: <`pdf-export`, `manual-text`, `url`, …>
 
@@ -40,7 +59,7 @@ observaciones). Otro tracker o idioma = cambiar solo esta tabla.
 | `WORKING_DIRECTORY` | <ruta absoluta del directorio de trabajo del proyecto, ej. `D:\Cristian\Nest\admin-back`> |
 | `WORKDIR_ACTIVE` | `work/active/{{STORY_ID}}/` |
 | `WORKDIR_DONE` | `work/done/{{STORY_ID}}/` |
-| `ARTIFACT_HU` | `{{WORKDIR_ACTIVE}}/hu.md` |
+| `ARTIFACT_SPEC` | `{{WORKDIR_ACTIVE}}/spec.md` |
 | `ARTIFACT_CONTEXT` | `{{WORKDIR_ACTIVE}}/context.md` |
 | `ARTIFACT_DESIGN` | `{{WORKDIR_ACTIVE}}/design.md` |
 | `ARTIFACT_PLAN` | `{{WORKDIR_ACTIVE}}/plan.md` |
@@ -104,7 +123,7 @@ expuestos, puerto/servicio abstracto + firmas.
 
 | Clave | Default | Cuándo cambiarlo |
 |---|---|---|
-| `API_CONTRACT_MODE` | `delta` — `/design` emite `docs/api.delta.yaml` (solo paths/schemas de la HU); `/sync` lo mergea en el `api.yaml` canónico del módulo (lo crea si no existe) | `full` — si se prefiere un `docs/api.yaml` completo por historia que `/sync` copia tal cual |
+| `API_CONTRACT_MODE` | `delta` — `/design` emite `docs/api.delta.yaml` (solo paths/schemas del ítem); `/sync` lo mergea en el `api.yaml` canónico del módulo (lo crea si no existe) | `full` — si se prefiere un `docs/api.yaml` completo por historia que `/sync` copia tal cual |
 | `DESIGN_OUTPUT_MODE` | `full` — diagramas en Markdown/Mermaid (`docs/diagram.md` + `docs/component.md`) por historia | `delta` — solo si el proyecto adoptó docs-as-code LikeC4 (`model.delta.c4` + `flows/*.md`) |
 | `SYNC_MODE` | `promote` — `/sync` copia los artefactos | `reconcile` — mergea por artefacto: contrato si `API_CONTRACT_MODE=delta`, modelo si `DESIGN_OUTPUT_MODE=delta` |
 

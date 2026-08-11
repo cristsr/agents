@@ -86,8 +86,8 @@ Never run `git add`, `git commit`, or `git push` at any point.
    - If tasks are already marked [X] → resume from the first incomplete task
    - If no tasks are marked → start from the beginning
 3. **Verify traceability (Analyze gate):** read the "Trazabilidad AC → Tareas" table
-   in the plan header and read `work/active/sm-<number>/hu.md`'s ACs.
-   - Confirm every AC in `hu.md` appears in the table mapped to at least one task.
+   in the plan header and read `work/active/sm-<number>/spec.md`'s ACs.
+   - Confirm every AC in `spec.md` appears in the table mapped to at least one task.
    - If an AC is missing from the table → STOP: "El plan no cubre AC-<N> (`<texto del AC>`).
      Ejecutá `/plan sm-<number>` de nuevo para regenerarlo o agregá la tarea faltante
      manualmente antes de continuar." Do not silently add tasks yourself — this is a
@@ -169,7 +169,7 @@ cd ..
    - A prompt naming each affected microservice, so it can run `git diff`
      against `develop` in each one
 
-3. **Validate against the original spec:** read `work/active/sm-<number>/hu.md` again
+3. **Validate against the original spec:** read `work/active/sm-<number>/spec.md` again
    and build a closing checklist — one line per AC, marked against what was actually
    implemented and tested (not against what the plan intended):
 
@@ -226,7 +226,7 @@ npx -y openapi-to-postmanv2 -s work/active/sm-<number>/docs/<api-artifact> -o wo
    `/sync`."
 
 > Si más adelante aparece un defecto en este código y se origina en una
-> ambigüedad o gap de `hu.md`, no reabrir esta skill ni regenerar el plan —
+> ambigüedad o gap de `spec.md`, no reabrir esta skill ni regenerar el plan —
 > usar `/hotfix sm-<number>`.
 
 ---

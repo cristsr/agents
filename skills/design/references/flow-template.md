@@ -17,8 +17,8 @@ entrypoint: <ruta REST | nombre de cron/job | evento de dominio>
 command: <Command o Query que dispara>
 view: <viewId de la dynamic view en el .c4>
 invariants: [<AC/INV que aplican>]
-introduced_by: <hu-XXXX que lo creó>       # no cambia en 'modify'
-last_modified_by: <hu-XXXX de este cambio>
+introduced_by: <spec-XXXX que lo creó>       # no cambia en 'modify'
+last_modified_by: <spec-XXXX de este cambio>
 status: active                  # active | deprecated | removed
 ---
 

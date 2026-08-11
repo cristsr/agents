@@ -5,7 +5,7 @@ and the coherence rules to apply after each change.
 
 ---
 
-## hu.md — Mutability Rules
+## spec.md — Mutability Rules
 
 ### Mutable sections
 
@@ -26,7 +26,7 @@ and the coherence rules to apply after each change.
 | `# sm-<number>:` header number | Story number never changes |
 | Title after the colon | Comes from Jira — only change if user confirms the Jira title changed |
 
-### Change classification for hu.md
+### Change classification for spec.md
 
 **Minor change (no downstream action needed):**
 - Wording correction in Como / Quiero / Para
@@ -61,7 +61,7 @@ and the coherence rules to apply after each change.
 | Section | Why |
 |---------|-----|
 | `# context: sm-<number>` header | Identifies the artifact |
-| Historia resumida | Derived from `hu/sm-<number>.md` — if wrong, the hu.md is the source to fix |
+| Historia resumida | Derived from `hu/sm-<number>.md` — if wrong, the spec.md is the source to fix |
 | Absolute paths of module folders | Structural — re-run /scan if structure changed |
 
 ---
@@ -188,9 +188,9 @@ If the sequence diagram changes (new hop, new participant):
 - If the new hop implies an endpoint not present in `api.yaml`: warn:
   > "⚠️ El diagrama ahora muestra una llamada a `<servicio>` que no está en `docs/api.yaml`. ¿Falta documentar ese endpoint?"
 
-### Rule 6: hu.md AC added or removed → check context.md and design.md
+### Rule 6: spec.md AC added or removed → check context.md and design.md
 
-If an AC is added or removed from hu.md:
+If an AC is added or removed from spec.md:
 - Check if `work/active/sm-<number>/context.md` exists
 - If it does: warn:
   > "⚠️ Agregaste/eliminaste un AC. Si context.md ya fue generado, puede quedar desactualizado. Ejecutá `/scan sm-<number>` para regenerarlo."
@@ -198,15 +198,15 @@ If an AC is added or removed from hu.md:
 - If it does: warn:
   > "⚠️ design.md también puede quedar desactualizado. Después de re-escanear, ejecutá `/design sm-<number>`."
 
-### Rule 7: hu.md AC body significantly rewritten → flag for review
+### Rule 7: spec.md AC body significantly rewritten → flag for review
 
 If the meaning of an AC changes (not just wording):
 - After applying, warn:
   > "⚠️ El contenido del AC-N cambió de forma significativa. Revisá que context.md y design.md sigan siendo coherentes con el nuevo criterio."
 
-### Rule 5: validate every change against hu.md ACs
+### Rule 5: validate every change against spec.md ACs
 
-`hu.md` is the source of truth. Apply this rule **before** every change, in both Modo Directo and Modo Guiado.
+`spec.md` is the source of truth. Apply this rule **before** every change, in both Modo Directo and Modo Guiado.
 
 **How to apply:**
 
@@ -227,13 +227,13 @@ If the meaning of an AC changes (not just wording):
 
 Use this classification to determine the handoff message.
 
-### hu.md — Minor change (no downstream action)
+### spec.md — Minor change (no downstream action)
 - Wording correction in Como / Quiero / Para
 - AC title rename (label only)
 - Minor clarification in AC body (meaning unchanged)
 - Notas Técnicas or Fuera de Alcance edits
 
-### hu.md — Structural change (re-run /scan, then /design)
+### spec.md — Structural change (re-run /scan, then /design)
 - Adding a new AC
 - Removing an existing AC
 - Significantly rewriting an AC body

@@ -6,10 +6,10 @@ description: >
   `git commit`), verifying the index before each one, and drafts the PR
   title and body — never running `gh pr create` or `git push`, those stay as
   ready-to-run commands for the user. Use when the user says "/commit
-  hu-XXXX", "commiteá los cambios", "ejecutá los commits", "dejá el PR
+  spec-XXXX", "commiteá los cambios", "ejecutá los commits", "dejá el PR
   redactado", or right after /sync suggests running /commit.
   Do NOT use to promote docs or archive the story workspace (use /sync first
-  — /commit expects work/done/hu-<number>/ to already exist).
+  — /commit expects work/done/spec-<number>/ to already exist).
   Do NOT use to push or open the PR — git push and gh pr create stay as
   ready-to-run commands for the user.
 ---
@@ -30,8 +30,8 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 
 | En este documento | Clave en profile.md |
 |---|---|
-| `hu-<number>` | `STORY_ID_PATTERN` |
-| `work/done/hu-<number>/` | `WORKDIR_DONE` |
+| `spec-<number>` | `STORY_ID_PATTERN` |
+| `work/done/spec-<number>/` | `WORKDIR_DONE` |
 | `master` | `BASE_BRANCH` |
 | salida en español | `OUTPUT_LANGUAGE` |
 
@@ -40,11 +40,11 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 ## Overview
 
 Second half of the story-closing pipeline, right after `/sync`: `/sync`
-promotes documentation and archives `work/active/hu-<number>/` →
-`work/done/hu-<number>/`; `/commit` takes the resulting working tree and
+promotes documentation and archives `work/active/spec-<number>/` →
+`work/done/spec-<number>/`; `/commit` takes the resulting working tree and
 turns it into real commits on the current branch, and drafts the PR.
 
-**Announce at start:** "Preparando commits para hu-<number>."
+**Announce at start:** "Preparando commits para spec-<number>."
 
 **Output:** N commits executed on the current branch (one per logical unit,
 aligned with `plan.md`'s tasks) + PR title and body printed in the chat +
@@ -59,9 +59,9 @@ for the user to run.
 
 ## CRITICAL: Verify inputs
 
-1. `work/done/hu-<number>/` must exist.
-   - If only `work/active/hu-<number>/` exists instead → stop: "Corré
-     `/sync hu-<number>` primero — `/commit` trabaja sobre la historia ya
+1. `work/done/spec-<number>/` must exist.
+   - If only `work/active/spec-<number>/` exists instead → stop: "Corré
+     `/sync spec-<number>` primero — `/commit` trabaja sobre la historia ya
      archivada, no sobre `work/active/`."
    - If neither exists → stop and ask for the correct story number.
 2. `git branch --show-current` — stop if it's the base branch
@@ -108,9 +108,9 @@ don't push forward "to save time".
 
 ## Step 1: Read the story artifacts
 
-From `work/done/hu-<number>/` (already archived by `/sync`):
+From `work/done/spec-<number>/` (already archived by `/sync`):
 
-- `hu.md` — goal (As/I want/So that) and ACs → feed the PR body.
+- `spec.md` — goal (As/I want/So that) and ACs → feed the PR body.
 - `plan.md` — executed tasks → feed the commit grouping.
 
 ## Step 2: Inventory the working tree
@@ -140,7 +140,7 @@ commit):
    `type(scope): description` in English.
 3. Repeat for the next group.
 
-The commit covering the `work/done/hu-<number>/` archive (the `mv`
+The commit covering the `work/done/spec-<number>/` archive (the `mv`
 `/sync` already ran) goes in its own `docs(<scope>):` commit, or gets folded
 into the last one — decide explicitly and say so in the summary.
 
@@ -159,7 +159,7 @@ feat(<scope>): hu-0009 <short story title in English>
 
 ```markdown
 ## Summary
-<As/I want/So that from hu.md, condensed in 2-3 lines>
+<As/I want/So that from spec.md, condensed in 2-3 lines>
 
 ## Implemented features
 - <feature 1 based on ACs>
@@ -173,7 +173,7 @@ feat(<scope>): hu-0009 <short story title in English>
 - <module/task> — <what was done>
 
 ## Documentation
-- Story archived in `work/done/hu-<number>/` (via /sync)
+- Story archived in `work/done/spec-<number>/` (via /sync)
 
 ## Testing
 - `CI_GATES_CMD` (tests) ✓ (result from /sync Step 2)
@@ -241,7 +241,7 @@ commands by hand.
 
 | Issue | Cause | Resolution |
 |---|---|---|
-| `work/done/hu-<number>/` doesn't exist | `/sync` hasn't run yet | Stop — suggest `/sync hu-<number>` first |
+| `work/done/spec-<number>/` doesn't exist | `/sync` hasn't run yet | Stop — suggest `/sync spec-<number>` first |
 | The index has unexpected files after a `git add` | Something was left staged from a previous session | Stop, `git restore --staged <path>`, re-verify before committing |
 | There are unrelated changes in the working tree | Other work in progress on the same branch | Exclude them from every `git add` and list them separately in the summary |
 | Current branch is the base branch | The user forgot to switch branches | Stop immediately, ask them to switch to the working branch |
