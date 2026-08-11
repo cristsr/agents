@@ -1,13 +1,13 @@
 ---
 name: design
 description: >
-  Reads hu.md and context.md to produce an API-first technical design delta
+  Reads spec.md and context.md to produce an API-first technical design delta
   (DESIGN_OUTPUT_MODE): a LikeC4 model fragment (components + one dynamic view per
   use case), per-flow docs, an OpenAPI delta scoped to the story, and a data model
   if needed. /sync reconciles the delta into the module's living docs.
   Use when the user says "/design sm-XXX", "diseñar historia", "crear diseño",
-  "especificación técnica", or has completed /scan and wants to define what to build.
-  Do NOT use before /scan is complete. Do NOT use for planning tasks (use /plan).
+  "especificación técnica", or has completed /clarify and wants to define what to build.
+  Do NOT use before /clarify is complete. Do NOT use for planning tasks (use /plan).
   Do NOT use for system-wide architecture (C4 Nivel 1/2 — actores, sistemas
   externos, apps/microservicios) — that's /architecture, invoked by /sync.
 ---
@@ -27,7 +27,7 @@ exists — `/plan` generates DTOs that conform to it, never the reverse.
 
 **Eje 1 — `API_CONTRACT_MODE` (contrato OpenAPI, default `delta`):**
 - `delta` (default): `work/active/sm-<number>/docs/api.delta.yaml` — **solo** los paths
-  y schemas que la HU agrega o cambia (agrupados por módulo/tag). `/sync` lo mergea en
+  y schemas que el ítem agrega o cambia (agrupados por módulo/tag). `/sync` lo mergea en
   el `api.yaml` canónico del módulo (lo crea si no existe).
 - `full`: `work/active/sm-<number>/docs/api.yaml` — contrato completo por historia;
   `/sync` lo copia tal cual.
@@ -35,7 +35,7 @@ exists — `/plan` generates DTOs that conform to it, never the reverse.
 **Eje 2 — `DESIGN_OUTPUT_MODE` (diagramas/modelo, default `full`):**
 - `full` (default, Markdown/Mermaid): `docs/diagram.md` + `docs/component.md` por historia.
 - `delta` (solo si el proyecto adoptó docs-as-code LikeC4): `docs/model.delta.c4` +
-  `docs/flows/<use-case>.md` — delta acotado a la HU que `/sync` reconcilia.
+  `docs/flows/<use-case>.md` — delta acotado al ítem que `/sync` reconcilia.
 
 En ambos modos se producen además, según aplique:
 - `work/active/sm-<number>/docs/research.md` — alternativas técnicas evaluadas + rationale (solo si hay decisiones no triviales)
@@ -76,29 +76,29 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 Extract the story number from user input. Then verify:
 
 ```bash
-[ -f work/active/sm-<number>/hu.md ]      || echo "MISSING: hu.md"
+[ -f work/active/sm-<number>/spec.md ]      || echo "MISSING: spec.md"
 [ -f work/active/sm-<number>/context.md ] || echo "MISSING: context.md"
 ```
 
-- If `hu.md` missing → stop:
-  "No encontré `work/active/sm-<number>/hu.md`.
-  Ejecutá `/hu sm-<number>` primero."
+- If `spec.md` missing → stop:
+  "No encontré `work/active/sm-<number>/spec.md`.
+  Ejecutá `/spec sm-<number>` primero."
 
 - If `context.md` missing → stop:
   "No encontré `work/active/sm-<number>/context.md`.
-  Ejecutá `/scan sm-<number>` primero."
+  Ejecutá `/clarify sm-<number>` primero."
 
 ## CRITICAL: Ambiguity gate — zero unresolved markers
 
 The spec must be unambiguous before any contract is designed. Check for
-unresolved `[NEEDS CLARIFICATION]` markers left by `/hu`:
+unresolved `[NEEDS CLARIFICATION]` markers left by `/spec`:
 
 ```bash
-grep -c 'NEEDS CLARIFICATION' work/active/sm-<number>/hu.md
+grep -c 'NEEDS CLARIFICATION' work/active/sm-<number>/spec.md
 ```
 
 If the count is greater than `0` → **STOP** (do not design):
-> "`hu.md` todavía tiene <N> marcadores `[NEEDS CLARIFICATION]` sin resolver.
+> "`spec.md` todavía tiene <N> marcadores `[NEEDS CLARIFICATION]` sin resolver.
 > Diseñar un contrato sobre ambigüedades produce DTOs y comportamientos
 > potencialmente incorrectos. Ejecutá `/clarify sm-<number>` para resolverlos
 > antes de `/design`."
@@ -111,7 +111,7 @@ planning begins.
 
 ## PHASE 1: Load context
 
-1. Read `work/active/sm-<number>/hu.md` — extract:
+1. Read `work/active/sm-<number>/spec.md` — extract:
    - Historia de Usuario completa
    - Todos los Criterios de Aceptación
    - Notas Técnicas si existen
@@ -121,7 +121,7 @@ planning begins.
    - Entidades existentes con sus campos
    - DTOs existentes disponibles para reutilizar
    - Patrones de inyección del proyecto
-   - Gaps detectados por /scan
+   - Gaps detectados por /clarify
 
 3. Read `docs/architecture/conventions.md` — apply naming and code conventions
    throughout the design.
@@ -261,12 +261,12 @@ mkdir -p work/active/sm-<number>/docs/
 ## PHASE 4 — DELTA MODE (when `DESIGN_OUTPUT_MODE = delta`)
 
 Este modo **reemplaza** las secciones legadas «File 1/2/3» de abajo. La unidad de
-documentación es el **caso de uso (flujo)**, no la HU. La HU es un conjunto de
+documentación es el **caso de uso (flujo)**, no el ítem. La ítem es un conjunto de
 operaciones sobre flujos: `create` | `modify` | `deprecate`.
 
 **Algoritmo:**
 
-1. **Derivar los casos de uso afectados.** De `hu.md`, mapear cada AC a un flujo:
+1. **Derivar los casos de uso afectados.** De `spec.md`, mapear cada AC a un flujo:
    `(módulo, use-case, trigger)`. `trigger ∈ TRIGGER_TAXONOMY` (`rest`, `cron`,
    `queue`, `domain-event`, `cli`). Determinar el `entrypoint` (ruta REST, nombre de
    cron/job/evento) y el `command`/query que dispara.
@@ -300,11 +300,11 @@ operaciones sobre flujos: `create` | `modify` | `deprecate`.
    - **Procedencia obligatoria — bloque `metadata` por elemento (nuevo o modificado):** cada
      elemento (módulo/componente) lleva un bloque `metadata` que rastrea en qué historia nació
      y en cuáles cambió. LikeC4 solo admite `metadata` en **elementos**, no en `dynamic view`.
-     - Elemento **nuevo** (`create`): `metadata { introducedIn 'hu-<number>' }`.
+     - Elemento **nuevo** (`create`): `metadata { introducedIn 'spec-<number>' }`.
      - Elemento **modificado** (`modify` — cambia su descripción, tecnología o relaciones):
-       agregar en el delta `metadata { changedIn 'hu-<number>' }` como el **incremento** a aplicar;
-       `/sync` lo fusiona anexando esta HU al `changedIn` vigente (sin tocar `introducedIn`).
-     - Claves: `introducedIn` = string con **una** HU; `changedIn` = string con la **lista** de
+       agregar en el delta `metadata { changedIn 'spec-<number>' }` como el **incremento** a aplicar;
+       `/sync` lo fusiona anexando este ítem al `changedIn` vigente (sin tocar `introducedIn`).
+     - Claves: `introducedIn` = string con **una** ítem; `changedIn` = string con la **lista** de
        HUs separadas por coma, en orden cronológico (p. ej. `'hu-0005, hu-0007'`).
 
      ```
@@ -335,7 +335,7 @@ operaciones sobre flujos: `create` | `modify` | `deprecate`.
          introducedIn 'hu-0015'
        }
      }
-     // componente ya EXISTENTE que esta HU modifica (resaltado + incremento de procedencia)
+     // componente ya EXISTENTE que este ítem modifica (resaltado + incremento de procedencia)
      extend admin.ledger.accounts.confirmHandler {
        #delta-changed
        metadata {
@@ -352,7 +352,7 @@ operaciones sobre flujos: `create` | `modify` | `deprecate`.
      título del flujo con `[NEW] ` (caso de uso `create`) o `[CHANGED] ` (caso de uso `modify`),
      p. ej. `title '[NEW] Abrir cuenta · trigger REST'`. Es la contraparte textual del tag naranja
      para el revisor; **`/sync` lo remueve** al reconciliar la vista en el `.c4` vivo. No prefijes
-     las vistas que la HU no toca.
+     las vistas que el ítem no toca.
    - Referenciar los nodos compartidos por su FQN (`<app>.shared.commandBus`, etc.).
    - **Convención de navegación (organiza la app LikeC4) — obligatoria:**
      - **Carpeta por módulo (bloque `views '<Módulo>' { ... }`):** todas las vistas del módulo van
@@ -385,8 +385,8 @@ operaciones sobre flujos: `create` | `modify` | `deprecate`.
 5. **Emitir `docs/flows/<slug>.md`** por cada flujo tocado, siguiendo `references/flow-template.md`:
    frontmatter obligatorio (`use_case`, `module`, `trigger`, `entrypoint`, `command`, `view`,
    `invariants`, `introduced_by`, `last_modified_by`, `status`) + prosa (reglas, errores, respuesta).
-   Para `create`: `introduced_by` = `last_modified_by` = esta HU. Para `modify`: conservar
-   `introduced_by`, poner `last_modified_by` = esta HU.
+   Para `create`: `introduced_by` = `last_modified_by` = este ítem. Para `modify`: conservar
+   `introduced_by`, poner `last_modified_by` = este ítem.
 
 6. **`design.md` referencia los flujos por su `view`/slug** — nunca embebe un diagrama-monstruo
    que abarque varios módulos. La sección «Componentes del módulo» lista el delta de componentes
@@ -721,14 +721,14 @@ After saving the files:
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| context.md no encontrado | /scan no ejecutado | Indicar al usuario que ejecute /scan primero |
-| `hu.md` tiene marcadores `[NEEDS CLARIFICATION]` | Ambigüedades sin resolver | STOP: ejecutar `/clarify sm-<number>` antes de diseñar |
+| context.md no encontrado | /clarify no ejecutado | Indicar al usuario que ejecute /clarify primero |
+| `spec.md` tiene marcadores `[NEEDS CLARIFICATION]` | Ambigüedades sin resolver | STOP: ejecutar `/clarify sm-<number>` antes de diseñar |
 | Un Quality Gate falla (⚠️) | El diseño viola un principio | Ajustar el diseño para pasarlo, o registrar excepción justificada en `design.md` y aprobarla en PHASE 5 |
 | No hay constitución | `/constitution` nunca se ejecutó | Aplicar los 4 gates built-in por default; sugerir `/constitution` para hacerlos exigibles |
-| Campo en schema no definido | HU ambigua | Preguntar en PHASE 3 antes de diseñar |
+| Campo en schema no definido | ítem ambigua | Preguntar en PHASE 3 antes de diseñar |
 | Micro afectado no identificado | context.md incompleto | Preguntar al usuario antes de continuar |
 | Diagrama sin nombres de schema en flechas | Falta información de contratos | Resolver en PHASE 3 antes de diagramar |
 | `component.md` ya existe de una historia anterior del mismo módulo | Es un documento vivo por módulo, se acumula entre historias | Leerlo primero y actualizarlo quirúrgicamente — nunca regenerarlo desde cero, perdería componentes de historias anteriores |
 | No está claro si la historia toca arquitectura global | El módulo/integración es ambiguo respecto a lo ya listado en `context.md` | Resolver en PHASE 3 como una pregunta más — nunca dejar "Impacto en Arquitectura Global" en un estado ambiguo, `/sync` y `/architecture` confían en esa respuesta tal cual |
-| Tabla nueva no confirmada | HU ambigua sobre persistencia | Preguntar como una de las 5 preguntas |
+| Tabla nueva no confirmada | ítem ambigua sobre persistencia | Preguntar como una de las 5 preguntas |
 | api.yaml modificado después de /plan | Cambio de contrato post-aprobación | Advertir: ejecutar `/plan sm-<number>` de nuevo para regenerar las DTOs |

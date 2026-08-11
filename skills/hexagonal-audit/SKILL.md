@@ -4,13 +4,13 @@ description: >
   Audits an existing codebase against the hexagonal rules (dependency direction,
   layer topology, ports & bindings, error handling) and produces a ranked
   findings report — then bridges into the SDD pipeline by generating draft
-  hu.md stories (work/active/<story-id>/hu.md) whose ACs derive from the HIGH
-  and MEDIUM findings, ready for /clarify → /scan → /plan → /build. Read-only:
+  spec.md stories (work/active/<story-id>/spec.md) whose ACs derive from the HIGH
+  and MEDIUM findings, ready for /clarify → /design → /plan → /build. Read-only:
   never edits code unless the user asks for the fixes to be applied. Use when
   the user says "audita el proyecto", "revisa la arquitectura", "auditalo",
   "detectar mejoras de arquitectura", "esto respeta hexagonal", or wants to turn
   architecture debt into backlog stories. Do NOT use to build modules (use
-  /hexagonal-architecture), to read the codebase for a user story (use /scan),
+  /hexagonal-architecture), to survey the codebase for an item (use /clarify),
   or for C4 diagrams of the whole system (use /architecture).
 metadata:
   author: styve
@@ -25,7 +25,7 @@ metadata:
 
 **Output:**
 - Un reporte de hallazgos rankeados (HIGH/MEDIUM/LOW), en el idioma del usuario.
-- Uno o más borradores `work/active/<story-id>/hu.md` derivados de los hallazgos,
+- Uno o más borradores `work/active/<story-id>/spec.md` derivados de los hallazgos,
   para que el fix entre al pipeline SDD (ver Step 4).
 - **Never edit code in AUDIT mode** unless the user asks for the fixes to be applied.
 
@@ -34,7 +34,7 @@ metadata:
 ## Perfil del proyecto (leer primero, siempre)
 
 Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyecto actual):
-define `OUTPUT_LANGUAGE`, `STORY_ID_MODE`/`STORY_ID_PATTERN` (para los `hu.md`
+define `OUTPUT_LANGUAGE`, `STORY_ID_MODE`/`STORY_ID_PATTERN` (para los `spec.md`
 generados), `WORKDIR_ACTIVE`, el stack (sección 7) y `STACK_REFS` (templates y
 detectores por stack). Si no existe, avisá que lo creen desde la plantilla y detené.
 
@@ -66,24 +66,24 @@ scorizar las 13 dimensiones, escribir findings, reglas del auditor). Resumen:
    (fuente única) para dimensionar contra el layout canónico.
 3. **Write findings** rankeados por severidad, cada uno con `file:line`, la regla
    rota, el costo concreto y el fix más chico. Cerrar con el plan priorizado 3–5.
-4. **Bridge al pipeline — generar `hu.md`** (Step 4 abajo).
+4. **Bridge al pipeline — generar `spec.md`** (Step 4 abajo).
 
 ## Step 4: Bridge al pipeline (generar historias)
 
 Con el reporte final, convertir los hallazgos en trabajo del pipeline SDD:
 
 1. **Una historia por módulo auditado** (o por cluster de hallazgos si el módulo
-   tiene pocos): crear `work/active/<story-id>/hu.md` con la estructura del template
-   de `/hu` (`../hu/references/hu-template.md`).
+   tiene pocos): crear `work/active/<story-id>/spec.md` con la estructura del template
+   de `/spec` (`../spec/references/spec-template.md`).
 2. **El ID** se resuelve con `STORY_ID_MODE` del profile (sequential → siguiente
    número libre; name → slug; tracker-code → pedir la clave).
 3. **Cada hallazgo HIGH/MEDIUM → un AC verificable**, redactado como comportamiento
    esperado del sistema (ej. "El controller X no debe contener lógica de negocio" /
    "El dominio no debe importar el framework"). Los LOW van como checklist de
    higiene en el cuerpo de la historia, no como ACs.
-4. Cada `hu.md` lleva una sección `## Contexto de auditoría` con la referencia al
+4. Cada `spec.md` lleva una sección `## Contexto de auditoría` con la referencia al
    reporte completo (`docs/audits/<fecha>-<alcance>.md` — guardar el reporte ahí).
-5. Reportar y sugerir el siguiente paso: `/clarify <id>` (recomendado) o `/scan <id>`.
+5. Reportar y sugerir el siguiente paso: `/clarify <id>`.
 
 CRITICAL: No resolver los hallazgos en el código — el AUDIT genera historias; los
 fixes se construyen con `/plan` + `/build` como cualquier otra.
@@ -95,10 +95,10 @@ fixes se construyen con `/plan` + `/build` como cualquier otra.
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | El detector del pack no corre (sin bash / otro lenguaje) | Pack sin script para el stack | Mapear manualmente con find/grep del lenguaje; los detalladores por stack van en `audit-smells.md` del pack |
-| `work/active/` no existe | Pipeline nunca iniciado en el repo | Crearla (los borradores de hu.md la requieren) y confirmar `WORKDIR_ACTIVE` del profile |
+| `work/active/` no existe | Pipeline nunca iniciado en el repo | Crearla (los borradores de spec.md la requieren) y confirmar `WORKDIR_ACTIVE` del profile |
 | Hallazgos demasiado numerosos | Reporte sin priorizar | Solo HIGH/MEDIUM generan ACs; LOW quedan como checklist |
-| El usuario quiere que apliques los fixes | Confusión de modo | Es trabajo de historias: generar los `hu.md` y que pasen por `/plan` + `/build` — AUDIT nunca edita código |
-| El `hu.md` generado no sigue la plantilla | Formato inconsistente | Consultar `../hu/references/hu-template.md` y el `STORY_ID_MODE` del profile |
+| El usuario quiere que apliques los fixes | Confusión de modo | Es trabajo de historias: generar los `spec.md` y que pasen por `/plan` + `/build` — AUDIT nunca edita código |
+| El `spec.md` generado no sigue la plantilla | Formato inconsistente | Consultar `../spec/references/spec-template.md` y el `STORY_ID_MODE` del profile |
 
 ---
 

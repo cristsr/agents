@@ -2,13 +2,13 @@
 name: prepare
 description: >
   Prepares a fresh base branch (checkout + pull) for the components affected by
-  a story, so /scan reads current code and /plan's Tarea 0 creates the working
-  branch off an up-to-date base. Runs right after /hu, before /clarify and /scan.
-  Use when the user says "/prepare", "/prepare hu-XXXX", "preparar ramas",
+  an item, so /clarify surveys current code and /plan's Tarea 0 creates the working
+  branch off an up-to-date base. Runs right after /spec, before /clarify.
+  Use when the user says "/prepare", "/prepare spec-XXXX", "preparar ramas",
   "checkout y pull", "traer la base actualizada", "dejar la base fresca", or
-  right after /hu to leave the base ready before scanning.
+  right after /spec to leave the base ready before scanning.
   Do NOT use to create working branches (that's /plan's Tarea 0), to commit or
-  push (that's /commit), or to scan the codebase (use /scan).
+  push (that's /commit), or to survey the codebase (use /clarify).
 ---
 
 # prepare
@@ -38,7 +38,7 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 
 | En este documento | Clave en profile.md |
 |---|---|
-| `hu-<number>` | `STORY_ID_PATTERN` |
+| `spec-<number>` | `STORY_ID_PATTERN` |
 | «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
 | `develop` | `BASE_BRANCH` |
 | mono-repo (un solo repo git en la raíz) | `REPO_TOPOLOGY` |
@@ -49,12 +49,12 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 
 ## CRITICAL: Identify the components to prepare
 
-1. Extraé el número de historia del input (patrón `STORY_ID_PATTERN`, ej. `hu-XXXX`).
+1. Extraé el número de historia del input (patrón `STORY_ID_PATTERN`, ej. `spec-XXXX`).
 2. Para identificar los componentes afectados, en este orden:
-   - Leer `work/active/hu-<number>/hu.md` (corrida normal: `/prepare` corre justo
-     después de `/hu`) — los microservicios/modulos nombrados en la historia y sus
+   - Leer `work/active/spec-<number>/spec.md` (corrida normal: `/prepare` corre justo
+     después de `/spec`) — los microservicios/modulos nombrados en la historia y sus
      keywords sirven como pista inicial.
-   - Si existe `work/active/hu-<number>/context.md` (porque `/scan` ya corrió),
+   - Si existe `work/active/spec-<number>/context.md` (porque `/clarify` ya corrió),
      usarlo como fuente de verdad.
    - Si aun así no queda claro → preguntar: "¿Qué componente(s) preparo?
      (ej: apps/finances, apps/ledger)" y esperar. No adivinar.
@@ -124,7 +124,7 @@ git -C <componente> pull
    (up-to-date / fast-forward), y estado del working tree.
 2. Cerrar:
    > "Base preparada: <componentes> en `<BASE_BRANCH>` actualizado. Ahora podés
-   > correr `/clarify hu-<number>` (si hace falta) y `/scan hu-<number>`."
+   > correr `/clarify spec-<number>`."
 3. Stop — no clarificar ni escanear.
 
 ---
@@ -147,11 +147,11 @@ git -C <componente> pull
 > `/prepare hu-0009`
 
 **Flujo:**
-1. Historia `hu-0009`; `hu.md` menciona `apps/finances` y `apps/ledger`. Profile: `REPO_TOPOLOGY = mono-repo`, `BASE_BRANCH = develop`.
+1. Historia `hu-0009`; `spec.md` menciona `apps/finances` y `apps/ledger`. Profile: `REPO_TOPOLOGY = mono-repo`, `BASE_BRANCH = develop`.
 2. En la raíz: `git status --porcelain` → vacío; `git branch --show-current` → `feat/ledger-transfers`.
 3. `git checkout develop` + `git pull` → up-to-date.
 4. Reporta:
-   > "Base preparada: admin-back en `develop` actualizado (estabas en `feat/ledger-transfers`). Ahora podés correr `/clarify hu-0009` (si hace falta) y `/scan hu-0009`."
+   > "Base preparada: admin-back en `develop` actualizado (estabas en `feat/ledger-transfers`). Ahora podés correr `/clarify hu-0009`."
 
 **Input del usuario (con working tree sucio):**
 > `/prepare hu-0009`

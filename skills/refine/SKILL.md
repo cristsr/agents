@@ -1,15 +1,15 @@
 ---
 name: refine
 description: >
-  Refines hu.md, context.md, design.md, docs/api.yaml, docs/diagram.md, or
-  docs/data-model.md for a story without re-running /hu, /scan, or /design.
+  Refines spec.md, context.md, design.md, docs/api.yaml, docs/diagram.md, or
+  docs/data-model.md for a story without re-running /spec, /clarify, or /design.
   Use when the user says "/refine sm-XXX", "refinar hu", "refinar contexto",
   "ajustar diseño", "corregir el context", "hay un campo mal en el design",
   "quiero cambiar el schema", "actualizar el context", "modificar el diseño",
   "ajustar un AC", "cambiar la historia", "corregir el api.yaml", "ajustar el
   diagrama", "cambiar la entidad", "ajustar la migración", or has reviewed an
   artifact and wants to make targeted or guided corrections.
-  Do NOT use to regenerate from scratch (use /hu, /scan, or /design).
+  Do NOT use to regenerate from scratch (use /spec, /clarify, or /design).
   Do NOT use to modify plan.md (use /plan to regenerate it).
 ---
 
@@ -56,7 +56,7 @@ Parse the input for an explicit type keyword: `hu`, `context`, `design`,
 
 | Target | File |
 |--------|------|
-| `hu` | `work/active/sm-<number>/hu.md` |
+| `spec` (alias: `hu`) | `work/active/sm-<number>/spec.md` — o `hu.md` si el ítem es anterior al renombre |
 | `context` | `work/active/sm-<number>/context.md` |
 | `design` | `work/active/sm-<number>/design.md` |
 | `api` | `work/active/sm-<number>/docs/<api-artifact>` — `api.delta.yaml` si `API_CONTRACT_MODE=delta` (default), si no `api.yaml` |
@@ -69,24 +69,28 @@ Parse the input for an explicit type keyword: `hu`, `context`, `design`,
   se generan junto con `design.md`." — for `data-model`, if `design.md` exists but has
   no `## Modelado de datos` section, say instead: "Esta historia no tiene modelo de
   datos nuevo.")
-- If not explicit → check existence of `hu.md`, `context.md`, `design.md`:
+- If not explicit → check existence of `spec.md`, `context.md`, `design.md`:
 
 ```bash
-for f in hu.md context.md design.md; do
+for f in spec.md hu.md context.md design.md; do
   [ -f "work/active/sm-<number>/$f" ] && echo "$f: EXISTS" || echo "$f: -"
 done
 ```
 
-| hu.md | context.md | design.md | Candidate options | Ask via |
+> **Ítems legados.** `hu.md` es el nombre anterior de `spec.md`. Si aparece él,
+> es el mismo artefacto: refinarlo en su lugar, sin renombrarlo ni crear un
+> `spec.md` duplicado.
+
+| spec.md | context.md | design.md | Candidate options | Ask via |
 |-------|-----------|-----------|--------------------|---------|
-| exists | — | — | hu.md, context.md (aún no existe), design.md (aún no existe) | `AskUserQuestion` (3 opciones) |
-| exists | exists | not exists | hu.md, context.md | `AskUserQuestion` (2 opciones) |
-| exists | not exists | exists | hu.md, design.md/api.yaml/diagram.md/data-model.md (si aplica) | `AskUserQuestion` (2 opciones) |
-| exists | exists | exists | hu.md, context.md, design.md, api.yaml, diagram.md, data-model.md (si existe) | Texto plano numerado — son hasta 6 candidatos y `AskUserQuestion` admite máximo 4 opciones |
+| exists | — | — | spec.md, context.md (aún no existe), design.md (aún no existe) | `AskUserQuestion` (3 opciones) |
+| exists | exists | not exists | spec.md, context.md | `AskUserQuestion` (2 opciones) |
+| exists | not exists | exists | spec.md, design.md/api.yaml/diagram.md/data-model.md (si aplica) | `AskUserQuestion` (2 opciones) |
+| exists | exists | exists | spec.md, context.md, design.md, api.yaml, diagram.md, data-model.md (si existe) | Texto plano numerado — son hasta 6 candidatos y `AskUserQuestion` admite máximo 4 opciones |
 | not exists | exists | exists | context.md, design.md/api.yaml/diagram.md/data-model.md (si aplica) | `AskUserQuestion` (2 opciones) |
 | not exists | exists | not exists | target = context | (sin pregunta, target directo) |
 | not exists | not exists | exists | design.md, api.yaml, diagram.md, data-model.md (si existe) | `AskUserQuestion` (hasta 4 opciones — si data-model.md no existe, quedan 3) |
-| none | none | none | STOP → "No encontré ningún artefacto. Ejecutá `/hu sm-<number>` primero." | — |
+| none | none | none | STOP → "No encontré ningún artefacto. Ejecutá `/spec sm-<number>` primero." | — |
 
 Para las filas marcadas `AskUserQuestion`: `question: "¿Qué querés refinar?"`,
 `header: "Artefacto"`, una opción por candidato con su nombre de archivo
@@ -97,18 +101,18 @@ are produced together by `/design`); `data-model.md` exists alongside them
 only if the story has a new/changed table — never offer them as options if
 `design.md` doesn't exist.
 
-### Step 3 — Load hu.md for validation (if target ≠ hu)
+### Step 3 — Load spec.md for validation (if target ≠ hu)
 
-If the target is `context`, `design`, `api`, `diagram`, `data-model`, or `research`, read `work/active/sm-<number>/hu.md` and keep in working memory:
+If the target is `context`, `design`, `api`, `diagram`, `data-model`, or `research`, read `work/active/sm-<number>/spec.md` and keep in working memory:
 - **Título** de la historia
 - **Criterios de aceptación (ACs)** numerados
 - **Reglas de negocio** si las hay
 
-If `hu.md` does not exist: skip this step (continue without AC validation).
+If `spec.md` does not exist: skip this step (continue without AC validation).
 
 These ACs are used as validation anchors in PHASE 3A and 3B.
 
-If the target **is** `hu`: skip this step — `hu.md` is the artifact being edited, not the reference.
+If the target **is** `hu`: skip this step — `spec.md` is the artifact being edited, not the reference.
 
 ---
 
@@ -126,7 +130,7 @@ Read the full input after the command and story number.
 1. Read the full artifact from its file (per the Step 2 lookup table —
    `api` and `diagram` live under `docs/`, not at the story root)
 2. Locate the section most relevant to the described change — use the section order lists from PHASE 3B as reference, or consult `references/refine-guide.md` for the full mutability rules per section
-3. Show the **ACs from hu.md** that are relevant to this section (1–3 lines max), then show the **current content** of the section
+3. Show the **ACs from spec.md** that are relevant to this section (1–3 lines max), then show the **current content** of the section
 4. Check if the proposed change contradicts any AC (see Rule 5 in `references/refine-guide.md`). If yes, warn before asking for confirmation.
 5. Ask: "¿Es esto lo que querés cambiar? Confirmá o indicá qué ajustar exactamente."
 6. Wait for confirmation
@@ -141,13 +145,13 @@ Read the full input after the command and story number.
 
 Read the artifact. Review **one section at a time** in this order:
 
-### For hu.md:
+### For spec.md:
 1. Historia de Usuario (Como / Quiero / Para)
 2. Criterios de Aceptación — revisar uno a uno: mostrar el texto de cada AC y preguntar si está correcto
 3. Notas Técnicas (si existe la sección)
 4. Fuera de Alcance (si existe la sección)
 
-> Note: when refining `hu.md`, there is no external AC reference to validate against — the ACs themselves are what's being corrected. Apply judgment: flag changes that look like scope creep vs. wording fixes.
+> Note: when refining `spec.md`, there is no external AC reference to validate against — the ACs themselves are what's being corrected. Apply judgment: flag changes that look like scope creep vs. wording fixes.
 
 ### For context.md:
 1. Microservicios afectados
@@ -195,7 +199,7 @@ Read the artifact. Review **one section at a time** in this order:
 > y que si `plan.md` ya existe hay que regenerarlo.
 
 ### Per section:
-1. Show the **ACs from hu.md** that justify or constrain this section (1–3 lines max, inline), then show the current content of the section
+1. Show the **ACs from spec.md** that justify or constrain this section (1–3 lines max, inline), then show the current content of the section
 2. Ask via `AskUserQuestion`: `question: "¿Está correcto esta sección?"`,
    `header: "Sección"`, options `"Sí, está correcto"` / `"Necesito ajustar algo"`.
    If the user picks "Necesito ajustar algo" (or uses "Other" to describe the
@@ -228,7 +232,7 @@ If `plan.md` exists AND has at least one `[X]` task → the story is already
 built. Replace the "ejecutá `/plan` de nuevo" warning with:
 > "⚠️ Este cambio es estructural y `plan.md` ya tiene tareas completadas —
 > regenerarlo perdería ese progreso. Si el cambio corrige un defecto en código
-> ya construido por una ambigüedad de `hu.md`, usá `/hotfix sm-<number>` en
+> ya construido por una ambigüedad de `spec.md`, usá `/hotfix sm-<number>` en
 > vez de `/plan`. Si el alcance es mayor (microservicio/endpoint/tabla nueva),
 > sí conviene regenerar el plan completo con `/plan sm-<number>` — confirmá
 > cuál es el caso."
@@ -239,8 +243,8 @@ Consult `references/refine-guide.md` for the full coherence rules. Summary:
 
 | Change made in | Check |
 |----------------|-------|
-| hu.md — AC added or removed | Warn: "Este cambio es estructural. Si ya existe context.md, ejecutá `/scan sm-<number>` para regenerarlo." |
-| hu.md — wording correction only | No downstream action required. |
+| spec.md — AC added or removed | Warn: "Este cambio es estructural. Si ya existe context.md, ejecutá `/scan sm-<number>` para regenerarlo." |
+| spec.md — wording correction only | No downstream action required. |
 | context.md — field renamed | Warn if `docs/api.yaml` references the old name |
 | design.md — endpoint description changed | Warn: "Este cambio es estructural. Ejecutá `/plan sm-<number>` para actualizar el plan." |
 | api.yaml — schema field renamed/added/removed, or path added | Warn if plan.md exists: "El contrato cambió. Ejecutá `/plan sm-<number>` para regenerar las DTOs y la trazabilidad." |
@@ -257,8 +261,8 @@ Consult `references/refine-guide.md` for the full coherence rules. Summary:
 
 | Artifact refined | Message |
 |-----------------|---------|
-| hu.md (wording only) | "Historia actualizada en `work/active/sm-<number>/hu.md`. Los cambios son menores — los artefactos existentes siguen siendo válidos." |
-| hu.md (AC added/removed/major) | "Historia actualizada en `work/active/sm-<number>/hu.md`. Los cambios son estructurales — ejecutá `/scan sm-<number>` para regenerar el contexto." |
+| spec.md (wording only) | "Historia actualizada en `work/active/sm-<number>/spec.md`. Los cambios son menores — los artefactos existentes siguen siendo válidos." |
+| spec.md (AC added/removed/major) | "Historia actualizada en `work/active/sm-<number>/spec.md`. Los cambios son estructurales — ejecutá `/scan sm-<number>` para regenerar el contexto." |
 | context.md | "Contexto actualizado en `work/active/sm-<number>/context.md`. Cuando estés listo ejecutá `/design sm-<number>`." |
 | design.md (minor change) | "Diseño actualizado en `work/active/sm-<number>/design.md`. Los cambios son menores — podés continuar con el plan existente y ejecutar `/build sm-<number>`." |
 | design.md (structural change) | "Diseño actualizado en `work/active/sm-<number>/design.md`. Los cambios son estructurales — ejecutá `/plan sm-<number>` para regenerar el plan antes de hacer build." |
@@ -275,10 +279,10 @@ Stop — do not start planning or building.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| hu.md no existe y se pide refinar hu | /hu no ejecutado | STOP: "Ejecutá `/hu sm-<number>` primero para crear la historia." |
-| context.md y design.md no existen | /scan no ejecutado | Ofrecer refinar hu.md si existe, o STOP: "Ejecutá `/hu` y `/scan` primero." |
-| design.md no existe pero sí context.md | /design no ejecutado | Ofrecer refinar context.md o hu.md solamente. |
-| Cambio en hu.md contradice ACs existentes | Scope creep o corrección real | Mostrar el AC afectado, pedir confirmación explícita antes de aplicar. |
+| spec.md no existe y se pide refinar hu | /spec no ejecutado | STOP: "Ejecutá `/spec sm-<number>` primero para crear la historia." |
+| context.md y design.md no existen | /scan no ejecutado | Ofrecer refinar spec.md si existe, o STOP: "Ejecutá `/spec` y `/clarify` primero." |
+| design.md no existe pero sí context.md | /design no ejecutado | Ofrecer refinar context.md o spec.md solamente. |
+| Cambio en spec.md contradice ACs existentes | Scope creep o corrección real | Mostrar el AC afectado, pedir confirmación explícita antes de aplicar. |
 | plan.md ya existe (sin tareas `[X]`) y hay cambio estructural en hu/design | Artefacto refinado después de planear, pero antes de construir | Advertir: "plan.md puede quedar desactualizado. Ejecutá `/plan sm-<number>` para regenerarlo." |
 | plan.md ya existe CON tareas `[X]` y hay cambio estructural | Defecto post-build por gap de clarificación | Redirigir a `/hotfix sm-<number>` — no regenerar el plan, ver nota en PHASE 4. |
 | Usuario pide refinar plan.md | Fuera del scope de esta skill | Redirigir: "Para modificar el plan ejecutá `/plan sm-<number>` de nuevo o editá plan.md manualmente." |
@@ -294,7 +298,7 @@ Stop — do not start planning or building.
 > `/refine design sm-1933` — el campo en el DTO debería ser `serviceTypeId` en vez de `type`
 
 **Flujo:**
-1. Target = design (explícito). Lee `work/active/sm-1933/hu.md` → extrae ACs: AC-2 "el campo se llama serviceTypeId en el contrato"
+1. Target = design (explícito). Lee `work/active/sm-1933/spec.md` → extrae ACs: AC-2 "el campo se llama serviceTypeId en el contrato"
 2. Modo = Directo (cambio descripto)
 3. Lee design.md → localiza sección DTOs → muestra los ACs relevantes y el contenido actual:
    > **ACs relevantes:** AC-2 — "el campo se llama serviceTypeId en el contrato"
@@ -311,15 +315,15 @@ Stop — do not start planning or building.
 
 ---
 
-### Direct Mode — refinando hu.md
+### Direct Mode — refinando spec.md
 
 **Input:**
 > `/refine hu sm-1933` — el AC-2 debería decir "retorna lista vacía con código 200" en vez de solo "retorna lista vacía"
 
 **Flujo:**
-1. Target = hu (explícito). No se carga referencia externa — el hu.md es el artefacto a editar.
+1. Target = hu (explícito). No se carga referencia externa — el spec.md es el artefacto a editar.
 2. Modo = Directo (cambio descripto)
-3. Lee `work/active/sm-1933/hu.md` → localiza AC-2:
+3. Lee `work/active/sm-1933/spec.md` → localiza AC-2:
    ```
    ### AC-2: Sin resultados retorna lista vacía
    Si no hay resultados, retorna lista vacía.
@@ -337,7 +341,7 @@ Stop — do not start planning or building.
 > `/refine context sm-1933`
 
 **Flujo:**
-1. Target = context (explícito). Lee `work/active/sm-1933/hu.md` → extrae ACs en memoria
+1. Target = context (explícito). Lee `work/active/sm-1933/spec.md` → extrae ACs en memoria
 2. Modo = Guiado (sin cambio descripto)
 3. Muestra sección "Microservicios afectados" con ACs relacionados:
    > **ACs relevantes:** AC-1 — "el sistema registra zonas en el servicio de capacidades"

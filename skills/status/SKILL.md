@@ -2,9 +2,9 @@
 name: status
 description: >
   Diagnoses where a story is in the SDD pipeline: which artifacts exist
-  (hu.md, context.md, design.md, plan.md), how many plan tasks are done, and
+  (spec.md, context.md, design.md, plan.md), how many plan tasks are done, and
   what the next step is. Also lists active and done stories. Use when the user
-  says "/status", "/status hu-XXXX", "en qué etapa está", "dónde quedamos",
+  says "/status", "/status spec-XXXX", "en qué etapa está", "dónde quedamos",
   "qué falta para avanzar", "estado de la historia", or after an interrupted
   session to resume work. Read-only — never writes or mutates anything.
 ---
@@ -17,7 +17,7 @@ Lee (solo lectura) la carpeta de la historia y reporta su etapa en el pipeline
 sin ejecutar nada. Útil para retomar sesiones interrumpidas y para decidir cuál
 es el siguiente comando.
 
-**Announce at start:** "Estado de hu-<number>: ..."
+**Announce at start:** "Estado de spec-<number>: ..."
 
 ---
 
@@ -33,7 +33,7 @@ que lo creen desde la plantilla y detené.
 
 ## Step 1: Resolve the story
 
-- Con `hu-XXXX` → trabajar sobre esa historia.
+- Con `spec-XXXX` → trabajar sobre esa historia.
 - Sin historia → listar TODAS las activas:
 
 ```bash
@@ -49,25 +49,33 @@ Para una historia, verificar en orden:
 
 ```bash
 id="<story-id>"
-for f in hu.md context.md design.md plan.md; do
+# spec.md es el artefacto de entrada; hu.md es su nombre legado (ítems anteriores
+# al renombre). Cualquiera de los dos cuenta como presente.
+{ [ -f "work/active/$id/spec.md" ] || [ -f "work/active/$id/hu.md" ]; } \
+  && echo "spec.md: SI" || echo "spec.md: no"
+for f in context.md design.md plan.md; do
   [ -f "work/active/$id/$f" ] && echo "$f:  SI" || echo "$f:  no"
 done
 [ -d "work/active/$id/docs" ] && echo "docs/: SI" || echo "docs/: no"
 ```
 
+> **Ítems legados.** Los que se cerraron antes del renombre usan `hu.md` y un
+> prefijo de ID antiguo (`STORY_ID_LEGACY_PREFIXES` del profile). Se leen con
+> normalidad — no se renombran ni se reportan como incompletos.
+
 Etapas posibles:
 
 | Última etapa | Tiene | Falta / siguiente paso |
 |---|---|---|
-| `inbox` | nada | `/hu <id>` |
-| `hu` | hu.md | `/clarify` (recomendado) o `/scan` |
+| `inbox` | nada | `/spec <id>` |
+| `spec` | spec.md | `/clarify` |
 | `context` | + context.md | `/design` |
 | `design` | + design.md (+ docs/) | `/plan` (tras aprobación del diseño) |
 | `plan` | + plan.md | `/build` |
 | `build` | plan.md con tareas `[X]` | contar `[X]`: `rg -c '\[X\]' work/active/$id/plan.md` — si no están todas, `/build` retoma; si todas, `/sync` |
 | `done` | carpeta en `work/done/` | `/commit` |
 
-Si hay `[NEEDS CLARIFICATION]` en hu.md, señalarlo: `/design` no avanza hasta resolverlos.
+Si hay `[NEEDS CLARIFICATION]` en spec.md, señalarlo: `/design` no avanza hasta resolverlos.
 
 Si existe `work/done/<id>/`, la historia está cerrada → reportar y sugerir `/commit`.
 

@@ -9,7 +9,7 @@ description: >
   "configurar perfil del proyecto", "setup profile", or when a skill reports
   that `.agents/profile.md` is missing. Do NOT use to edit individual user
   story artifacts (use /refine), to create project rules (use /rules), or to
-  scan the codebase (use /scan).
+  survey the codebase (use /clarify).
 ---
 
 # profile
@@ -26,7 +26,7 @@ stack, language, etc.).
    - `~/.agents/sdd-profile.template.md` — copy and fill it
    - If no template exists, create from scratch with the standard sections
 3. Ask the developer:
-   - Story ID prefix / pattern (e.g. `hu-<number>`)
+   - Story ID prefix / pattern (e.g. `spec-<number>`)
    - Project name
    - Working directory — absolute path where the project lives
      (e.g. `D:\Cristian\Nest\admin-back`); all skills verify they are in
@@ -42,4 +42,4 @@ stack, language, etc.).
 
 1. Confirm the file was written correctly.
 2. List the key values the skills will read from it.
-3. Suggest running `/scan` if there are active stories.
+3. Suggest running `/clarify` if there are active items.

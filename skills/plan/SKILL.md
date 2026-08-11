@@ -2,7 +2,7 @@
 name: plan
 description: >
   Generates a detailed TDD implementation plan from the approved design artifacts
-  (hu.md, context.md, design.md) and saves it to work/active/sm-<number>/plan.md.
+  (spec.md, context.md, design.md) and saves it to work/active/sm-<number>/plan.md.
   Use when the user says "/plan sm-XXX", "generar plan", "crear plan de implementación",
   "planear historia", or has completed /design and wants TDD tasks.
   Do NOT use before /design is complete and approved.
@@ -52,20 +52,20 @@ Extract the story number from user input. Then verify:
 en profile, sección 8), si no `docs/api.yaml`.
 
 ```bash
-[ -f work/active/sm-<number>/hu.md ]          || echo "MISSING: hu.md"
+[ -f work/active/sm-<number>/spec.md ]          || echo "MISSING: spec.md"
 [ -f work/active/sm-<number>/context.md ]      || echo "MISSING: context.md"
 [ -f work/active/sm-<number>/design.md ]       || echo "MISSING: design.md"
 [ -f work/active/sm-<number>/docs/diagram.md ] || echo "MISSING: docs/diagram.md"
 [ -f work/active/sm-<number>/docs/<api-artifact> ] || echo "MISSING: docs/<api-artifact>"
 ```
 
-- If `hu.md` missing → stop:
-  "No encontré `work/active/sm-<number>/hu.md`.
-  Ejecutá `/hu sm-<number>` primero."
+- If `spec.md` missing → stop:
+  "No encontré `work/active/sm-<number>/spec.md`.
+  Ejecutá `/spec sm-<number>` primero."
 
 - If `context.md` missing → stop:
   "No encontré `work/active/sm-<number>/context.md`.
-  Ejecutá `/scan sm-<number>` primero."
+  Ejecutá `/clarify sm-<number>` primero."
 
 - If `design.md`, `docs/diagram.md` or `<api-artifact>` are missing → stop:
   "No encontré los artefactos de diseño completos para sm-<number>.
@@ -80,7 +80,7 @@ en profile, sección 8), si no `docs/api.yaml`.
 
 ## PHASE 1: Load artifacts
 
-1. Read `work/active/sm-<number>/hu.md` — extract:
+1. Read `work/active/sm-<number>/spec.md` — extract:
    - All acceptance criteria — these drive the test cases
    - Business rules and edge cases
 
@@ -242,8 +242,8 @@ Each task MUST have:
 - One mock per external dependency
 
 **Tests must cover:**
-- Each acceptance criterion from hu.md → at least one test case
-- Edge cases mentioned in hu.md
+- Each acceptance criterion from spec.md → at least one test case
+- Edge cases mentioned in spec.md
 - Error scenarios (invalid input, DB failure, etc.)
 
 ### Final task — Run full test suite
@@ -267,7 +267,7 @@ If multiple microservices: run for each one.
 Before saving, run this consistency check across the three artifacts —
 do NOT skip it even if the plan "looks complete":
 
-1. **AC → Task coverage:** for every AC in `hu.md`, list which Tarea(s)
+1. **AC → Task coverage:** for every AC in `spec.md`, list which Tarea(s)
    exercise it (via the test written in that task). Build the table:
 
    | AC | Cubierto por |
@@ -323,7 +323,7 @@ After saving `work/active/sm-<number>/plan.md`:
 | Orden de micros no claro | Diagrama de secuencia ambiguo | Leer el diagrama completo, inferir por dirección de flechas |
 | Campo en test no definido | design.md incompleto | Usar solo campos confirmados en design.md |
 | Use case sin registro en módulo | Tarea omitida | Siempre incluir paso de registro en module.ts |
-| Test sin AC que lo justifique | Test inventado | Cada test debe mapear a un AC de hu.md |
+| Test sin AC que lo justifique | Test inventado | Cada test debe mapear a un AC de spec.md |
 | Ruta relativa en imports | Convención violada | Usar rutas absolutas desde src/ |
 
 ---

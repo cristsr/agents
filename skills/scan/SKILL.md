@@ -1,249 +1,152 @@
 ---
 name: scan
 description: >
-  Scans the codebase and documentation for a given story to produce a context.md
-  with all reusable artifacts found. Use when the user says "/scan sm-XXX",
-  "scan story", "analizar historia", "escanear contexto", or provides a story
-  number and asks to read the codebase before planning.
-  Do NOT use for planning (use /plan), designing (use /design), or executing (use /build).
+  Refreshes an item's context.md — re-surveys the affected components and
+  rewrites the inventory — without touching spec.md or re-resolving any
+  ambiguity. Use when the user says "/scan sm-XXX", "refrescar el contexto",
+  "regenerar context.md", "el código cambió desde que clarifiqué", "volvé a
+  relevar el módulo", or when a long-running item needs its inventory brought
+  up to date before /design or /plan. Do NOT use as the pipeline's survey
+  step — /clarify already produces context.md along with the precise spec.md.
+  Do NOT use to resolve ambiguities or edit ACs (use /clarify or /refine), to
+  design (use /design), or to plan (use /plan).
 ---
 
-# Scan
+# scan
 
 ## Overview
 
-Read the story, identify affected microservices, explore the codebase and
-available documentation, and produce `work/active/sm-<number>/context.md`
-with everything found — organized by microservice, with absolute paths.
+Skill de **refresco**, no un paso del pipeline. Vuelve a relevar los componentes
+afectados y reescribe `work/active/sm-<number>/context.md` con el inventario
+actualizado.
 
-**Announce at start:** "Escaneando el contexto para sm-<number>."
+`/clarify` ya produce `context.md` en su fase I, junto con el `spec.md` preciso.
+`/scan` existe para el caso en que **el código cambió y los ACs no**: un ítem que
+quedó abierto varios días, una rama base que avanzó, un módulo que se refactorizó
+mientras tanto.
 
-**Output:** `work/active/sm-<number>/context.md`
+**Nunca toca `spec.md`.** No resuelve ambigüedades, no edita ACs, no pregunta por
+restricciones. Si lo que cambió es el ítem y no el código, la skill correcta es
+`/clarify` (o `/refine` si ya hay diseño).
+
+**Announce at start:** "Refrescando el contexto de sm-<number>."
+
+**Output:** `work/active/sm-<number>/context.md` (regenerado)
 
 ---
 
 ## Perfil del proyecto (leer primero, siempre)
 
-Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyecto actual): define el patrón de ID
-de historia, las rutas de artefactos, la rama base, el **stack objetivo** y los
-**paths de documentación** de este proyecto. Todo lo que esta skill busca en el
-código (estructura de módulos, entidades, DTOs, servicios) sale de la sección 7
-del perfil. Si no existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
+Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyecto actual): define el patrón de ID,
+las rutas de artefactos, el **stack objetivo** y los **paths de documentación**. Todo
+lo que esta skill busca en el código sale de la sección 7. Si no existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
 
 **CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
-
-**Los literales de este documento son solo un ejemplo de resolución** (el perfil de Smart Mobility).
-Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
 
 | En este documento | Clave en profile.md |
 |---|---|
 | `sm-<number>` | `STORY_ID_PATTERN` |
 | `work/active/sm-<number>/` | `WORKDIR_ACTIVE` |
-| microservicio | `COMPONENT_TERM` |
+| «componente» en la prosa | `COMPONENT_TERM` |
 | `develop` | `BASE_BRANCH` |
-| `docs/architecture/services.md` | `DOCS_COMPONENTS_INDEX` |
-| `docs/services/<micro>/README.md`, `.../architecture.md` | `DOCS_COMPONENT_README`, `DOCS_COMPONENT_ARCH` |
-| `src/modules/` y artefactos NestJS/TypeORM (entidad, module.ts, DTO, servicio abstracto) | sección 7 «Stack y arquitectura» + `<STACK_REFS>` (templates por stack) |
-| subagente `code-explorer` | `EXPLORER_SUBAGENT` (si el agente no soporta subagentes, explorar inline) |
-| grafo indexado `.codegraph/` + tool `codegraph_explore` (MCP) / CLI `codegraph explore` | `CODEGRAPH` (sección 9) |
+| catálogo de componentes, docs por componente | `DOCS_COMPONENTS_INDEX`, `DOCS_COMPONENT_README`, `DOCS_COMPONENT_ARCH` |
+| grafo indexado + `codegraph_explore` | `CODEGRAPH` (sección 10) |
+| subagente `code-explorer` | `EXPLORER_SUBAGENT` / `EXPLORER_MODEL` (sección 9) |
 
 ---
 
-## CRITICAL: Before scanning anything
+## Step 1 — Prerequisites
 
-1. Extract the story number from the user input — look for `sm-XXXX` or a plain number.
-   If not found, ask: "¿Cuál es el número de la historia?"
-2. Verify `work/active/sm-<number>/hu.md` exists.
-   If missing, stop: "No encontré `work/active/sm-<number>/hu.md`.
-   Ejecutá `/hu` primero para estructurar la historia."
-
----
-
-## PHASE 1: Read the story
-
-1. Read `work/active/sm-<number>/hu.md` — extract:
-   - Historia de Usuario (Como / Quiero / Para)
-   - Criterios de Aceptación completos
-   - Notas Técnicas si existen
-
-2. Read `docs/architecture/services.md` to identify affected microservices.
-   Apply the microservice identification guide against the story content.
-   List every microservice affected — there may be more than one.
-
-3. If the affected microservices are not clear from the story content:
-   - Register as unknown: "Microservicio afectado no identificado con certeza"
-   - Ask: "¿Qué microservicio(s) afecta esta historia?
-     (ej: sm-capabilities-ms, sm-graphql-fb-ms)"
-   - Wait for answer before continuing.
-
----
-
-## PHASE 2: Verify affected microservices are on fresh base code (read-only)
-
-`/scan` never mutates git state — it does not checkout branches or pull. It only
-**checks** whether each affected microservice is on the base branch (`develop`)
-and up to date, so the scan reads current code. Preparing the repos (checkout +
-pull) is the job of the dedicated `/prepare` skill.
-
-For EACH microservice identified in PHASE 1, inspect (read-only):
+Extraer `sm-<number>` del input. Si no viene, preguntar: "¿Qué ítem querés refrescar?"
 
 ```bash
-git -C <microservice> branch --show-current
-git -C <microservice> status --porcelain
-git -C <microservice> fetch --dry-run 2>&1 | head -1   # ¿hay algo por traer?
+[ -f work/active/sm-<number>/spec.md ] && echo "OK" || echo "MISSING"
+[ -f work/active/sm-<number>/context.md ] && echo "CTX OK" || echo "CTX MISSING"
 ```
 
-- If a microservice is **not on `develop`**, or has **uncommitted changes**, or
-  is **behind its remote** → do NOT touch it. Warn the user and recommend
-  running `/sync` first:
-  > "`<microservice>` no está en `develop` actualizado (rama actual: `<rama>`).
-  > El scan va a leer el código tal como está. Si querés escanear sobre la base
-  > fresca, ejecutá `/prepare` primero y volvé a correr el scan."
+- Si falta `spec.md` → STOP: "No encontré el ítem. Ejecutá `/spec sm-<number>` primero."
+  (Ítems legados: `hu.md` cuenta como `spec.md`.)
+- Si **no existe** `context.md` → avisar y redirigir: "Este ítem todavía no fue
+  clarificado. Corré `/clarify sm-<number>` — produce el `context.md` junto con el
+  `spec.md` preciso. `/scan` solo refresca uno que ya existe."
 
-- If everything is clean and current → continue silently.
+## Step 2 — Determine what to survey
 
-The scan proceeds either way (it reads whatever is checked out) — the warning is
-so the developer decides whether the current code is the right base to scan.
+1. Leer `spec.md` (ACs y encuadre) y el `context.md` vigente.
+2. Los componentes a relevar salen del `context.md` actual. Si el ítem cambió de
+   alcance desde entonces, re-derivarlos del `DOCS_COMPONENTS_INDEX` contra el
+   contenido del `spec.md`, y avisar cuáles se agregan o se van.
+3. Verificar (read-only, nunca mutar git) que cada componente esté sobre base fresca:
 
----
+```bash
+git -C <component> branch --show-current
+git -C <component> status --porcelain
+git -C <component> fetch --dry-run 2>&1 | head -1
+```
 
-## PHASE 3: Query the code graph (CodeGraph-first)
+Si alguno no está en `BASE_BRANCH`, tiene cambios sin commitear, o está detrás →
+advertir y continuar: se releva lo que esté checked out.
 
-Si el proyecto está indexado con CodeGraph (existe `.codegraph/` en la raíz — ver
-`CODEGRAPH` en profile.md), consultá el grafo **directo**. No delegués la exploración
-a un subagente que lee archivos: CodeGraph solo ayuda cuando se consulta directo —
-un subagente que lee archivos lo convierte en overhead (medido en los benchmarks
-del propio proyecto).
+## Step 3 — Survey (parallel)
 
-Para CADA módulo afectado, una llamada al tool MCP `codegraph_explore` (o el CLI
-`codegraph explore <query>`) con el nombre del módulo + keywords de la historia.
-Devuelve en una sola llamada:
-
-- Símbolos relevantes con su **fuente verbatim**, agrupados por archivo
-- **Call paths** entre ellos (incluye hops de dispatch dinámico que grep no sigue)
-- **Blast radius** — quién depende de qué símbolo y qué tests lo cubren
-- **Routes** de framework (NestJS `@Controller` + `@Get/@Post`, GraphQL resolvers,
-  `@MessagePattern`, etc.)
+Una llamada `codegraph_explore` **por componente**, todas en la misma respuesta, con
+el nombre del módulo y las keywords del ítem. Devuelve símbolos con fuente verbatim,
+call paths, blast radius y rutas de framework.
 
 Con los resultados:
+1. Identificar los archivos clave y leer **solo esos** con Read, aplicando progressive
+   disclosure de `<STACK_REFS>/references/scan-guide.md` (default:
+   `references/scan-guide.md` local) — no explorar el árbol completo.
+2. Revisar `DOCS_COMPONENT_README` / `DOCS_COMPONENT_ARCH` y anotar gaps de doc.
 
-1. Identificar los archivos clave del módulo entre los devueltos: entidad
-   (`*.entity.ts`), registro del módulo (`*.module.ts`), caso de uso canónico,
-   barrel de DTOs (`dtos/index.ts`), puerto/servicio abstracto (`*.service.ts`).
-2. Leer **solo esos archivos puntuales** con Read, aplicando progressive
-   disclosure de `<STACK_REFS>/references/scan-guide.md` (default si `STACK_REFS` no está
-   definido: `references/scan-guide.md` local — genérica) — no explorar el
-   árbol completo.
-3. Inventariar los hallazgos para PHASE 5 (módulo, entidad + campos, providers,
-   caso de uso + patrón de inyección, DTOs exportados, firmas del puerto,
-   gaps de documentación, unknowns).
-
-Si más de un módulo está afectado, una llamada `codegraph_explore` por módulo,
-**en paralelo**.
+> **Alcance:** esto es un inventario, no una investigación de ambigüedades. No se
+> consultan precedentes por unknown — eso es de `/clarify`, que sí toma decisiones.
 
 ### Fallback — CodeGraph no disponible
 
-Si NO existe `.codegraph/` ni el tool `codegraph_explore`:
+Si `CODEGRAPH` es `no` o no existe `.codegraph/`: sugerir `codegraph init` (una vez,
+barato) y mientras tanto delegar al subagente `EXPLORER_SUBAGENT` (default
+`code-explorer`), una llamada por componente **en paralelo**, con `model:` =
+`EXPLORER_MODEL` explícito. Si el agente anfitrión no soporta subagentes, explorar
+inline con Read/Grep/Glob.
 
-1. Sugerir al usuario inicializarlo (una sola vez, barato): `codegraph init` en la
-   raíz — después queda auto-sincronizado y `/scan` deja de escanear el árbol por HU.
-2. Mientras tanto, usar el modo legado de exploración: delegar al subagente
-   `code-explorer` (ver abajo) — funciona pero es el modo costoso que esto reemplaza.
+Si el subagente reporta que no encontró el módulo → preguntar:
+> "¿Sabés dónde está el módulo relacionado en `<component>`? Podés darme el path o keywords."
 
-### Modo legado — subagente `code-explorer`
+## Step 4 — Rewrite context.md
 
-Delegate the exploration to the `code-explorer` subagent — it runs
-read-only and returns structured findings, keeping the heavy file reading
-out of this conversation's context.
+Volcar el inventario en `<STACK_REFS>/references/context-template.md` (default:
+`references/context-template.md` local) y sobrescribir
+`work/active/sm-<number>/context.md`.
 
-If more than one microservice is affected, launch one `code-explorer`
-call per microservice **in parallel** (multiple `Agent` tool calls in the
-same response).
+Conservar del `context.md` anterior cualquier nota que no provenga del código
+(observaciones agregadas a mano). Todo lo relevado se reemplaza.
 
-For each affected microservice, invoke `Agent` with:
-- `subagent_type:` el valor de `EXPLORER_SUBAGENT` del perfil (por defecto
-  `"code-explorer"`, un agente global agnóstico en `~/.claude/agents/`). Si el
-  perfil dice `ninguno` o el agente anfitrión no soporta subagentes, explorá
-  inline con Read/Grep/Glob y saltá al paso siguiente.
-- `model:` el valor de `EXPLORER_MODEL` del perfil (por defecto `"sonnet"` si el
-  perfil no lo declara). **Pasalo siempre explícito**, aunque el agente lo traiga
-  en su frontmatter: algunas versiones de Claude Code ignoran ese campo, y este
-  parámetro es el único punto donde el proyecto puede elegir el modelo.
-- A prompt that includes:
-  1. The microservice name and the story keywords to search for
-  2. Instruction to first read `docs/services/<microservice>/README.md` and
-     `docs/services/<microservice>/architecture.md`
-  3. Instruction to locate the affected module under
-     `<microservice>/src/modules/` using the story keywords
-  4. Instruction to consult `<STACK_REFS>/references/scan-guide.md` (default:
-     `references/scan-guide.md` local) for exact paths and
-     what to read/skip per file type
-  5. Instruction to check `docs/services/<microservice>/` for documentation
-     gaps
-  6. Instruction to return findings in the agent's standard output format
+Incluir siempre la sección de **gaps detectados**.
 
-If the subagent reports it could not locate the module:
-- Register as unknown: "Módulo no encontrado en <microservice>"
-- Ask: "¿Sabés dónde está el módulo relacionado en <microservice>?
-  Podés darme el path o keywords para buscar."
-- Wait for answer before continuing.
+## Step 5 — Report the delta
 
-Record each subagent's returned findings verbatim for use in PHASE 5:
-- Module path
-- Entity file path + field names and types
-- Module.ts path + current providers list
-- Canonical use case path + injection pattern
-- DTO barrel path + exported class names
-- Service abstract path + method signatures
-- Documentation gaps found
-- Any unknowns encountered
+Lo valioso de un refresco es **qué cambió**, no el inventario entero:
 
----
+```
+Contexto de sm-<number> refrescado — <C> componente(s).
 
-## PHASE 4: Resolve unknowns
+Cambios desde el relevamiento anterior:
+  + <símbolo/archivo nuevo>
+  ~ <firma o campo que cambió>
+  − <lo que ya no está>
 
-Before writing context.md, review all registered unknowns.
+Gaps: <g>  ·  Sin cambios en: <lista corta>
+```
 
-If any unknowns exist:
-- List them all at once — do NOT ask one by one if multiple exist
-- Wait for the user to resolve all of them before continuing
+Si nada cambió, decirlo en una línea: "Sin cambios respecto del contexto anterior."
 
-Format:
-> "Encontré las siguientes incógnitas antes de continuar:
->
-> 1. [incógnita 1]
-> 2. [incógnita 2]
->
-> ¿Podés ayudarme a resolverlas?"
+Si algo de lo que cambió **contradice una decisión** registrada en `## Resolución de
+Ambigüedades` del `spec.md` (ej. desapareció el precedente que fundamentó una
+decisión), señalarlo explícitamente y sugerir `/clarify` o `/refine`. No corregirlo
+acá — `/scan` no decide.
 
-If no unknowns → proceed directly to PHASE 5.
-
----
-
-## PHASE 5: Write context.md
-
-Consult `<STACK_REFS>/references/context-template.md` (default si `STACK_REFS` no está
-definido: `references/context-template.md` local — genérica) for the exact file
-structure to produce.
-
-Save the filled template to `work/active/sm-<number>/context.md`.
-
----
-
-## PHASE 6: Confirm and hand off
-
-After saving `context.md`:
-
-1. Show a brief summary:
-   - Microservicios escaneados
-   - Módulos encontrados
-   - Gaps detectados (si hay)
-
-2. Say:
-   "Contexto guardado en `work/active/sm-<number>/context.md`.
-   Revisalo y cuando estés listo ejecutá `/design sm-<number>`."
-
-3. Stop — do not start designing.
+Stop — no iniciar el diseño.
 
 ---
 
@@ -251,9 +154,9 @@ After saving `context.md`:
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| `hu.md` no encontrado | `/hu` no ejecutado | Detener y pedir que ejecute `/hu sm-<number>` primero |
-| Módulo no encontrado en el microservicio | Módulo nuevo o con nombre distinto | Registrar como unknown y preguntar al usuario |
-| Microservicio no identificado | HU ambigua o sin keywords claros | Preguntar: "¿Qué microservicio(s) afecta esta historia?" |
-| Entidad no encontrada | Módulo usa MongoDB o estructura distinta | Registrar gap en context.md y continuar |
-| Documentación ausente | `docs/services/<micro>/` no existe | Registrar como gap: "Sin documentación en docs/services/<micro>/" |
-| Múltiples unknowns acumulados | Historia compleja o codebase desconocido | Listar todos juntos en PHASE 4, no uno por uno |
+| `context.md` no existe | El ítem no fue clarificado | Redirigir a `/clarify sm-<number>`, que lo produce |
+| `spec.md` no existe | `/spec` no ejecutado | STOP: ejecutar `/spec sm-<number>` primero |
+| El ítem cambió de alcance | Se agregaron ACs desde el último relevamiento | Re-derivar componentes del `spec.md` y avisar el cambio |
+| Módulo no encontrado | Módulo nuevo o renombrado | Registrar como gap en `context.md`; no bloquear |
+| El refresco contradice una decisión ya tomada | El código cambió bajo los pies del ítem | Señalarlo y sugerir `/clarify`; `/scan` nunca edita `spec.md` |
+| Componente fuera de `BASE_BRANCH` | Base no preparada | Advertir y continuar; sugerir `/prepare` |

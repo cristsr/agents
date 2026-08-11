@@ -4,7 +4,7 @@ description: >
   Runs a story's implementation pipeline end to end: /plan, /build, then /sync in
   sequence, autonomously, without stopping between them — one command instead of
   three. Leaves built code with green tests and the module docs reconciled, ready
-  to commit. Use when the user says "/forge hu-XXXX", "forjar la historia",
+  to commit. Use when the user says "/forge spec-XXXX", "forjar la historia",
   "planear y construir", "plan build y sync de corrido", "ejecutá todo el pipeline
   de una", or wants to go from an approved design straight to built-and-documented
   in one shot. Do NOT use before /design is complete and approved (there is no plan
@@ -26,12 +26,12 @@ construido y la documentación ya reconciliada — justo antes de `/commit`.
 git**: los commits y el PR son de `/commit`, que sigue siendo un paso manual. Ese
 es el checkpoint donde el usuario revisa antes de que algo entre a la rama.
 
-**Announce at start:** "Forjando hu-<number>: /plan → /build → /sync sin pausas."
+**Announce at start:** "Forjando spec-<number>: /plan → /build → /sync sin pausas."
 
 **Output:**
-- `work/active/hu-<number>/plan.md` (lo produce `/plan`).
+- `work/active/spec-<number>/plan.md` (lo produce `/plan`).
 - El código implementado con sus tests en verde (lo produce `/build`).
-- Docs del módulo reconciliadas y la historia archivada en `work/done/hu-<number>/`
+- Docs del módulo reconciliadas y la historia archivada en `work/done/spec-<number>/`
   (lo produce `/sync`).
 
 **Core principle:** una sola invocación reemplaza tres. Los gates propios de
@@ -53,8 +53,8 @@ reales salen del `profile.md` del proyecto — si difieren, mandan los del perfi
 
 | En este documento | Clave en profile.md |
 |---|---|
-| `hu-<number>` | `STORY_ID_PATTERN` |
-| `work/active/hu-<number>/` | `WORKDIR_ACTIVE` |
+| `spec-<number>` | `STORY_ID_PATTERN` |
+| `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
 | `develop` | `BASE_BRANCH` |
 | salida en español | `OUTPUT_LANGUAGE` |
 
@@ -63,21 +63,23 @@ reales salen del `profile.md` del proyecto — si difieren, mandan los del perfi
 ## CRITICAL: Preflight — verificar TODO antes de arrancar
 
 Como el encadenado es autónomo (no hay pausa donde el usuario pueda corregir),
-validá los inputs de **las dos etapas ANTES** de generar nada — para no producir
-un `plan.md` y recién entonces morir en el guard de rama de `/build`.
+validá los inputs de **todas las etapas** ANTES de generar nada — para no producir
+un `plan.md` y recién entonces morir en un gate de `/build` o `/sync`.
 
-Extraé el número de historia. Verificá, en orden:
+Extraé el número de historia. `<api-artifact>` = `docs/api.delta.yaml` si
+`API_CONTRACT_MODE = delta` (default), si no `docs/api.yaml`. Verificá, en orden:
 
 1. **Inputs de `/plan`** (artefactos de diseño aprobados):
 
    ```bash
-   [ -f work/active/hu-<number>/hu.md ]      || echo "MISSING: hu.md"
-   [ -f work/active/hu-<number>/context.md ] || echo "MISSING: context.md"
-   [ -f work/active/hu-<number>/design.md ]  || echo "MISSING: design.md"
+   [ -f work/active/spec-<number>/spec.md ]      || echo "MISSING: spec.md"
+   [ -f work/active/spec-<number>/context.md ] || echo "MISSING: context.md"
+   [ -f work/active/spec-<number>/design.md ]  || echo "MISSING: design.md"
+   [ -f work/active/spec-<number>/docs/<api-artifact> ] || echo "MISSING: docs/<api-artifact>"
    ```
 
    Si falta alguno → **STOP** con la instrucción de qué correr primero
-   (`/hu`, `/scan` o `/design` según cuál falte). No sigas.
+   (`/spec`, `/clarify` o `/design` según cuál falte). No sigas.
 
 2. **Guard de rama de `/build`** (la rama base del profile):
 
@@ -87,9 +89,11 @@ Extraé el número de historia. Verificá, en orden:
 
    Si el resultado es `main`, `master` o `BASE_BRANCH` (`develop`) → **STOP**:
    "Estás en la rama base. Cambiá a la rama de trabajo antes de forjar."
+   Si la rama de trabajo está detrás del remoto o la base no está fresca →
+   sugerir `/prepare spec-<number>` primero (la base fresca es prerrequisito del build).
 
-3. **Ambigüedad:** si `hu.md` tiene marcadores `[NEEDS CLARIFICATION]` sin
-   resolver → **STOP**: "Resolvé las ambigüedades con `/clarify hu-<number>`
+3. **Ambigüedad:** si `spec.md` tiene marcadores `[NEEDS CLARIFICATION]` sin
+   resolver → **STOP**: "Resolvé las ambigüedades con `/clarify spec-<number>`
    antes de forjar." (Construir sobre ambigüedades produce DTOs incorrectos.)
 
 Solo si los tres chequeos pasan, continuá al Step 1.
@@ -98,13 +102,13 @@ Solo si los tres chequeos pasan, continuá al Step 1.
 
 ## Step 1: Ejecutar /plan
 
-Invocá la skill `plan` con `hu-<number>` y esperá a que termine. Debe dejar
-`work/active/hu-<number>/plan.md`.
+Invocá la skill `plan` con `spec-<number>` y esperá a que termine. Debe dejar
+`work/active/spec-<number>/plan.md`.
 
 Verificá que se haya producido y no esté vacío:
 
 ```bash
-[ -s work/active/hu-<number>/plan.md ] && echo OK || echo "PLAN FAILED"
+[ -s work/active/spec-<number>/plan.md ] && echo OK || echo "PLAN FAILED"
 ```
 
 - Si `/plan` se detuvo por su cuenta (algún gate no cumplido) o `plan.md` quedó
@@ -113,7 +117,7 @@ Verificá que se haya producido y no esté vacío:
 
 ## Step 2: Ejecutar /build
 
-Con `plan.md` presente y no vacío, invocá la skill `build` con `hu-<number>`.
+Con `plan.md` presente y no vacío, invocá la skill `build` con `spec-<number>`.
 `/build` ejecuta **todas** las tareas del plan de forma autónoma y marca cada una
 `[X]` al completarla.
 
@@ -128,9 +132,11 @@ Con `plan.md` presente y no vacío, invocá la skill `build` con `hu-<number>`.
 
 ## Step 3: Ejecutar /sync
 
-Con el build en verde, invocá la skill `sync` con `hu-<number>`. `/sync` reconcilia
-el delta del design en los docs vivos del módulo (LikeC4 + OpenAPI + flows), apila
-decisiones, y archiva la historia en `work/done/`.
+Con el build en verde, invocá la skill `sync` con `spec-<number>`. `/sync` reconcilia
+el delta del design según los modos del profile: el contrato se mergea si
+`API_CONTRACT_MODE = delta`, el modelo se reconcilia si `DESIGN_OUTPUT_MODE = delta`,
+los diagramas Markdown se copian si `full`; apila decisiones, y archiva la historia
+en `work/done/`.
 
 - `/build` ya corrió los tests en verde: informá a `/sync` que los gates ya pasaron
   para que **no vuelva a pedirlos** (su Step 2 pregunta antes de re-correr lint/test/
@@ -145,11 +151,11 @@ Al terminar, consolidá en un solo resumen:
 
 1. **Plan:** cuántas tareas generó `/plan`.
 2. **Build:** cuántas quedaron `[X]` y el resultado de los tests (verde/rojo).
-3. **Sync:** qué se reconcilió (OpenAPI/`.c4`/flows por módulo) y que la historia
-   quedó archivada en `work/done/hu-<number>/`.
+3. **Sync:** qué se reconcilió (contrato/`<api-artifact>` · modelo · diagramas, según
+   los modos del profile) y que la historia quedó archivada en `work/done/spec-<number>/`.
 4. **Estado final** de la historia.
 5. **Siguiente paso — el borde de git (manual):** "Todo forjado y documentado.
-   Revisá los cambios; cuando estén OK, `/commit hu-<number>` agrupa los commits y
+   Revisá los cambios; cuando estén OK, `/commit spec-<number>` agrupa los commits y
    deja el PR redactado."
 
 Stop — forge no toca git. Agrupar/ejecutar commits y redactar el PR es de `/commit`.
@@ -160,10 +166,10 @@ Stop — forge no toca git. Agrupar/ejecutar commits y redactar el PR es de `/co
 
 | Issue | Causa | Resolución |
 |---|---|---|
-| Falta `design.md` en preflight | `/design` no corrió o no se aprobó | STOP; correr `/design hu-<number>` primero |
+| Falta `design.md` en preflight | `/design` no corrió o no se aprobó | STOP; correr `/design spec-<number>` primero |
 | Rama base | estás en `develop`/`main`/`master` | Cambiar a la rama de trabajo antes de forjar |
 | `plan.md` vacío tras `/plan` | `/plan` se detuvo por un gate | Abortar forge; resolver lo que reportó `/plan` (p. ej. `/clarify`) y reintentar |
-| `hu.md` con `[NEEDS CLARIFICATION]` | ambigüedades sin resolver | STOP; `/clarify hu-<number>` antes de forjar |
+| `spec.md` con `[NEEDS CLARIFICATION]` | ambigüedades sin resolver | STOP; `/clarify spec-<number>` antes de forjar |
 | Un test no pasa al final | defecto de implementación | `/build` se detiene; forge **aborta antes de `/sync`**. Corregir el código, o `/hotfix` si es un gap de spec |
 | `/sync` reporta un duplicado de flujo | el design nombró distinto un flujo existente | forge para tras el build; resolver con `/refine` el design y reintentar `/sync` |
 
@@ -174,15 +180,15 @@ Stop — forge no toca git. Agrupar/ejecutar commits y redactar el PR es de `/co
 User dice: "/forge hu-0006"
 
 Acciones:
-1. Preflight: `hu.md`/`context.md`/`design.md` presentes; rama `feat/core` (no base);
+1. Preflight: `spec.md`/`context.md`/`design.md` presentes; rama `feat/core` (no base);
    sin marcadores `[NEEDS CLARIFICATION]`. OK.
 2. Step 1: invoca la skill `plan` con hu-0006 → genera `plan.md` con 12 tareas.
    Chequeo `[ -s plan.md ]` → OK.
 3. Step 2: invoca la skill `build` con hu-0006 → ejecuta las 12 tareas, todas `[X]`,
    tests en verde. No frena en la revisión de `/build`; continúa.
 4. Step 3: invoca la skill `sync` con hu-0006 (gates ya en verde, no los re-corre) →
-   reconcilia `api.yaml`/`accounts.c4`/`flows` del módulo y archiva la historia en
-   `work/done/hu-0006/`.
+   mergea `<api-artifact>` en el canónico del módulo, reconcilia el modelo y los
+   flows, y archiva la historia en `work/done/hu-0006/`.
 5. Step 4: reporta 12/12 + verde + docs reconciliadas, y sugiere `/commit hu-0006`.
 
 ### Example 2: aborta antes de build
@@ -207,6 +213,7 @@ Acciones:
 
 ## Output Language
 
-El cuerpo de este `SKILL.md` va en el idioma del proyecto (español). Excepción:
-frontmatter, nombres de campos, rutas y código siempre en inglés. Los disparadores
-de la `description` incluyen las frases en español (y sus equivalentes en inglés).
+Interacción y reportes en `OUTPUT_LANGUAGE` del profile (si no está definido, en el
+idioma del usuario). Excepción: frontmatter, nombres de campos, rutas y código
+siempre en inglés. Los disparadores de la `description` incluyen las frases en
+español (y sus equivalentes en inglés).
