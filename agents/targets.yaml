@@ -71,8 +71,10 @@ targets:
 
     # Lo no declarado se emite explícitamente como false, en vez de omitirse.
     # OpenCode habilita todo por defecto: omitir sería otorgar.
+    # Verificado con `opencode debug agent <name>`: lo que no esté acá queda
+    # habilitado por default. `invalid` y `question` los maneja OpenCode solo.
     deny_unlisted: true
-    known_tools: [read, grep, glob, bash, skill, edit, write, webfetch, task, patch]
+    known_tools: [read, grep, glob, bash, skill, edit, write, webfetch, task, patch, todowrite]
 
     defaults:
       mode: subagent
