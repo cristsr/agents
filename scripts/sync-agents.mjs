@@ -33,12 +33,23 @@ const die = (msg) => {
   process.exit(1);
 };
 
-/** Separa frontmatter YAML del cuerpo. */
+/**
+ * Separa frontmatter YAML del cuerpo.
+ *
+ * Los comentarios HTML del cuerpo se eliminan: son notas para quien mantiene el
+ * agente (cómo se genera, de dónde sale el modelo) y no cambian su comportamiento
+ * — dejarlas dentro sería pagar contexto en cada invocación por documentación que
+ * el agente no usa.
+ */
 function parseAgent(file) {
   const raw = readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
   const m = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!m) die(`${file} no tiene frontmatter YAML válido.`);
-  return { meta: yaml.load(m[1]) ?? {}, body: m[2].replace(/^\n+/, '') };
+  const body = m[2]
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/^\n+/, '');
+  return { meta: yaml.load(m[1]) ?? {}, body };
 }
 
 /**

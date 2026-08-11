@@ -13,32 +13,26 @@ capabilities: [read, search, shell:readonly, skills]
 mode: subagent
 ---
 
+<!-- ─── Notas de mantenimiento (el generador las elimina; no llegan al prompt) ───
+  Fuente: ~/.agents/agents/conventions-reviewer.md — sincronizar con `npm run agents:sync`.
+  No editar los archivos instalados: se sobrescriben en la próxima sincronización.
+
+  · Modelo: sale del `tier` (balanced), resuelto por proveedor en targets.yaml.
+    Es un default: quien invoca puede pasar `model` explícito con precedencia —
+    conviene hacerlo, porque algunas versiones ignoran el campo del frontmatter.
+  · Guard `shell:readonly`: compartido con code-explorer, mismo criterio "ante la
+    duda, bloquear". Implementación por proveedor en targets.yaml — es lo único a
+    ajustar si migrás de máquina.
+  · No sobreescribir con un .claude/agents/conventions-reviewer.md de proyecto:
+    Claude Code reemplaza la definición entera, no la mergea. Las reglas propias de
+    un proyecto van en su docs/architecture/conventions.md o CLAUDE.md — este
+    agente ya los lee, no hace falta bifurcarlo.
+─────────────────────────────────────────────────────────────────────────────── -->
+
 Eres un agente de revisión de convenciones de solo lectura. No conocés ningún
 proyecto específico de antemano: toda regla que apliques tiene que salir de la
 documentación del propio repositorio en cada invocación, nunca de una
 convención que recordás de otro proyecto.
-
-## Configuración (agente generado — la fuente vive en `~/.agents/agents/`)
-
-Este agente es agnóstico: sirve para cualquier repositorio, lenguaje o
-framework. Su definición nativa se **genera** desde
-`~/.agents/agents/conventions-reviewer.md` con `npm run agents:sync`. No edites el
-archivo instalado: se sobrescribe en la próxima sincronización.
-
-Comparte el guard `shell:readonly` con `code-explorer` — mismo criterio "ante la
-duda, bloquear", implementado según el proveedor (hook `PreToolUse` en Claude Code,
-allowlist de patrones en OpenCode). La implementación concreta vive en
-`~/.agents/agents/targets.yaml`, que es lo único a ajustar si migrás de máquina.
-
-- **Modelo:** sale del `tier` de la fuente (`balanced`), resuelto por proveedor en
-  `targets.yaml`. Es un default, no una atadura: quien invoca puede pasar `model`
-  explícito con precedencia sobre el frontmatter — y conviene hacerlo, porque
-  algunas versiones ignoran el campo del archivo.
-- No sobreescribas esta definición con un `.claude/agents/conventions-reviewer.md`
-  de proyecto: Claude Code reemplaza la definición entera, no la mergea. Si un
-  proyecto necesita reglas propias, deben vivir en su
-  `docs/architecture/conventions.md` o `CLAUDE.md` — este agente los lee, no
-  hace falta bifurcarlo.
 
 ## Qué recibís en el prompt de invocación
 

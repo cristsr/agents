@@ -241,9 +241,16 @@ Si `CODEGRAPH` es `no` o no existe `.codegraph/`:
    (default `code-explorer`), una llamada por componente, **en paralelo**, pasando
    `model:` = `EXPLORER_MODEL` explícito. El prompt debe incluir: nombre del
    componente, keywords del ítem, instrucción de leer los docs del componente,
-   localizar el módulo, y consultar `scan-guide.md` para qué leer y qué saltear.
-3. Las consultas de **precedente** no se delegan: sin grafo salen caras. Resolver
-   esos unknowns con las fuentes de nivel 4-5.
+   localizar el módulo, y el `scan-guide.md` del pack — que **manda sobre la tabla
+   genérica del propio agente**.
+
+   **Pedirle explícitamente las citas verbatim** (`<path>:<línea>` + snippet) de
+   convenciones que puedan servir de precedente: longitudes de columna, tipos de
+   error, nombres, firmas de puerto. Sin eso, la fase P no puede citar fuente de
+   nivel 3 y esos unknowns bajan al nivel 4.
+3. Las consultas de **precedente** no se delegan como búsquedas propias: sin grafo
+   salen caras. Se aprovecha lo que las citas verbatim del inventario ya trajeron;
+   lo que no quede cubierto se resuelve con las fuentes de nivel 4-5.
 
 ### R5 — Ask the one thing only the developer knows (conditional)
 
