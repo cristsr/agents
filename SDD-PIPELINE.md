@@ -7,28 +7,31 @@ mapa. Validá el ecosistema con `/healthcheck`.
 ## Flujo
 
 ```
-/hu → /prepare → /clarify → /scan → /design → /plan → /build → /sync → /commit
-        (solo si    (recomendado)
-         la base
-         no está
-         fresca)
+/spec → /prepare → /clarify → /design → /plan → /build → /sync → /commit
+        (solo si    (RPI: releva,
+         la base     decide y
+         no está     escribe
+         fresca)     spec.md + context.md)
 ```
 
+- **`/clarify`** absorbió el relevamiento: una sola pasada Research → Plan → Implement
+  produce el `spec.md` preciso **y** el `context.md`. No hay paso de scan intermedio.
+- **`/scan`** quedó como skill de **refresco**: regenera solo `context.md` cuando el
+  código cambió y los ACs no. Fuera del flujo normal.
 - **`/forge`** encadena `/plan` → `/build` → `/sync` sin pausas (requiere design aprobado).
 - **`/hotfix`** corrige defectos post-build originados en ACs ambiguos.
 - **`/refine`** ajusta artefactos existentes sin regenerar.
-- **`/status`** diagnostica en qué etapa está una historia.
+- **`/status`** diagnostica en qué etapa está un ítem.
 - **`/healthcheck`** valida consistencia de skills ↔ profile ↔ packs.
 
 ## Skills del pipeline
 
 | Skill | Entrada | Salida | Siguiente |
 |---|---|---|---|
-| `/hu` | texto crudo o PDF | `hu.md` | `/prepare` o `/clarify` |
-| `/prepare` | historia o componentes | base fresca (`BASE_BRANCH`) | `/clarify` o `/scan` |
-| `/clarify` | `hu.md` | ACs precisados + Technical Context | `/scan` |
-| `/scan` | `hu.md` | `context.md` | `/design` |
-| `/design` | `hu.md` + `context.md` | `design.md` + `docs/` (contrato, modelo, diagramas) | `/plan` |
+| `/spec` | texto crudo o export del tracker (feature, bug, deuda, incidente, chore) | `spec.md` (tipado) | `/prepare` o `/clarify` |
+| `/prepare` | ítem o componentes | base fresca (`BASE_BRANCH`) | `/clarify` |
+| `/clarify` | `spec.md` | `spec.md` con ACs precisados + registro de decisiones, y `context.md` con el relevamiento | `/design` |
+| `/design` | `spec.md` + `context.md` | `design.md` + `docs/` (contrato, modelo, diagramas) | `/plan` |
 | `/plan` | artefactos de diseño | `plan.md` (tareas TDD) | `/build` |
 | `/build` | `plan.md` | código + tests verdes, tareas `[X]` | `/sync` |
 | `/sync` | historia cerrada | docs del módulo reconciliadas, `work/done/` | `/commit` |
@@ -42,25 +45,26 @@ mapa. Validá el ecosistema con `/healthcheck`.
 | `/rules` | reglas no-negociables (`docs/rules.md`) |
 | `/architecture` | C4 Nivel 1/2 (`docs/architecture/`) — invocado por `/sync` |
 | `/healthcheck` | valida el ecosistema (script + checks) |
-| `/status` | diagnóstico de etapa de una historia |
+| `/status` | diagnóstico de etapa de un ítem |
+| `/scan` | refresco de `context.md` cuando el código cambió (no es paso del flujo) |
 | `/hexagonal-architecture` | BUILD — estructura hexagonal (reglas en `references/rules.md`, sintaxis por stack en `<STACK_REFS>/architecture/`) |
-| `/hexagonal-audit` | AUDIT — 13 dimensiones, reporte rankeado + genera `hu.md` en `work/active/` (bridge al pipeline) |
+| `/hexagonal-audit` | AUDIT — 13 dimensiones, reporte rankeado + genera `spec.md` en `work/active/` (bridge al pipeline) |
 
 ## Claves del profile por skill
 
 | Skill | Claves que lee |
 |---|---|
-| `hu` | `STORY_ID_MODE`, `STORY_ID_PATTERN`, `STORY_KEY_PATTERN`, `TRACKER`, `INTAKE_FORMATS`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE` |
+| `spec` | `STORY_ID_MODE`, `STORY_ID_PATTERN`, `STORY_KEY_PATTERN`, `STORY_ID_LEGACY_PREFIXES`, `ITEM_TYPES`, `TRACKER`, `INTAKE_FORMATS`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE` |
 | `prepare` | `WORKING_DIRECTORY`, `BASE_BRANCH`, `REPO_TOPOLOGY`, `PREP_SKILL`, `STORY_ID_PATTERN`, `WORKDIR_ACTIVE` |
-| `clarify` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE`, stack (sección 7) |
-| `scan` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`, `BASE_BRANCH`, `COMPONENT_TERM`, stack (7), docs (8), `EXPLORER_SUBAGENT`/`EXPLORER_MODEL`, `CODEGRAPH`, `STACK_REFS` |
+| `clarify` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE`, `COMPONENT_TERM`, `BASE_BRANCH`, stack (7), docs (8), `STACK_REFS`, `CODEGRAPH`, `EXPLORER_SUBAGENT`/`EXPLORER_MODEL` (fallback sin grafo) |
+| `scan` (refresco) | las mismas que `clarify` salvo las de decisión — no lee la rúbrica de autoridad |
 | `design` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE`, `API_CONTRACT`, `DIAGRAM_FORMAT`, `DESIGN_OUTPUT_MODE`, `API_CONTRACT_MODE`, stack (7), `STACK_REFS`, `MODEL_VALIDATE_CMD`, `YAML_VALIDATE_CMD`, `API_DIFF_TOOL` |
 | `plan` | diseño completo + `TEST_FRAMEWORK`, `API_CONTRACT`, `STACK_REFS`, `MODULE_TEST_CMD` |
 | `build` | `plan.md`, `TEST_FRAMEWORK`, `STACK_REFS`, `MODULE_TEST_CMD`, `FULL_TEST_CMD`, `POSTMAN_GEN_CMD` |
 | `sync` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`/`WORKDIR_DONE`, `BASE_BRANCH`, `SYNC_MODE`, `API_CONTRACT_MODE`, `DESIGN_OUTPUT_MODE`, docs (8), `CI_GATES_CMD`, `API_DIFF_TOOL`, `MODEL_VALIDATE_CMD` |
 | `commit` | `STORY_ID_PATTERN`, `WORKDIR_DONE`, `BASE_BRANCH`, `OUTPUT_LANGUAGE` |
 | `forge` | inputs de plan/build/sync + `BASE_BRANCH` |
-| `hotfix` | `plan.md`/`hu.md`, stack (7), `STACK_REFS`, `MODULE_TEST_CMD` |
+| `hotfix` | `plan.md`/`spec.md`, stack (7), `STACK_REFS`, `MODULE_TEST_CMD` |
 | `refine` | artefactos + `API_CONTRACT_MODE` (para `<api-artifact>`) |
 | `architecture` | `PROJECT_NAME`, `DIAGRAM_FORMAT`, `OUTPUT_LANGUAGE`, `WORKDIR_DONE`, `DOCS_ARCHITECTURE`, `PROJECT_GRAPH_CMD` |
 
