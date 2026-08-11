@@ -1,0 +1,96 @@
+# Mapeo de agentes agnósticos → formato nativo de cada proveedor.
+#
+# Los agentes (agents/*.md) no nombran modelos ni herramientas: declaran un
+# `tier` y una lista de `capabilities`. Este archivo traduce ambos al vocabulario
+# de cada herramienta. Cambiar de modelo = cambiar una celda acá.
+#
+# Sincronizar con:  npm run agents:sync        (preview: npm run agents:check)
+
+version: 1
+
+targets:
+  # ─────────────────────────────────────────────────────────────────────────
+  claude-code:
+    enabled: true
+    out: ~/.claude/agents/{name}.md
+    format: claude-code
+
+    # tier → alias de modelo. Claude Code resuelve el alias al id concreto
+    # según el proveedor activo (Anthropic directo, Bedrock, Vertex).
+    tiers:
+      reasoning: opus
+      balanced: sonnet
+      fast: haiku
+
+    # capability → tools nativas (allowlist: lo no declarado no se otorga)
+    capabilities:
+      read: [Read]
+      search: [Grep, Glob]
+      shell: [Bash]
+      skills: [Skill]
+      edit: [Edit, Write]
+      web: [WebFetch, WebSearch]
+      agents: [Agent]
+
+    # Implementación de cada guard en este proveedor.
+    guards:
+      # Bash permitido, pero cada comando pasa por un validador que falla
+      # CERRADO: si no puede parsear el comando, lo bloquea.
+      shell:readonly:
+        hooks:
+          PreToolUse:
+            - matcher: 'Bash'
+              hooks:
+                - type: command
+                  command: 'node C:/Users/styve/.claude/scripts/validate-readonly-bash.js'
+
+  # ─────────────────────────────────────────────────────────────────────────
+  opencode:
+    enabled: true
+    out: ~/.config/opencode/agents/{name}.md
+    format: opencode
+
+    # Este OpenCode corre contra LM Studio local (ver opencode.json), no contra
+    # Anthropic — por eso los tiers resuelven a modelos completamente distintos
+    # que en claude-code. Con solo dos modelos locales, `reasoning` y `balanced`
+    # colapsan en el mismo: ajustar cuando haya un modelo local más grande.
+    tiers:
+      reasoning: lmstudio/qwen/qwen3.5-9b
+      balanced: lmstudio/qwen/qwen2.5-coder-7b
+      fast: lmstudio/qwen/qwen2.5-coder-7b
+
+    # capability → tools nativas (objeto de booleanos)
+    capabilities:
+      read: { read: true }
+      search: { grep: true, glob: true }
+      shell: { bash: true }
+      skills: { skill: true }
+      edit: { edit: true, write: true }
+      web: { webfetch: true }
+      agents: { task: true }
+
+    # Lo no declarado se emite explícitamente como false, en vez de omitirse.
+    # OpenCode habilita todo por defecto: omitir sería otorgar.
+    deny_unlisted: true
+    known_tools: [read, grep, glob, bash, skill, edit, write, webfetch, task, patch]
+
+    defaults:
+      mode: subagent
+
+    guards:
+      # OpenCode no tiene hooks. La mejor traducción disponible es una allowlist
+      # de patrones con deny por defecto: NO es equivalente al validador de
+      # claude-code (que inspecciona el comando entero), es una aproximación
+      # más restrictiva. Agregar patrones acá si un agente los necesita.
+      shell:readonly:
+        permission:
+          bash:
+            '*': deny
+            'git status*': allow
+            'git log*': allow
+            'git diff*': allow
+            'git branch*': allow
+            'ls*': allow
+            'rg*': allow
+            'find*': allow
+            'cat*': allow
