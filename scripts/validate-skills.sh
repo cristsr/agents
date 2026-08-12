@@ -7,12 +7,27 @@
 # Uso: bash validate-skills.sh
 set -u
 
+# Los checks usan `grep -P`, que en Git Bash falla con locales no-UTF8
+# ("grep: -P supports only unibyte and UTF-8 locales"). Sin esto, los greps
+# devuelven vacío y el script reporta un VERDE FALSO ("1 claves, sin issues")
+# en vez de fallar. Forzar UTF-8 antes de cualquier check.
+export LC_ALL=C.UTF-8
+export LANG=C.UTF-8
+
+if ! echo 'X' | grep -qoP 'X' 2>/dev/null; then
+  echo "FAIL: este grep no soporta -P (PCRE). Instalar GNU grep con PCRE o correr en WSL." >&2
+  exit 2
+fi
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SKILLS="$ROOT/skills"
 TEMPLATE="$ROOT/sdd-profile.template.md"
 STACKS="$ROOT/stacks"
 PACKS="generic typescript-nestjs"
-NOT_META="-not -path */skill-creator/* -not -path */skill-evaluator/*"
+# Array, no string: sin comillas el shell expande `*/skill-creator/*` contra el
+# cwd antes de que find lo vea ("paths must precede expression"), los tres checks
+# quedan sin archivos que revisar y el script reporta un VERDE FALSO.
+NOT_META=( -not -path '*/skill-creator/*' -not -path '*/skill-evaluator/*' )
 
 STOP_KEYS='^(AC|ACs|API|CI|DTO|DTOs|EARS|FAIL|FTS5|NEW|NEXT|OK|PASS|PR|REST|SQL|TDD|TODO|UI|UUID|YAML|X|Y|Z|M|N|P|A|B|C)$'
 key_re='`\K[A-Z][A-Z0-9_]{2,}(?=`)'
@@ -25,7 +40,7 @@ issues=0
 defined_keys=$(grep -oP "$key_re" "$TEMPLATE" | grep -E -v "$STOP_KEYS" | sort -u)
 
 # --- 2. Claves referenciadas por las skills (no-meta) ---
-referenced=$(find "$SKILLS" -type f -name '*.md' $NOT_META -exec grep -h -oP "$key_re" {} + | grep -E -v "$STOP_KEYS" | sort -u)
+referenced=$(find "$SKILLS" -type f -name '*.md' "${NOT_META[@]}" -exec grep -h -oP "$key_re" {} + | grep -E -v "$STOP_KEYS" | sort -u)
 
 warnings=$(comm -23 <(printf '%s\n' "$referenced") <(printf '%s\n' "$defined_keys"))
 if [ -n "$warnings" ]; then
@@ -42,7 +57,7 @@ while IFS= read -r file; do
       issues=$((issues+1))
     fi
   done < <(grep -oP "(?<![./])${refs_re}" "$file")
-done < <(find "$SKILLS" -type f -name '*.md' $NOT_META)
+done < <(find "$SKILLS" -type f -name '*.md' "${NOT_META[@]}")
 
 # --- 4. Rutas <STACK_REFS>/<file> ---
 # Las refs ya llevan el subcarpeta del pack: `references/<f>` (obligatorio en TODOS
@@ -67,7 +82,7 @@ while IFS= read -r file; do
       done
     fi
   done < <(grep -oP "$stack_re" "$file")
-done < <(find "$SKILLS" -type f -name '*.md' $NOT_META)
+done < <(find "$SKILLS" -type f -name '*.md' "${NOT_META[@]}")
 
 if [ "$issues" -eq 0 ]; then
   echo "OK: $(printf '%s\n' "$defined_keys" | wc -l) claves de profile, sin issues."
