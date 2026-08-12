@@ -103,7 +103,7 @@ observaciones). Otro tracker o idioma = cambiar solo esta tabla.
 | `DTO_STYLE` | <cómo se organizan los DTOs> |
 | `TEST_FRAMEWORK` | <Jest / pytest / … + patrón de archivos> |
 | `API_CONTRACT` | <OpenAPI 3.1 / GraphQL SDL / gRPC proto> |
-| `DIAGRAM_FORMAT` | Mermaid (default) / PlantUML / LikeC4 (solo si el proyecto adopta docs-as-code) |
+| `DIAGRAM_FORMAT` | Mermaid (default — bloques inline en `.md`) / PlantUML |
 
 ### Artefactos de código a ubicar por módulo (guía para `scan`)
 Listar qué debe encontrar el scan en este stack. Ej.: entidad + campos, registro
@@ -124,15 +124,17 @@ expuestos, puerto/servicio abstracto + firmas.
 | Clave | Default | Cuándo cambiarlo |
 |---|---|---|
 | `API_CONTRACT_MODE` | `delta` — `/design` emite `docs/api.delta.yaml` (solo paths/schemas del ítem); `/sync` lo mergea en el `api.yaml` canónico del módulo (lo crea si no existe) | `full` — si se prefiere un `docs/api.yaml` completo por historia que `/sync` copia tal cual |
-| `DESIGN_OUTPUT_MODE` | `full` — diagramas en Markdown/Mermaid (`docs/diagram.md` + `docs/component.md`) por historia | `delta` — solo si el proyecto adoptó docs-as-code LikeC4 (`model.delta.c4` + `flows/*.md`) |
-| `SYNC_MODE` | `promote` — `/sync` copia los artefactos | `reconcile` — mergea por artefacto: contrato si `API_CONTRACT_MODE=delta`, modelo si `DESIGN_OUTPUT_MODE=delta` |
+| `DOCS_UNIT_README` | `—` (default — sin docs-as-code) | `<unidad>/README.md` — arc42-lite + `flowchart` de componentes (C4 L3) |
+| `DOCS_UNIT_FLOWS` | `—` (default — sin docs-as-code) | `<unidad>/flows/<use-case>.md` — prosa + frontmatter + `sequenceDiagram` inline (C4 L4) |
+| `DESIGN_OUTPUT_MODE` | `full` — diagramas en Markdown/Mermaid (`docs/diagram.md` + `docs/component.md`) por historia | `full-flow` — solo si el proyecto adoptó docs-as-code: `flows/*.md` completos con su `sequenceDiagram` inline |
+| `SYNC_MODE` | `promote` — `/sync` copia los artefactos | `replace` — reemplaza cada `flows/*.md` entero; el contrato se mergea si `API_CONTRACT_MODE=delta` |
 
 > Los dos modos son **ejes independientes**. El contrato OpenAPI es **delta por
 > default en cualquier proyecto** (contratos incrementales, mergeados en el
-> `api.yaml` canónico del módulo). El flujo LikeC4 (`DESIGN_OUTPUT_MODE=delta`,
-> `DOCS_MODULE_MODEL`, `DOCS_MODULE_FLOWS`, `DOCS_MODULE_README`,
+> `api.yaml` canónico del módulo). El flujo docs-as-code (`DESIGN_OUTPUT_MODE=full-flow`,
+> `SYNC_MODE=replace`, `DOCS_UNIT_FLOWS`, `DOCS_UNIT_README`,
 > `MODEL_VALIDATE_CMD`) es **opcional y por proyecto**: por defecto la
-> documentación es Markdown (Mermaid). Si el proyecto lo adopta, se copia el
+> documentación es Markdown por historia. Si el proyecto lo adopta, se copia el
 > bloque «Documentación como código» del profile de admin-back como referencia.
 
 ## 9. Subagentes / herramientas auxiliares
@@ -165,7 +167,7 @@ expuestos, puerto/servicio abstracto + firmas.
 | Clave | Propósito | Valor (default) | Fallback (clave en `—` / `no`) |
 |---|---|---|---|
 | `CODEGRAPH` | Exploración con grafo de código | `no` (default) — `/scan` usa `EXPLORER_SUBAGENT` / explora inline | `yes` → tool MCP `codegraph_explore` / CLI `codegraph explore` |
-| `MODEL_VALIDATE_CMD` | Validar el modelo LikeC4 | `—` (default — sin LikeC4, no aplica) | `npx likec4 validate` — solo si el proyecto adoptó docs-as-code; si falta, revisión manual del `.c4` |
+| `MODEL_VALIDATE_CMD` | Validar que todo identificador de los diagramas nombre un símbolo real del código | `—` (default — sin gate, revisión manual) | `npm run docs:validate` — script propio del proyecto; solo si adoptó docs-as-code |
 | `API_DIFF_TOOL` | Clasificar breaking del contrato al reconciliar | `—` (default) → comparación manual del diff + nota en el PR body | `oasdiff` — si el proyecto quiere diff automático |
 | `POSTMAN_GEN_CMD` | Generar colección Postman | `npx -y openapi-to-postmanv2 -s <api.yaml> -o <out> -p` | `—` → importar `api.yaml` directo en Postman |
 | `YAML_VALIDATE_CMD` | Validar sintaxis YAML | cadena: `python` + PyYAML → `node` + js-yaml → `npx js-yaml` | `—` → revisión manual del archivo |

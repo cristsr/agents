@@ -2,8 +2,9 @@
 name: sync
 description: >
   Closes the documentation half of a story at the end of the pipeline:
-  reconciles the design delta (LikeC4 model + OpenAPI + per-flow docs) into the
-  affected module's living docs (SYNC_MODE=reconcile; legacy mode promotes files),
+  reconciles the design delta (OpenAPI contract + per-flow docs carrying their
+  own inline Mermaid diagram) into the affected unit's living docs
+  (SYNC_MODE=replace; legacy mode promotes files),
   appends design.md's "Decisiones de Diseño" section (if any) to the
   cumulative docs/decisions.md log, and reads the "Impacto en Arquitectura
   Global" section /design already left in design.md — if it says yes,
@@ -37,7 +38,7 @@ drafting the PR) is `/commit`'s job, meant to run right after this one.
 
 **Output:**
 
-- Delta del design reconciliado en los docs vivos del módulo (`SYNC_MODE=reconcile`): OpenAPI canónico mergeado (+`API_DIFF_TOOL`), modelo `<module>.c4` actualizado y `flows/*.md` upserteados en `apps/<app>/docs/<module>/`. (En modo legado `promote`: artefactos copiados tal cual.)
+- Delta del design reconciliado en los docs vivos de la unidad (`SYNC_MODE=replace`): OpenAPI canónico mergeado (+`API_DIFF_TOOL`) y `flows/*.md` reemplazados en `<unidad>/flows/`, con sus diagramas Mermaid inline validados por `MODEL_VALIDATE_CMD`. (En modo legado `promote`: artefactos copiados tal cual.)
 - `docs/decisions.md` (raíz del repo) con una entrada nueva si `design.md` tenía sección "Decisiones de Diseño" (o sin cambios, si no aplicó).
 - `docs/architecture/` actualizado por `/architecture` si la historia tocó arquitectura global (o sin cambios, si no aplicó).
 - Carpeta `work/active/spec-<number>/` movida a `work/done/spec-<number>/`.
@@ -136,86 +137,68 @@ Read from `work/active/spec-<number>/`:
 
 El comportamiento depende de `SYNC_MODE` (profile.md), con **granularidad por
 artefacto**: el contrato se mergea si `API_CONTRACT_MODE = delta` (default) y se
-copia si `full`; el modelo se reconcilia si `DESIGN_OUTPUT_MODE = delta` y se
+copia si `full`; los flujos se reemplazan si `SYNC_MODE = replace` y se
 promueve (copia) si `full`. Un proyecto puede mezclar ambos ejes (p. ej. contrato
 delta + diagramas Markdown) — en ese caso el contrato se mergea acá y los
 diagramas se copian en la sección promote.
 
-### When `SYNC_MODE = reconcile` (docs-as-code with LikeC4 — solo si el profile lo declara; default es `promote`)
+### When `SYNC_MODE = replace` (docs-as-code con Mermaid — solo si el profile lo declara; default es `promote`)
 
-El delta de `/design` (`docs/model.delta.c4`, `docs/api.delta.yaml`, `docs/flows/*.md`)
-**no se copia**: se **fusiona** en los docs vivos del módulo. La unidad es el flujo, no el ítem.
+`/design` produce el `flows/<slug>.md` **completo**, con su `sequenceDiagram` inline. Al no
+haber modelo global que fusionar, el flujo se **reemplaza entero** en los docs vivos. La
+única reconciliación real que sobrevive es la del `api.yaml` canónico, que sí es acumulativo.
 
-> Si el proyecto mezcla modos (`API_CONTRACT_MODE=full` y/o `DESIGN_OUTPUT_MODE=full`),
-> el/los artefacto(s) en `full` se **copian** en vez de mergearse — ver la sección
-> promote de abajo; el resto se reconcilia acá.
+> Si el proyecto declara `API_CONTRACT_MODE=full`, el contrato se **copia** en vez de
+> mergearse — ver la sección promote de abajo.
 
-**Identity keys & duplicate guard (correr ANTES de fusionar).** Cada entidad viva tiene una
-clave estable: el flujo = `use_case` (slug de `flows/*.md`), la vista = `viewId` en el `.c4`,
-el endpoint = `path`+método / `operationId` en `api.yaml`. Antes de escribir nada, por cada
-flujo del delta chequear contra los docs vivos del módulo:
+**Identity keys & duplicate guard (correr ANTES de escribir).** Cada entidad viva tiene una
+clave estable: el flujo = `use_case` (slug de `flows/*.md`), el endpoint = `path`+método /
+`operationId` en `api.yaml`. Antes de escribir nada, por cada flujo del delta chequear
+contra los docs vivos de la unidad:
 
-- Si el `use_case`/`viewId`/`operationId` del delta **ya existe** → es una modificación:
-  reemplazar/actualizar **in place** (pasos de abajo). Correcto, no es duplicado.
-- Si el delta trae un `use_case`/`viewId`/`operationId` **nuevo** pero su `entrypoint`+`command`
-  (o el evento, para triggers no-REST) **coincide con un flujo vivo existente** → **STOP**: es un
-  duplicado (el `/design` nombró distinto un flujo que ya existía). No fusionar. Reportar el
-  choque y pedir corregir el delta para que reuse el slug/viewId/operationId vigente, o usar
-  `/refine` sobre el design. Nunca resolver el choque creando `<slug>-v2.md` ni una vista paralela.
+- Si el `use_case`/`operationId` del delta **ya existe** → es una modificación: reemplazar
+  **in place** (pasos de abajo). Correcto, no es duplicado.
+- Si el delta trae un `use_case`/`operationId` **nuevo** pero su `entrypoint`+`command` (o el
+  evento, para triggers no-REST) **coincide con un flujo vivo existente** → **STOP**: es un
+  duplicado (el `/design` nombró distinto un flujo que ya existía). No escribir. Reportar el
+  choque y pedir corregir el delta para que reuse el slug/operationId vigente, o usar
+  `/refine` sobre el design. Nunca resolver el choque creando `<slug>-v2.md`.
 
-Por cada módulo afectado (identificado en `design.md`; si es ambiguo → preguntar, no adivinar):
+**Resolver la unidad de documentación, no el «módulo».** El destino de un flujo es
+`DOCS_UNIT_FLOWS` = `<unidad>/flows/<slug>.md`, donde la unidad es la raíz de código que el
+flujo documenta. Regla dura: **la documentación vive junto al código que describe.** Si el
+handler vive en una lib, su flujo va a `libs/<lib>/docs/flows/`, no bajo `apps/<app>/docs/`.
+Cuando el destino no sea obvio, resolverlo por la ubicación real de la clase del `command`.
+
+Por cada unidad afectada (identificada en `design.md`; si es ambiguo → preguntar, no adivinar):
 
 1. **OpenAPI canónico** (`DOCS_MODULE_API` = `apps/<app>/docs/<module>/api.yaml`):
    - Guardar una copia del canónico previo (para el diff).
    - Mergear `docs/api.delta.yaml`: agregar/reemplazar cada `path` y cada `components.schemas`
      del delta; conservar todo lo que el delta no toca. No cambiar el `info.title` canónico del módulo.
    - Correr `API_DIFF_TOOL` (sección 10 — default `oasdiff`) entre el canónico
-     previo y el nuevo. Si `API_DIFF_TOOL` está en `—` → comparación manual del
-     diff. Registrar en el
-     cuerpo del PR el veredicto: **no-breaking** (evolución in-place) o **breaking** (→ señalar que
-     amerita versión de path `/vN`; no versionar automáticamente).
+     previo y el nuevo. Si `API_DIFF_TOOL` está en `—` → comparación manual del diff.
+     Registrar en el cuerpo del PR el veredicto: **no-breaking** (evolución in-place) o
+     **breaking** (→ señalar que amerita versión de path `/vN`; no versionar automáticamente).
 
-2. **Modelo LikeC4** (`DOCS_MODULE_MODEL` = `apps/<app>/docs/<module>/<module>.c4`):
-   - Si no existe → crearlo con el contenido de `docs/model.delta.c4`.
-   - Si existe → aplicar el delta quirúrgicamente:
-     - Elementos nuevos (`extend`) → insertarlos en el bloque del módulo sin tocar los vigentes.
-       Traen `metadata { introducedIn 'spec-<number>' }` del delta; copiarlo tal cual.
-     - `dynamic view` con `viewId` nuevo → agregarla.
-     - `dynamic view` con `viewId` existente → reemplazarla (git guarda la versión previa; **no** crear `<view>-v2`).
-   - **Normalización de los marcadores de revisión del delta (obligatorio).** El delta resalta lo
-     nuevo/cambiado con señales efímeras que **no** deben aterrizar en el `.c4` vivo — al fusionar,
-     stripearlas para dejar el estilo estándar:
-     - Quitar los tags `#delta-new` / `#delta-changed` de cada elemento que se copie o se toque.
-       Si un `modify` venía como `extend <fqn> { #delta-changed metadata { changedIn ... } }` cuyo
-       **único** aporte era el tag y la procedencia, no dejes un `extend` vacío: aplicá el
-       `changedIn` al elemento vivo (regla de abajo) y descartá el bloque `extend` de resaltado.
-     - Quitar el prefijo `[NEW] ` / `[CHANGED] ` del `title` de cada `dynamic view` reconciliada
-       (p. ej. `title '[NEW] Abrir cuenta · trigger REST'` → `title 'Abrir cuenta · trigger REST'`).
-     - La procedencia permanente (`metadata.introducedIn` / `metadata.changedIn`) **se conserva** —
-       es el registro que sobrevive; los tags y prefijos no.
-   - **Fusión de procedencia (`changedIn`).** Si el delta trae `metadata { changedIn 'spec-<number>' }`
-     sobre un elemento **ya existente**:
-     - Conservar su `introducedIn` intacto.
-     - Anexar este ítem a la lista `changedIn` del elemento vivo (crear la clave si no existía),
-       separada por coma y en orden cronológico, **sin duplicar** si ya figura. Ej.: un elemento
-       con `changedIn 'hu-0005'` que esta historia (hu-0007) modifica → `changedIn 'hu-0005, hu-0007'`.
-    - Validar con `MODEL_VALIDATE_CMD` (sección 10 — default `npx likec4 validate`)
-      que el modelo completo sigue compilando. Si la clave está en `—` → revisión
-      manual del `.c4`.
-
-3. **Flows** (`DOCS_MODULE_FLOWS` = `apps/<app>/docs/<module>/flows/<slug>.md`), por cada
+2. **Flows** (`DOCS_UNIT_FLOWS` = `<unidad>/flows/<slug>.md`), por cada
    `docs/flows/<slug>.md` del delta:
-   - No existe en el módulo → crearlo.
-   - Existe → actualizar prosa/metadata y **bumpear `last_modified_by`**; conservar `introduced_by`.
-     Nunca crear `<slug>-v2.md`.
+   - No existe → crearlo tal cual.
+   - Existe → **reemplazarlo entero**, conservando `introduced_by` del vivo y poniendo
+     `last_modified_by` = este ítem. Git guarda la versión previa; nunca crear `<slug>-v2.md`.
    - `status: deprecated`/`removed` → marcarlo en el frontmatter, no borrar el archivo.
+   - Verificar que el frontmatter **no** traiga una clave `view:` — es un residuo del enfoque
+     LikeC4 y ya no tiene referente.
 
-4. **README del módulo** (`DOCS_MODULE_README`): actualizar la tabla de casos de uso (agregar la
-   fila del flujo nuevo) y, solo si cambian, las secciones de invariantes / lenguaje ubicuo.
-   No reescribirlo entero en cada historia.
+3. **README de la unidad** (`DOCS_UNIT_README`): actualizar la tabla de casos de uso (agregar
+   la fila del flujo nuevo) y, **si la historia agregó o quitó componentes**, el bloque
+   ` ```mermaid ` del `flowchart` de componentes. No reescribirlo entero en cada historia.
 
-5. **Export de vistas:** correr el export de LikeC4 a `assets/` si el proyecto lo tiene cableado,
-   o dejarlo a CI. No bloquear el cierre si el export no está configurado.
+4. **Validar los diagramas:** correr `MODEL_VALIDATE_CMD` (sección 10 — default
+   `npm run docs:validate`). Verifica que todo identificador de todo bloque Mermaid nombre
+   un símbolo real del código. Si falla, **no cerrar la historia**: el diagrama nombra algo
+   que no existe, y eso es exactamente lo que el gate está para atajar. Si la clave está en
+   `—` → revisión manual.
 
 El delta original permanece en la carpeta de la historia como registro puntual — viaja a
 `work/done/` en el Step 5.

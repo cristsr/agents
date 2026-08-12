@@ -2,9 +2,9 @@
 name: design
 description: >
   Reads spec.md and context.md to produce an API-first technical design delta
-  (DESIGN_OUTPUT_MODE): a LikeC4 model fragment (components + one dynamic view per
-  use case), per-flow docs, an OpenAPI delta scoped to the story, and a data model
-  if needed. /sync reconciles the delta into the module's living docs.
+  (DESIGN_OUTPUT_MODE): per-flow docs carrying their own inline Mermaid diagram
+  (one per use case), an OpenAPI delta scoped to the story, and a data model
+  if needed. /sync reconciles the delta into the unit's living docs.
   Use when the user says "/design sm-XXX", "diseñar historia", "crear diseño",
   "especificación técnica", or has completed /clarify and wants to define what to build.
   Do NOT use before /clarify is complete. Do NOT use for planning tasks (use /plan).
@@ -34,8 +34,9 @@ exists — `/plan` generates DTOs that conform to it, never the reverse.
 
 **Eje 2 — `DESIGN_OUTPUT_MODE` (diagramas/modelo, default `full`):**
 - `full` (default, Markdown/Mermaid): `docs/diagram.md` + `docs/component.md` por historia.
-- `delta` (solo si el proyecto adoptó docs-as-code LikeC4): `docs/model.delta.c4` +
-  `docs/flows/<use-case>.md` — delta acotado al ítem que `/sync` reconcilia.
+- `full-flow` (solo si el proyecto adoptó docs-as-code con Mermaid):
+  `docs/flows/<use-case>.md` completo, con su `sequenceDiagram` inline — un archivo por
+  caso de uso tocado, que `/sync` reemplaza en los docs vivos de la unidad.
 
 En ambos modos se producen además, según aplique:
 - `work/active/sm-<number>/docs/research.md` — alternativas técnicas evaluadas + rationale (solo si hay decisiones no triviales)
@@ -274,8 +275,7 @@ operaciones sobre flujos: `create` | `modify` | `deprecate`.
 2. **Reconciliation lookup — resolver identidad contra los docs vivos (evita duplicados).**
    Antes de marcar nada, por cada módulo afectado leer sus docs vivos e inventariar las
    **claves de identidad** existentes:
-   - `DOCS_MODULE_FLOWS` (`flows/*.md`) → todos los `use_case` (slug), su `entrypoint` y `command`.
-   - `DOCS_MODULE_MODEL` (`<module>.c4`) → todos los `viewId` de las `dynamic view`.
+   - `DOCS_UNIT_FLOWS` (`flows/*.md`) → todos los `use_case` (slug), su `entrypoint` y `command`.
    - `DOCS_MODULE_API` (`api.yaml`) → todos los `path` + método y sus `operationId`.
 
    Para cada caso de uso derivado en el paso 1, buscar coincidencia por **cualquiera** de
@@ -294,143 +294,77 @@ operaciones sobre flujos: `create` | `modify` | `deprecate`.
    `modify` y anotá la ambigüedad en `design.md` para que el revisor confirme — es más barato
    fusionar de más que duplicar.
 
-3. **Emitir `docs/model.delta.c4`** — fragmento LikeC4, no un modelo completo:
-   - Por cada componente nuevo: un bloque `extend <app>.<module> { <id> = component '...' { ... } }`
-     (o `extend` del módulo si ya existe). Nunca redefinir elementos ya presentes en el `.c4` vivo.
-   - **Procedencia obligatoria — bloque `metadata` por elemento (nuevo o modificado):** cada
-     elemento (módulo/componente) lleva un bloque `metadata` que rastrea en qué historia nació
-     y en cuáles cambió. LikeC4 solo admite `metadata` en **elementos**, no en `dynamic view`.
-     - Elemento **nuevo** (`create`): `metadata { introducedIn 'spec-<number>' }`.
-     - Elemento **modificado** (`modify` — cambia su descripción, tecnología o relaciones):
-       agregar en el delta `metadata { changedIn 'spec-<number>' }` como el **incremento** a aplicar;
-       `/sync` lo fusiona anexando este ítem al `changedIn` vigente (sin tocar `introducedIn`).
-     - Claves: `introducedIn` = string con **una** ítem; `changedIn` = string con la **lista** de
-       HUs separadas por coma, en orden cronológico (p. ej. `'hu-0005, hu-0007'`).
 
-     ```
-     openHandler = component 'OpenAccountHandler' {
-       technology 'Application · CommandHandler'
-       metadata {
-         introducedIn 'hu-0003'
-       }
-     }
-     ```
-   - **Resaltado visual del delta (efímero, obligatorio) — tag `#delta-new` / `#delta-changed`:**
-     además de la procedencia en `metadata`, marcá cada elemento tocado con un tag de revisión que
-     lo pinta de naranja (definidos en `docs/architecture/landscape.c4`: `delta-new` y
-     `delta-changed`, `color #F97316`). Sirven para que el revisor vea de un vistazo, en
-     `likec4 start`, qué es nuevo/cambiado mientras el delta vive en `work/active/`. **`/sync` los
-     remueve** al reconciliar (la procedencia permanente es `metadata`, no el tag).
-     - Elemento **nuevo** (`create`): agregar `#delta-new` al componente.
-     - Elemento **modificado** (`modify`): si el elemento ya existe en el `.c4` vivo, resaltarlo con
-       un `extend <fqn> { #delta-changed }` (no lo redefinas para taggearlo); si el `modify` también
-       agrega un componente nuevo, ese lleva `#delta-new`.
+3. **Emitir `docs/flows/<slug>.md` completo, con su diagrama inline** — no hay modelo
+   aparte que mantener. Seguir `references/flow-template.md`:
+   - Frontmatter obligatorio: `use_case`, `module`, `trigger`, `entrypoint`, `command`,
+     `invariants`, `introduced_by`, `last_modified_by`, `status`. **No hay clave `view:`.**
+   - Un bloque ` ```mermaid ` con un `sequenceDiagram` que muestra el recorrido del caso de
+     uso: quién dispara, por qué componentes pasa y qué se persiste.
+   - Prosa: qué hace el flujo, reglas de negocio verificables, tabla de errores y respuesta.
+   - Para `create`: `introduced_by` = `last_modified_by` = este ítem.
+     Para `modify`: conservar `introduced_by`, poner `last_modified_by` = este ítem.
 
-     ```
-     // componente NUEVO
-     openHandler = component 'OpenAccountHandler' {
-       technology 'Application · CommandHandler'
-       #delta-new
-       metadata {
-         introducedIn 'hu-0015'
-       }
-     }
-     // componente ya EXISTENTE que este ítem modifica (resaltado + incremento de procedencia)
-     extend admin.ledger.accounts.confirmHandler {
-       #delta-changed
-       metadata {
-         changedIn 'hu-0015'
-       }
-     }
-     ```
-   - Por cada caso de uso `create`/`modify`: una `dynamic view <viewId> { title '<Módulo> · <caso> · trigger <trigger>' ... }`
-     con los pasos del flujo. El `viewId` es estable (se reusa entre historias) para que `/sync`
-     reemplace la vista existente en `modify`. **Las dynamic view no aceptan `metadata`**: su
-     procedencia vive en el frontmatter de `flows/<slug>.md` (`introduced_by` / `last_modified_by`),
-     que es la fuente de verdad para flujos — no la dupliques en el `.c4`.
-   - **Prefijo de revisión en el `title` de la dynamic view (efímero, obligatorio):** prefijá el
-     título del flujo con `[NEW] ` (caso de uso `create`) o `[CHANGED] ` (caso de uso `modify`),
-     p. ej. `title '[NEW] Abrir cuenta · trigger REST'`. Es la contraparte textual del tag naranja
-     para el revisor; **`/sync` lo remueve** al reconciliar la vista en el `.c4` vivo. No prefijes
-     las vistas que el ítem no toca.
-   - Referenciar los nodos compartidos por su FQN (`<app>.shared.commandBus`, etc.).
-   - **Convención de navegación (organiza la app LikeC4) — obligatoria:**
-     - **Carpeta por módulo (bloque `views '<Módulo>' { ... }`):** todas las vistas del módulo van
-       dentro de un bloque `views '<Módulo>' { ... }`. LikeC4 crea una carpeta con ese nombre en el
-       panel de navegación (usa el prefijo como path; también acepta `/` en el `title` para anidar).
-       **No** uses `·` como prefijo de título: solo ordena alfabéticamente, no crea carpeta.
-     - **Vista de componentes del módulo:** dentro de ese bloque, si el módulo aún no tiene su overview,
-       crear `view <module>Components of <app>.<module> { title 'Componentes' include <app>.<module>, <app>.<module>.* }`.
-       El `of <elemento>` hace que al hacer click en el módulo (en el landscape) se entre a esta vista
-       — navegación por jerarquía, no grid plano.
-     - **Títulos limpios:** como la carpeta ya da el módulo, el `title` de cada vista es solo el nombre
-       del caso de uso (p. ej. `title 'Abrir cuenta · trigger REST'`, `title 'Componentes'`), sin repetir el módulo.
+   **Convención de identificadores (la valida el CI — romperla rompe el build).** El gate
+   de diagramas (`MODEL_VALIDATE_CMD`) verifica que todo identificador nombre un símbolo
+   real del código que el flujo documenta:
 
-     ```
-     views 'Accounts' {
-       view accountsComponents of admin.ledger.accounts {
-         title 'Componentes'
-         include admin.ledger.accounts, admin.ledger.accounts.*
-       }
-       dynamic view openAccount {
-         title 'Abrir cuenta · trigger REST'
-         ...
-       }
-     }
-     ```
+   - **Se verifica el nombre visible, no el alias.** En `participant CB as CommandBus` se
+     resuelve `CommandBus`; `CB` queda libre para la legibilidad del diagrama.
+   - **Usar el nombre exacto de la clase**, puerto o excepción —
+     `ReverseConfirmedTransactionHandler`, no una descripción.
+   - **Actores externos exentos:** `Client`, `User`, `Usuario`, `Postgres`, `Keycloak`.
+   - En un `flowchart`, la forma declara la clase de nodo: `X("Nombre")` debe resolver;
+     `X[("tabla")]` (cilindro) y `subgraph` no.
 
-4. **Emitir el contrato API según `API_CONTRACT_MODE`** — ver la sección
+   ```mermaid
+   sequenceDiagram
+     actor Client
+     participant C as AccountsController
+     participant CB as CommandBus
+     participant H as OpenAccountHandler
+     participant A as Account
+     participant ES as EventStore
+
+     Client->>C: POST /accounts (OpenAccountRequestDto)
+     C->>CB: dispatch(OpenAccountCommand)
+     CB->>H: handle
+     H->>A: Account.open(...) — valida AC-2
+     H->>ES: append(AccountOpened)
+   ```
+
+4. **Actualizar el `flowchart` de componentes solo si hace falta.** Si el ítem agrega o
+   quita componentes de la unidad, incluir en `design.md` el bloque ` ```mermaid ` del
+   `flowchart` actualizado, agrupado por capa hexagonal (`domain` / `application` /
+   `infrastructure`), para que `/sync` lo lleve al `DOCS_UNIT_README`. Si el ítem no cambia
+   la estructura del módulo —solo el recorrido de un flujo— **omitirlo**: no reescribas el
+   diagrama de componentes en cada historia.
+
+5. **Resolver la unidad de documentación, no el «módulo».** El destino de un flujo es
+   `<unidad>/flows/<slug>.md`, donde la unidad es la raíz de código que el flujo documenta.
+   Regla dura: **la documentación vive junto al código que describe.** Si el `command` y su
+   handler viven en una lib, el flujo va a `libs/<lib>/docs/flows/`, no bajo
+   `apps/<app>/docs/`. Cuando el destino no sea obvio, resolverlo por la ubicación real de
+   la clase del `command`.
+
+6. **Emitir el contrato API según `API_CONTRACT_MODE`** — ver la sección
    «PHASE 4 — Contrato API» más abajo (aplica igual en ambos modos de diseño).
 
-5. **Emitir `docs/flows/<slug>.md`** por cada flujo tocado, siguiendo `references/flow-template.md`:
-   frontmatter obligatorio (`use_case`, `module`, `trigger`, `entrypoint`, `command`, `view`,
-   `invariants`, `introduced_by`, `last_modified_by`, `status`) + prosa (reglas, errores, respuesta).
-   Para `create`: `introduced_by` = `last_modified_by` = este ítem. Para `modify`: conservar
-   `introduced_by`, poner `last_modified_by` = este ítem.
+7. **`design.md` referencia los flujos por su slug** — nunca embebe un diagrama-monstruo
+   que abarque varios módulos. La sección «Flujos afectados» lista `create`/`modify`/
+   `deprecate` con su trigger y entrypoint; la sección «Componentes» describe el delta en
+   una oración y solo incluye el `flowchart` si el paso 4 aplicó.
 
-6. **`design.md` referencia los flujos por su `view`/slug** — nunca embebe un diagrama-monstruo
-   que abarque varios módulos. La sección «Componentes del módulo» lista el delta de componentes
-   y enlaza a `model.delta.c4`; la sección «Flujos afectados» lista `create`/`modify`/`deprecate`
-   con su trigger y entrypoint.
+8. **Validar los diagramas:** correr `MODEL_VALIDATE_CMD` del profile (sección 10 —
+   default `npm run docs:validate`) para confirmar que todo identificador de todo bloque
+   Mermaid resuelve a un símbolo real. Si la clave está en `—` → revisión manual y anotar
+   en `design.md` que no hubo validación automática.
 
-7. **Validar el modelo:** correr `MODEL_VALIDATE_CMD` del profile (sección 10 —
-   default `npx likec4 validate`) para confirmar que el modelo completo (no solo
-   el delta) compila sin nuevos errores. Si `MODEL_VALIDATE_CMD` está en `—`
-   (proyecto sin LikeC4) → revisión manual del `.c4` y anotar en `design.md` que
-   no hubo validación automática. La fusión real contra el modelo vivo la valida
-   `/sync`.
-
-   **Regla crítica — relaciones dentro del bloque extend:** toda relación que referencie un
-   elemento **definido via `extend`** (ya sea en el delta o en el `.c4` vivo) debe ir
-   **dentro** del bloque `extend { ... }`, no fuera. LikeC4 no resuelve referencias a
-   elementos `extend`-ed desde afuera del bloque — ni siquiera en el mismo archivo.
-   Ejemplo correcto:
-
-   ```likec4
-   extend admin.ledger.shared {
-     readModel = store 'ReadModelStore' { ... }
-
-     // ✅ relaciones dentro del extend
-     admin.ledger.shared.queryBus -> admin.ledger.shared.readModel 'lee proj_*'
-   }
-   ```
-
-   Incorrecto (genera `Could not resolve reference`):
-   ```likec4
-   extend admin.ledger.shared {
-     readModel = store 'ReadModelStore' { ... }
-   }
-   // ❌ referencia a readModel no resuelta fuera del extend
-   admin.ledger.shared.queryBus -> admin.ledger.shared.readModel 'lee proj_*'
-   ```
-
-   Las referencias dentro de `views { dynamic view ... { ... } }` no tienen esta
-   limitación — funcionan sin importar dónde esté definido el elemento.
-
-   Si `MODEL_VALIDATE_CMD` (default `npx likec4 validate`) reporta errores
-   nuevos (vs. el estado pre-diseño), corregir el `.c4` antes de continuar.
-   Errores pre-existentes documentados
-   (como los deltas archivados en `work/done/`) no bloquean, pero deben anotarse
+   El error típico es nombrar un componente que todavía no existe porque este ítem lo va a
+   crear. Es esperable: el gate se corre sobre el repo, y el símbolo aparecerá cuando
+   `/build` escriba el código. Anotarlo como pendiente en `design.md` en vez de renombrar
+   el nodo para «hacer pasar» el gate — el diagrama debe nombrar la clase que se va a
+   crear, con el nombre con el que se va a crear.
    como riesgo conocido.
 
 Luego saltar a **PHASE 4.5** (quality gates). Las secciones «File 1/2» de abajo son el
@@ -644,7 +578,8 @@ Save:
 - `work/active/sm-<number>/docs/api.delta.yaml` (si `API_CONTRACT_MODE = delta`) o `docs/api.yaml` (si `full`)
 - `work/active/sm-<number>/docs/data-model.md` (if applicable)
 - `work/active/sm-<number>/design.md`
-- Solo modo `DESIGN_OUTPUT_MODE = delta`: `docs/model.delta.c4` + `docs/flows/*.md`
+- Solo modo `DESIGN_OUTPUT_MODE = full-flow`: `docs/flows/*.md` completos, cada uno con su
+  `sequenceDiagram` inline
 
 ---
 
