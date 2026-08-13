@@ -18,9 +18,10 @@ description: >
 ## Overview
 
 Read the story requirements and the existing codebase context, resolve any
-ambiguities about new data through targeted questions, and produce the
-contract API-first: `docs/api.yaml` is approved **before** any NestJS code
-exists — `/plan` generates DTOs that conform to it, never the reverse.
+ambiguities about new data through targeted questions, and produce the contract
+API-first (`API_CONTRACT`, e.g. OpenAPI 3.1): `<api-artifact>` is approved
+**before** any code exists — `/plan` generates the DTOs that conform to it, never
+the reverse.
 
 **Announce at start:** "Designing the technical specification for spec-<number>."
 
@@ -48,68 +49,127 @@ In both modes the following are also produced, where applicable:
 
 ## Project profile (read first, always)
 
-Before anything else, read `.agents/profile.md` (at the root of the current project): it defines the artifact
-paths, the output language, the **API contract format**, the **diagram format**, the
-**target stack** (domain-code language, ORM, migration style) and the project
-constitution that validates the quality gates. If it doesn't exist, tell the user to create it by copying `~/.agents/sdd-profile.template.md` to the project's `.agents/profile.md`, and stop: without a profile you don't know this project's conventions.
+Read `.agents/profile.md` at the root of the current project before anything else. If it
+doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
+`.agents/profile.md` and stop — without a profile you don't know this project's
+conventions.
 
-**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
-
-**The literals in this document are only an example resolution**.
-The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
-
-| In this document | Key in profile.md |
-|---|---|
-| `spec-<number>` | `STORY_ID_PATTERN` |
-| `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
-| "microservice" in the prose | `COMPONENT_TERM` (section 7) — read the term from the profile |
-| interaction language | `OUTPUT_LANGUAGE` |
-| `OpenAPI 3.1 (`api.yaml`)` | `API_CONTRACT` |
-| per-stack templates (`STACK_REFS`) | section 7 — `<pack path>/references/`; default: local `references/` (generic) |
-| Mermaid diagram | `DIAGRAM_FORMAT` |
-| TypeORM entity + manual SQL migration | `ORM`, `MIGRATIONS` (section 7) |
-| NestJS / DTOs | section 7 "Stack and architecture" |
+Any path, command, framework or diagram notation shown in this document is an example
+resolution; the profile's value wins. The keys this skill reads are listed under
+**Profile keys** in the `Contract` below.
 
 ---
 
-## CRITICAL: Verify inputs exist
+## Contract
 
-Extract the story number from user input. Then verify:
+What this skill needs, what it guarantees to the next stage, and what it may not do.
+**Check every `Requires` row before any other work** — a failed precondition stops
+the design at the start, not halfway through a contract.
 
-```bash
-[ -f work/active/spec-<number>/spec.md ]      || echo "MISSING: spec.md"
-[ -f work/active/spec-<number>/context.md ] || echo "MISSING: context.md"
-```
+**Requires**
 
-- If `spec.md` missing → stop:
-  "I couldn't find `work/active/spec-<number>/spec.md`.
-  Run `/spec spec-<number>` first."
+| Condition | Check | If it fails |
+|---|---|---|
+| You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
+| `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find `work/active/spec-<number>/spec.md`. Run `/spec spec-<number>` first." |
+| `context.md` exists | `[ -f work/active/spec-<number>/context.md ]` | Stop: "I couldn't find `work/active/spec-<number>/context.md`. Run `/clarify spec-<number>` first." |
+| **Ambiguity gate:** zero unresolved markers | `grep -c 'NEEDS CLARIFICATION' work/active/spec-<number>/spec.md` returns `0` | Stop, do not design: "`spec.md` still has `<N>` unresolved `[NEEDS CLARIFICATION]` markers. Designing a contract on top of ambiguities produces potentially incorrect DTOs and behaviors. Run `/clarify spec-<number>` to resolve them before `/design`." |
 
-- If `context.md` missing → stop:
-  "I couldn't find `work/active/spec-<number>/context.md`.
-  Run `/clarify spec-<number>` first."
+`/clarify` closes its own run with that same `grep -c` at `0`. A spec that still
+carries markers is therefore a spec `/clarify` never finished: the gate catches a
+broken handoff, and no marker is minor enough to design past.
 
-## CRITICAL: Ambiguity gate — zero unresolved markers
+**Produces** — this is what `/plan` and `/sync` look for
 
-The spec must be unambiguous before any contract is designed. Check for
-unresolved `[NEEDS CLARIFICATION]` markers left by `/spec`:
+- `design.md` with `## Global Architecture Impact`, **always present, never
+  conditional**: Yes/No and, if Yes, the C4 level plus the concrete node/edge.
+  `/sync` reads this section by name and hands it to `/architecture` verbatim — it
+  re-derives nothing from the diff (PHASE 4, File 4).
+- `design.md` with `## Design Decisions` whenever PHASE 3 resolved at least one
+  unknown — omitted entirely, never left as an empty header, when it resolved none.
+  `/sync` copies it verbatim into the cumulative `docs/decisions.md`.
+- `design.md` with `## Module Components`, the endpoint table per <component>,
+  `## Quality Gates Validation` (for the PHASE 5 review), and `## Data Modeling`
+  **if and only if** `docs/data-model.md` exists — `/plan` stops when that pairing
+  is broken.
+- `<api-artifact>` — `docs/api.delta.yaml` if `API_CONTRACT_MODE = delta`,
+  `docs/api.yaml` if `full` — having passed all 5 post-generation checks, zero
+  unreplaced `<placeholder>` matches among them. `/plan` reads it as the source of
+  truth for DTOs, never `design.md`.
+- The diagram artifacts the mode dictates: `docs/diagram.md` + `docs/component.md`
+  when `DESIGN_OUTPUT_MODE = full`; `docs/flows/<slug>.md`, each carrying its inline
+  `sequenceDiagram`, when `full-flow`.
+- `docs/data-model.md` and `docs/research.md` only where they apply.
 
-```bash
-grep -c 'NEEDS CLARIFICATION' work/active/spec-<number>/spec.md
-```
+Two of those guarantees are **countable, not a matter of judgment**, and both are
+checked by running a command rather than by re-reading the artifact: the ambiguity
+gate in `Requires` (`grep -c 'NEEDS CLARIFICATION'` = `0`, so every design rests on a
+spec with no open markers) and Check 2 of the contract validation (`grep -n '<[a-z]'`
+over `<api-artifact>` = no matches). One marker or one placeholder left is a stop.
 
-If the count is greater than `0` → **STOP** (do not design):
-> "`spec.md` still has <N> unresolved `[NEEDS CLARIFICATION]` markers. Designing a
-> contract on top of ambiguities produces potentially incorrect DTOs and behaviors.
-> Run `/clarify spec-<number>` to resolve them before `/design`."
+`## Design Decisions` and `## Global Architecture Impact` are structural headings —
+`/sync` looks them up literally. Translating either one breaks the close-out.
 
-Only proceed when the count is `0`. This mirrors the industry standard (Spec
-Kit): specifications must reach zero ambiguity markers before implementation
-planning begins.
+**Writes** — nothing outside this list
+
+- `work/active/spec-<number>/design.md`
+- `work/active/spec-<number>/docs/` — `<api-artifact>`, `diagram.md`,
+  `component.md`, `flows/*.md`, `data-model.md`, `research.md`
+
+Not `spec.md` or `context.md` (that's `/clarify`, or `/refine` for a correction), not
+`plan.md` (that's `/plan`), not the unit's living docs (that's `/sync` — this skill
+only *reads* them, in PHASE 4 step 2), and not `DOCS_ARCHITECTURE`: C4 Level 1/2
+belongs to `/architecture`.
+
+**Never** — regardless of how obvious the field or the name looks
+
+- Write a field into `<api-artifact>` or `docs/data-model.md` that comes from neither
+  `context.md` nor an answer recorded in `## Design Decisions`.
+- Mint a new flow when the `entrypoint`/`command`/`operationId` already exists in the
+  living docs — that is a `modify`, never a `create` (PHASE 4, step 2).
+- Rename a diagram node to make `MODEL_VALIDATE_CMD` pass. The gate failing on a class
+  this item is about to create is expected; record it as a known risk instead.
+- Regenerate `docs/component.md` from scratch when the module already has one — it
+  accumulates across stories and gets updated surgically.
+
+**Escalates** — PHASE 3, at most 5 unknowns, one `AskUserQuestion` call each: anything
+that blocks a DTO, a contract or a behavior, plus any doubt about whether the story
+touches global architecture. Writing a vague `## Global Architecture Impact` instead
+of asking is not an option — `/sync` and `/architecture` apply that answer verbatim.
+
+**Degrades** — none of the three tool keys blocks the design; each falls back to
+manual and leaves the mark in `design.md`:
+
+- `YAML_VALIDATE_CMD` at `—` → review `<api-artifact>`'s syntax by hand (Check 1).
+- `MODEL_VALIDATE_CMD` at `—` → review the diagram identifiers by hand, and note in
+  `design.md` that there was no automatic validation.
+- `API_DIFF_TOOL` at `—` → no automatic breaking-change classification; note in
+  `design.md` that `/sync` compares the contracts manually.
+
+**Profile keys**
+
+- `STORY_ID_PATTERN`, `WORKDIR_ACTIVE` — the story's id and workspace, written
+  throughout this document as `spec-<number>` and `work/active/spec-<number>/`
+- `WORKING_DIRECTORY` — the directory gate in `Requires`
+- `API_CONTRACT`, `API_CONTRACT_MODE` — the contract's notation and whether the story
+  emits a delta or a full file ("PHASE 4 — API contract")
+- `DESIGN_OUTPUT_MODE`, `DIAGRAM_FORMAT` — which diagram artifacts to emit, in what
+  notation
+- `DOCS_MODULE_API`, `DOCS_UNIT_FLOWS`, `DOCS_MODULE_ARTIFACTS`, `DOCS_UNIT_README`,
+  `DOCS_ARCHITECTURE` — the living docs read for the reconciliation lookup (PHASE 4,
+  step 2) and the destinations `/sync` promotes to (section 8)
+- `MODEL_VALIDATE_CMD`, `YAML_VALIDATE_CMD`, `API_DIFF_TOOL` — the gates over the
+  produced artifacts (section 10)
+- `COMPONENT_TERM`, `ORM`, `MIGRATIONS`, `STACK_REFS` and section 7 — the term for a
+  deployable unit, the persistence stack, and the per-stack templates
+- `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
 
 ---
 
 ## PHASE 1: Load context
+
+Extract the story number from the user's input, then run the `Requires` checks above
+before reading anything else.
 
 1. Read `work/active/spec-<number>/spec.md` — extract:
    - The complete framing block (User Story, Defect, Technical Debt, …)
@@ -117,13 +177,14 @@ planning begins.
    - Technical Context if present
 
 2. Read `work/active/spec-<number>/context.md` — extract:
-   - Affected microservices and their modules
+   - Affected <component>s (`COMPONENT_TERM`, e.g. microservice) and their modules
    - Existing entities with their fields
    - Existing DTOs available for reuse
    - The project's injection patterns
    - Gaps detected by /clarify
 
-3. Read `docs/architecture/conventions.md` — apply naming and code conventions
+3. Read the conventions doc under `DOCS_ARCHITECTURE` (e.g.
+   `docs/architecture/conventions.md`) — apply naming and code conventions
    throughout the design.
 
 4. Read the project **constitution** if it exists — it is the source of
@@ -258,18 +319,18 @@ mkdir -p work/active/spec-<number>/docs/
 
 ---
 
-## PHASE 4 — DELTA MODE (when `DESIGN_OUTPUT_MODE = delta`)
+## PHASE 4 — FLOW MODE (when `DESIGN_OUTPUT_MODE = full-flow`)
 
-This mode **replaces** the legacy "File 1/2/3" sections below. The unit of
-documentation is the **use case (flow)**, not the item. The item is a set of
-operations over flows: `create` | `modify` | `deprecate`.
+This mode **replaces** the "File 1/2/3" sections below (which are the `full` default).
+The unit of documentation is the **use case (flow)**, not the item. The item is a set
+of operations over flows: `create` | `modify` | `deprecate`.
 
 **Algorithm:**
 
 1. **Derive the affected use cases.** From `spec.md`, map each AC to a flow:
-   `(module, use-case, trigger)`. `trigger ∈ TRIGGER_TAXONOMY` (`rest`, `cron`,
-   `queue`, `domain-event`, `cli`). Determine the `entrypoint` (REST route, cron/job/
-   event name) and the `command`/query it fires.
+   `(module, use-case, trigger)`, where `trigger` is one of `rest`, `cron`, `queue`,
+   `domain-event`, `cli`. Determine the `entrypoint` (REST route, cron/job/event name)
+   and the `command`/query it fires.
 
 2. **Reconciliation lookup — resolve identity against the living docs (avoids duplicates).**
    Before marking anything, read each affected module's living docs and inventory the
@@ -368,8 +429,10 @@ operations over flows: `create` | `modify` | `deprecate`.
    known risk — instead of renaming the node to "make the gate pass": the diagram must
    name the class that will be created, with the name it will be created under.
 
-Then jump to **PHASE 4.5** (quality gates). The "File 1/2" sections below are the
-default mode (`full`/Markdown-Mermaid) and don't run in delta mode; the API contract
+Then produce **File 3** (`docs/data-model.md`, if it applies) and **File 4**
+(`design.md`) below — those two run in **both** modes, and File 4 is where
+`## Global Architecture Impact` becomes mandatory — and jump to **PHASE 4.5** (quality
+gates). Only "File 1" and "File 2" are `full`-mode only; the API contract
 ("PHASE 4 — API contract") applies in both modes.
 
 ---
@@ -390,15 +453,16 @@ Build it from:
 
 ### When `API_CONTRACT_MODE = delta` (default)
 
-Emit `docs/api.delta.yaml` — OpenAPI 3.1 with **only** the new or modified `paths` and
-`components.schemas`, grouped by `tags` (one per module). If an endpoint **modifies** an
-already-published contract, note it in `design.md` so `/sync` runs `API_DIFF_TOOL`
-(profile section 10 — default `oasdiff`) and classifies whether it's breaking.
+Emit `docs/api.delta.yaml` — in `API_CONTRACT`'s notation (e.g. OpenAPI 3.1), with
+**only** the new or modified `paths` and `components.schemas`, grouped by `tags` (one
+per module). If an endpoint **modifies** an already-published contract, note it in
+`design.md` so `/sync` runs `API_DIFF_TOOL` (profile section 10 — a typical resolution
+is `oasdiff`) and classifies whether it's breaking.
 
 ### When `API_CONTRACT_MODE = full`
 
-Emit `docs/api.yaml` — the complete contract, OpenAPI 3.1, API-first. The `info.title`
-starts with `spec-<number>`.
+Emit `docs/api.yaml` — the complete contract in `API_CONTRACT`'s notation, API-first.
+The `info.title` starts with `spec-<number>`.
 
 ### Post-generation validation (mandatory, before continuing)
 
@@ -455,7 +519,7 @@ a matching entry in `components.schemas`.
 **Check 4 — Required contract fields:**
 
 Confirm that:
-- `openapi: 3.1.0` is at the document root
+- the document root declares `API_CONTRACT`'s version (e.g. `openapi: 3.1.0`)
 - `info.title` starts with the item's ID (`STORY_ID_PATTERN` from the profile)
 - `tags` has at least one entry with `name` and `description`
 - All `paths` start with `/`
@@ -472,9 +536,9 @@ Only proceed to the next files once all 5 checks pass.
 
 ---
 
-### File 1 — docs/diagram.md (always)
+### File 1 — docs/diagram.md (`DESIGN_OUTPUT_MODE = full` only — always, in that mode)
 
-Shows how data flows between microservices. Use Mermaid format:
+Shows how data flows between <component>s. Use `DIAGRAM_FORMAT` (e.g. Mermaid):
 
 ```markdown
 # Flow diagram: spec-<number>
@@ -493,19 +557,19 @@ sequenceDiagram
 ```
 
 Rules for the diagram:
-- Show every microservice in the flow, in order
+- Show every <component> in the flow, in order
 - Label each arrow with: HTTP method + path + schema name (matching the
   operation/schema names used in `<api-artifact>`, the produced contract)
 - Use `-->>` for responses, `->>` for requests
 - Include the actor (User/System) as the initiator
-- If a microservice calls another internally, show that hop too
+- If a <component> calls another internally, show that hop too
 
-### File 2 — docs/component.md (C4 Level 3, almost always)
+### File 2 — docs/component.md (C4 Level 3 — `DESIGN_OUTPUT_MODE = full` only, almost always)
 
 Shows the affected module's internal building blocks: use case(s)/handler(s), domain
 aggregate(s)/entity(ies), port(s)/repository(ies) and the infrastructure adapters that
-implement them. This is the C4 Level 3 view — it lives inside the module, not in
-`docs/architecture/` (that's Level 1-2, managed by `/architecture`, invoked by `/sync`).
+implement them. This is the C4 Level 3 view — it lives inside the module, not under
+`DOCS_ARCHITECTURE` (that's Level 1-2, managed by `/architecture`, invoked by `/sync`).
 
 Rules:
 - Resolve the module's promoted destination with `DOCS_MODULE_ARTIFACTS`
@@ -521,9 +585,10 @@ Rules:
   components (for example, a purely configuration change) — that shouldn't be the
   typical case.
 
-### File 3 — docs/data-model.md (conditional, only if a new/changed DB table is needed)
+### File 3 — docs/data-model.md (both modes; only if a new/changed DB table is needed)
 
-Schema definition (per the project's ORM) + migration SQL, full definitions. Consult
+Schema definition per `ORM` + the migration in `MIGRATIONS`' form (e.g. a TypeORM
+entity plus manual SQL), full definitions — never a sketch. Consult
 `<STACK_REFS>/references/data-model-template.md` (default if `STACK_REFS` isn't defined:
 the local `references/data-model-template.md` — generic) for the exact structure.
 
@@ -534,7 +599,7 @@ Build it from:
 
 If no new/changed table is needed, skip this file entirely — do not create it.
 
-### File 4 — design.md (narrative summary, links to docs/)
+### File 4 — design.md (both modes — narrative summary, links to docs/)
 
 Consult `references/design-template.md` for the exact structure.
 
@@ -563,7 +628,7 @@ Contains:
   introduces isn't already there, it's a **Yes**. Never leave it ambiguous —
   if genuinely unsure, ask the user as part of PHASE 3 rather than writing a
   vague answer here.
-- A per-microservice endpoint table (method + path + business description)
+- A per-<component> endpoint table (method + path + business description)
   linking to `<api-artifact>` (the produced contract) for the full schemas
 - `## Data Modeling` (conditional — only if `docs/data-model.md` was
   produced; here just name the new table(s) and link to `docs/data-model.md`
@@ -596,7 +661,7 @@ For each **Article**, confirm the design does not violate it. For each active
 |------|--------|---------------|
 | Simplicity | ✅/⚠️ | <why no layers/abstractions were added without a use case> |
 | Anti-Abstraction | ✅/⚠️ | <why the framework/pattern is used directly> |
-| Integration-First | ✅/⚠️ | <`api.yaml` + contract tests defined before implementing> |
+| Integration-First | ✅/⚠️ | <`<api-artifact>` + contract tests defined before implementing> |
 | Test-First | ✅/⚠️ | <the plan will write tests before the code — guaranteed in `/plan`> |
 
 - If a gate **fails** (⚠️) → do not silently proceed. Either adjust the design
@@ -621,8 +686,8 @@ Record the gate table in `design.md` under `## Quality Gates Validation`
 After saving the files:
 
 1. Show a summary:
-   - Microservices designed
-   - New endpoints per service (paths from `<api-artifact>`)
+   - <component>s designed
+   - New endpoints per <component> (paths from `<api-artifact>`)
    - New schemas created
    - Whether it includes a data model (and whether `docs/data-model.md` was generated)
    - Whether `docs/research.md` was generated (and how many decisions it documents)
@@ -642,7 +707,7 @@ After saving the files:
 3. Say:
    > "**STOP:** Review the full contract (`<api-artifact>`), the diagram and the data
    > model (if applicable) before continuing.
-   > Once approved, `/plan` generates the NestJS DTOs and entity/migration from these
+   > Once approved, `/plan` generates the DTOs and the entity/migration from these
    > files — a later change means regenerating them.
    > If something isn't right, say so now. When you're ready, run `/plan spec-<number>`."
 
@@ -659,16 +724,16 @@ After saving the files:
 | A Quality Gate fails (⚠️) | The design violates a principle | Adjust the design to pass it, or record a justified exception in `design.md` and approve it in PHASE 5 |
 | No constitution | `/constitution` never ran | Apply the 4 built-in gates by default; suggest `/constitution` to make them enforceable |
 | Undefined field in a schema | Ambiguous item | Ask in PHASE 3 before designing |
-| Affected service not identified | Incomplete context.md | Ask the user before continuing |
+| Affected <component> not identified | Incomplete context.md | Ask the user before continuing |
 | Diagram with no schema names on the arrows | Missing contract information | Resolve in PHASE 3 before diagramming |
 | `component.md` already exists from an earlier story of the same module | It's a living per-module document, accumulated across stories | Read it first and update it surgically — never regenerate it from scratch, that would lose earlier stories' components |
 | Unclear whether the story touches global architecture | The module/integration is ambiguous with respect to what `context.md` already lists | Resolve it in PHASE 3 as one more question — never leave "Global Architecture Impact" ambiguous, `/sync` and `/architecture` trust that answer as written |
 | New table not confirmed | Item ambiguous about persistence | Ask it as one of the 5 questions |
-| api.yaml modified after /plan | Contract change after approval | Warn: run `/plan spec-<number>` again to regenerate the DTOs |
+| `<api-artifact>` modified after /plan | Contract change after approval | Warn: run `/plan spec-<number>` again to regenerate the DTOs |
 
 ---
 
-## CRITICAL: Output Language
+## Output language
 
 **Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
 `OUTPUT_LANGUAGE` if the project doesn't declare it): the prose of `design.md`,

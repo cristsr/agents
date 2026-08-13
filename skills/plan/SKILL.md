@@ -13,70 +13,130 @@ description: >
 
 ## Overview
 
-Read the three approved artifacts, determine implementation order from the
-sequence diagram, and produce a complete TDD plan organized by microservice.
+Read the approved artifacts, determine implementation order from the sequence
+diagram, and produce a complete TDD plan organized by <component>.
 
 **Announce at start:** "Generating the implementation plan for spec-<number>."
 
 **Output:** `work/active/spec-<number>/plan.md`
 
+**Core principle:** the plan is written, not executed — every task is text `/build`
+runs later, including the git commands in Task 0.
+
 ---
 
 ## Project profile (read first, always)
 
-Before anything else, read `.agents/profile.md` (at the root of the current project): it defines the artifact
-paths, the output language, the **target stack** (framework, ORM, DTO style) and the
-**test framework** that anchors the TDD cycle. If it doesn't exist, tell the user to
-create it from the template and stop.
+Read `.agents/profile.md` at the root of the current project before anything else. If it
+doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
+`.agents/profile.md` and stop — without a profile you don't know this project's
+conventions.
 
-**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
-
-**The literals in this document are only an example resolution**.
-The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
-
-| In this document | Key in profile.md |
-|---|---|
-| `spec-<number>` | `STORY_ID_PATTERN` |
-| `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
-| microservice | `COMPONENT_TERM` |
-| `develop` | `BASE_BRANCH` |
-| `feat/<story-key>-…` | `STORY_KEY_PATTERN` |
-| Jest / `*.spec.ts` | `TEST_FRAMEWORK` |
-| NestJS · DTOs · OpenAPI→DTO | section 7 "Stack and architecture" + `API_CONTRACT` + `<STACK_REFS>` |
+Any path, branch name, command or framework shown in this document is an example
+resolution; the profile's value wins. The keys this skill reads are listed under
+**Profile keys** in the `Contract` below.
 
 ---
 
-## CRITICAL: Verify inputs exist
+## Contract
 
-Extract the story number from user input. Then verify:
+What this skill needs, what it guarantees to the next stage, and what it may not
+do. **Check every `Requires` row before any other work** — a missing design
+artifact stops the run at the start, not halfway through a written plan.
 
-`<api-artifact>` = `docs/api.delta.yaml` if `API_CONTRACT_MODE = delta` (the profile
-default, section 8), otherwise `docs/api.yaml`.
+Two artifact names resolve from the profile (section 8) and are used throughout this
+document:
 
-```bash
-[ -f work/active/spec-<number>/spec.md ]          || echo "MISSING: spec.md"
-[ -f work/active/spec-<number>/context.md ]      || echo "MISSING: context.md"
-[ -f work/active/spec-<number>/design.md ]       || echo "MISSING: design.md"
-[ -f work/active/spec-<number>/docs/diagram.md ] || echo "MISSING: docs/diagram.md"
-[ -f work/active/spec-<number>/docs/<api-artifact> ] || echo "MISSING: docs/<api-artifact>"
-```
+- `<api-artifact>` = `docs/api.delta.yaml` if `API_CONTRACT_MODE = delta` (the
+  default), otherwise `docs/api.yaml`.
+- `<flow-artifact>` = `docs/diagram.md` if `DESIGN_OUTPUT_MODE = full` (the default),
+  or every `docs/flows/*.md` if `full-flow` — in that mode each flow carries its own
+  inline `sequenceDiagram` and there is no `diagram.md`.
 
-- If `spec.md` missing → stop:
-  "I couldn't find `work/active/spec-<number>/spec.md`.
-  Run `/spec spec-<number>` first."
+**Requires**
 
-- If `context.md` missing → stop:
-  "I couldn't find `work/active/spec-<number>/context.md`.
-  Run `/clarify spec-<number>` first."
+| Condition | Check | If it fails |
+|---|---|---|
+| You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
+| `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find `work/active/spec-<number>/spec.md`. Run `/spec spec-<number>` first." |
+| `context.md` exists | `[ -f work/active/spec-<number>/context.md ]` | Stop: "I couldn't find `work/active/spec-<number>/context.md`. Run `/clarify spec-<number>` first." |
+| `design.md` exists | `[ -f work/active/spec-<number>/design.md ]` | Stop: "I couldn't find the complete design artifacts for spec-<number>. Run `/design spec-<number>` first." |
+| The sequence diagram exists | `<flow-artifact>` is present under `work/active/spec-<number>/` | Same stop as `design.md` — the implementation order comes from it (PHASE 2) |
+| The API contract exists | `[ -f work/active/spec-<number>/docs/<api-artifact> ]` | Same stop as `design.md` — it is the source of truth for every DTO task |
+| A declared data model has its file | `design.md` has a `## Data Modeling` section ⇒ `docs/data-model.md` exists | Stop: "`design.md` states there's a new data model but I couldn't find `docs/data-model.md`. Run `/design spec-<number>` again." |
+| No plan is already under execution | `plan.md` is absent, or present with **no** task marked `[X]` | Ask before overwriting — see `Escalates` |
 
-- If `design.md`, `docs/diagram.md` or `<api-artifact>` are missing → stop:
-  "I couldn't find the complete design artifacts for spec-<number>.
-  Run `/design spec-<number>` first."
+**Produces** — this is what `/build` looks for
 
-- If `design.md` contains a `## Data Modeling` section but
-  `docs/data-model.md` does not exist → stop:
-  "`design.md` states there's a new data model but I couldn't find
-  `docs/data-model.md`. Run `/design spec-<number>` again."
+- `work/active/spec-<number>/plan.md`, with the header of
+  `references/plan-header-template.md`
+- an `### AC → Task traceability` table in that header mapping **every** AC in
+  `spec.md` to at least one task — `/build` stops at its own Step 1.3 if one is missing
+- `Task 0` as the first task: creates the working branch off `BASE_BRANCH` in every
+  affected <component>, with the branch name already resolved (PHASE 3)
+- `Task N` headings numbered sequentially, each with its TDD cycle, exact file paths
+  and the expected output of every command; tasks belonging to independent groups
+  carry a trailing `[P]` and the groups are named in the header's
+  "Implementation groups" line
+- a final task per affected <component> that runs `MODULE_TEST_CMD`
+- no task marked `[X]` — those markers belong to `/build`
+
+**Writes** — nothing outside this list
+
+- `work/active/spec-<number>/plan.md`
+
+Not `spec.md`, `context.md`, `design.md` or anything under the story's `docs/`
+(that's `/design` or `/refine`), not the project's source and test files (that's
+`/build`), and not the unit's living docs (that's `/sync`).
+
+**Never** — regardless of what the plan appears to need
+
+- **Allowed (read-only):** reading any project file, `git branch --show-current`,
+  `git status`.
+- **Forbidden:** `git checkout`, `git checkout -b`, `git pull`, `git add`,
+  `git commit`, `git push` and any other state-changing git command. The branch
+  creation lives *inside Task 0 as text*; `/plan` writes it, `/build` runs it.
+- **Forbidden:** creating or editing source or test files. The code inside a task is
+  plan content, not a file on disk.
+
+**Escalates**
+
+- The branch name for Task 0 — always asked, never invented (PHASE 3).
+- A `plan.md` that already has tasks marked `[X]`: report it and ask before
+  regenerating, because a regeneration discards the execution state and any
+  `## AC Coverage` `/build` wrote. A targeted fix on an already-built plan is
+  `/hotfix spec-<number>`, not a full regeneration.
+- An AC that cannot be mapped to any task with the design artifacts at hand
+  (PHASE 3.5): ask — never save a plan with an uncovered AC.
+
+**Degrades**
+
+- `STACK_REFS` unset → the skill's local (generic) `references/`.
+- `MODULE_TEST_CMD` at `—` → the <component>'s full suite (`FULL_TEST_CMD`), both in
+  each task's TDD steps and in the final task.
+- `docs/rules.md` absent → skip the constitution check (PHASE 1, step 6c).
+- `DESIGN_OUTPUT_MODE = full-flow` → there is no `docs/diagram.md`; take the order
+  from the `sequenceDiagram` inside each `docs/flows/*.md`.
+
+**Reverting** — `plan.md` is the only file written, and it is restorable only once the
+story workspace is tracked by git: `git checkout -- work/active/spec-<number>/plan.md`
+brings back the committed version. Before the story's first commit there is nothing to
+restore, which is exactly why regenerating over a plan with `[X]` tasks asks first.
+
+**Profile keys**
+
+- `STORY_ID_PATTERN`, `WORKDIR_ACTIVE` — the story's id and workspace, written
+  throughout this document as `spec-<number>` and `work/active/spec-<number>/`
+- `WORKING_DIRECTORY` — the first `Requires` row
+- `BASE_BRANCH`, `STORY_KEY_PATTERN` — Task 0's branch and its name
+- `API_CONTRACT`, `API_CONTRACT_MODE`, `DESIGN_OUTPUT_MODE` — which design artifacts
+  to read, and which of them is the source of truth (PHASE 1)
+- `TEST_FRAMEWORK`, `MODULE_TEST_CMD` (`FULL_TEST_CMD` as fallback) — the TDD cycle in
+  every task and the final task
+- `STACK_REFS` and section 7 (`COMPONENT_TERM`, `LANGUAGE`, `FRAMEWORK`, `ORM`,
+  `MIGRATIONS`, `DTO_STYLE`, `MODULE_ROOT`) — the task templates and the header's
+  `Stack` line
+- `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
 
 ---
 
@@ -87,23 +147,22 @@ default, section 8), otherwise `docs/api.yaml`.
    - Business rules and edge cases
 
 2. Read `work/active/spec-<number>/context.md` — extract:
-   - Affected microservices
-   - Existing module paths per microservice
-   - Injection patterns (how use cases are registered)
+   - Affected <component>s
+   - Existing module paths per <component> (under `MODULE_ROOT`)
+   - Injection patterns (how use cases are registered, per `DI_TOKENS`)
    - Existing DTOs available for reuse
-   - Current providers in each module.ts
+   - Current providers in each module registration file
 
 3. Read `work/active/spec-<number>/design.md` — extract:
-   - Endpoint table per microservice (business description)
+   - Endpoint table per <component> (business description)
    - Whether `## Data Modeling` is present (signals a new/changed table
      exists — the actual entity/SQL lives in `docs/data-model.md`)
 
-4. Read `work/active/spec-<number>/docs/diagram.md` — the sequence diagram
-   determines microservice implementation order (PHASE 2).
+4. Read `<flow-artifact>` — the sequence diagram determines the <component>
+   implementation order (PHASE 2).
 
-5. Read `work/active/spec-<number>/docs/<api-artifact>` (resolved by
-   `API_CONTRACT_MODE`: `api.delta.yaml` if `delta`, `api.yaml` if `full`) —
-   this is the **source of truth** for DTOs, never `design.md`:
+5. Read `work/active/spec-<number>/docs/<api-artifact>` — written in `API_CONTRACT`
+   (e.g. OpenAPI 3.1), this is the **source of truth** for DTOs, never `design.md`:
    - Every path + operation → the endpoint a controller task must expose
    - Every schema in `components.schemas` → one DTO class, field-by-field
    - Every response code + description → the HTTP response cases a task must test
@@ -111,7 +170,7 @@ default, section 8), otherwise `docs/api.yaml`.
 6. If `design.md` has a data model section, read
    `work/active/spec-<number>/docs/data-model.md` — this is the **source of
    truth** for the entity/migration task, never `design.md`:
-   - Every entity field + type → the `@Column` definition and SQL column
+   - Every entity field + type → the `ORM` column definition and the SQL column
    - Every SQL column → must match the entity field name/type exactly
 
 6b. If `work/active/spec-<number>/docs/research.md` exists, read it — the chosen
@@ -134,35 +193,35 @@ default, section 8), otherwise `docs/api.yaml`.
     — required task format.
 11. Consult `<STACK_REFS>/references/openapi-to-dto-mapping.md` (default: the local
     `references/openapi-to-dto-mapping.md` — generic) — exact mapping from
-    the API contract schema fields to the project's DTO style for the DTO task(s).
+    the API contract schema fields to the project's `DTO_STYLE` for the DTO task(s).
 
 ---
 
 ## PHASE 2: Determine implementation order
 
-Read the sequence diagram in `design.md`.
+Read the sequence diagram in `<flow-artifact>`.
 
 Identify the call chain:
-- Which microservice initiates the flow (usually BFF or scheduling-ms)
-- Which microservice provides the core data (usually capabilities-ms)
-- Which microservices are in between
+- Which <component> initiates the flow (usually the BFF or the entry service)
+- Which <component> provides the core data
+- Which <component>s are in between
 
 **Implementation order rule:**
 Implement from the data provider outward to the consumer.
-Example: if BFF calls capabilities-ms, implement capabilities-ms first,
-then BFF.
+Example: if a BFF calls `capabilities-ms`, implement `capabilities-ms` first,
+then the BFF.
 
-Record the ordered list of microservices before writing any tasks.
+Record the ordered list of <component>s before writing any tasks.
 
 ### Detect independent groups (parallelizable)
 
-If 3+ microservices are affected, check whether any of them have **no call
+If 3+ <component>s are affected, check whether any of them have **no call
 relationship** with each other in the sequence diagram (neither calls the
 other, directly or transitively). Group those into independent groups —
-e.g. "Group A: catalog-ms → gateway-ms" and "Group B:
-users-ms" when users-ms doesn't interact with the other two.
+e.g. "Group A: catalog-ms → gateway-ms" and "Group B: users-ms" when
+`users-ms` doesn't interact with the other two.
 
-If only 1-2 microservices are affected, or all of them are connected in a
+If only 1-2 <component>s are affected, or all of them are connected in a
 single call chain, skip this — there is nothing to parallelize.
 
 Record the groups (if any) — they are used in PHASE 3 to mark tasks `[P]`
@@ -172,44 +231,49 @@ and in the header template.
 
 ## PHASE 3: Generate plan.md
 
-Consult `references/plan-header-template.md` for the exact header structure.
-
 ### Header
 
 Consult `references/plan-header-template.md` for the exact header structure.
 
 ### Task 0 — Prepare branches (always first)
 
-Create git branch preparation for ALL affected microservices.
-Ask the user for the branch name before continuing:
+Ask the user for the branch name before writing the task, and write the resolved
+name into it — `/build` executes the plan without stopping, so it must not have to
+ask:
 
 > "What's the branch name? Use English for the description.
-> (e.g. feat/<story-key>-short-english-description or fix/<story-key>-short-english-description,
-> where `<story-key>` follows `STORY_KEY_PATTERN` from the profile)"
+> (e.g. `feat/<story-key>-short-english-description` or
+> `fix/<story-key>-short-english-description`, where `<story-key>` follows
+> `STORY_KEY_PATTERN` from the profile)"
 
-Include steps for each affected microservice:
+Include, for each affected <component>, a step that branches **explicitly off
+`BASE_BRANCH`** (e.g. `develop`) rather than off whatever happens to be checked out:
+
 ```bash
-git -C <microservice> checkout -b <branch-name>
+git -C <component> checkout -b <branch-name> BASE_BRANCH
 ```
 
-Note: preparing the base branch (`git checkout develop` + `git pull`) is done by
-the dedicated `/prepare` skill, not by `/scan`. Task 0 assumes each affected
-microservice is already on an up-to-date `develop` — if the developer skipped
-`/prepare`, the branch is created off whatever is currently checked out. Do not add
-checkout/pull-of-develop steps here; if the base looks stale, recommend `/prepare`.
+Task 0 must be re-runnable: if the working branch already exists and is checked out
+(the developer created it by hand, or `/forge` did), the task verifies it and skips
+the creation instead of failing.
 
-### Tasks per microservice (in sequence diagram order)
+Note: refreshing the base branch (`checkout` + `pull` of `BASE_BRANCH`) is the
+dedicated `/prepare` skill's job. Task 0 assumes each affected <component> already
+sits on an up-to-date `BASE_BRANCH`. Do not add checkout/pull steps for the base
+here; if the base looks stale, recommend `/prepare`.
 
-For EACH microservice, in the order determined in PHASE 2,
+### Tasks per <component> (in sequence diagram order)
+
+For EACH <component>, in the order determined in PHASE 2,
 generate tasks following this order when applicable:
 
 ```
-Task N   — TypeORM entity + SQL migration
+Task N   — Entity (per `ORM`) + migration (per `MIGRATIONS`)
            (only if design.md has a data model section — use the exact
            entity/SQL from docs/data-model.md, never invent fields)
 
 Task N+1 — Request and response DTOs
-           (use exact field names and types from design.md)
+           (use exact field names and types from <api-artifact>)
 
 Task N+2 — Domain port (abstract class)
            (add new method signatures to the existing abstract service)
@@ -224,23 +288,23 @@ Task N+5 — Controller + module registration
            (add endpoint + register the use case in the module providers)
 ```
 
-**CRITICAL for multi-service plans:**
-- Clearly mark which microservice each task belongs to
-- Use the microservice name as a section header between groups
-- Tasks for service-2 only start after service-1's tasks are complete,
-  UNLESS service-1 and service-2 belong to different independent groups
-  detected in PHASE 2 — in that case, mark every task header in both
-  groups with a trailing `[P]` (e.g. `### Task 3: Request DTOs [P]`)
-  to signal `/build` they can be executed using parallel tool calls.
+**Multi-<component> plans:**
+- Clearly mark which <component> each task belongs to
+- Use the <component> name as a section header between groups
+- Tasks for the second <component> only start after the first one's tasks are
+  complete, UNLESS the two belong to different independent groups detected in
+  PHASE 2 — in that case, mark every task header in both groups with a trailing
+  `[P]` (e.g. `### Task 3: Request DTOs [P]`) to signal `/build` they can be
+  executed using parallel tool calls.
 
 ### Task format
 
 Consult `references/task-structure-template.md` for the exact format.
 
 Each task MUST have:
-- Exact file paths (absolute from monorepo root)
-- Complete TypeScript code — never "add validation here"
-- TDD cycle: test fails → implement → test passes
+- Exact file paths (absolute from the repo root)
+- Complete `LANGUAGE` code — never "add validation here"
+- TDD cycle in `TEST_FRAMEWORK`: test fails → implement → test passes
 - Expected output for every bash command
 - One mock per external dependency
 
@@ -249,19 +313,16 @@ Each task MUST have:
 - Edge cases mentioned in spec.md
 - Error scenarios (invalid input, DB failure, etc.)
 
-### Final task — Run full test suite
+### Final task — Run the affected module's suite
 
-Always include as the last task — the profile's `MODULE_TEST_CMD` (section 10 — default):
-
-```bash
-cd <microservice>
-npx jest src/modules/<module>/ --no-coverage
-cd ..
-```
+Always include as the last task, per affected <component>: run `MODULE_TEST_CMD`
+(profile, section 10 — a typical resolution is
+`npx jest src/modules/<module>/ --no-coverage`, run from that <component>'s
+directory and returning afterwards).
 
 Expected: PASS — every test in the module passing.
 
-If multiple microservices: run for each one.
+If `MODULE_TEST_CMD` is `—` → use `FULL_TEST_CMD` for that <component> instead.
 
 ---
 
@@ -278,7 +339,8 @@ do NOT skip it even if the plan "looks complete":
    | AC-1 | Task 2, Task 5 |
 
    If any AC has zero tasks mapped → add the missing task now, before
-   saving. Never save a plan with an uncovered AC.
+   saving. Never save a plan with an uncovered AC. This table is a contract with
+   `/build`, which refuses to start when an AC is missing from it.
 
 2. **DTO field consistency:** every field name used in a task's DTO code
    must match exactly (name and type, per `references/openapi-to-dto-mapping.md`)
@@ -306,7 +368,7 @@ After saving `work/active/spec-<number>/plan.md`:
 
 1. Show a brief summary:
    - Total tasks generated
-   - Affected microservices in implementation order
+   - Affected <component>s in implementation order
    - Whether it includes an entity + migration
    - Scope estimate (number of files to create/modify)
 
@@ -324,10 +386,13 @@ After saving `work/active/spec-<number>/plan.md`:
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | Service order unclear | Ambiguous sequence diagram | Read the whole diagram, infer from arrow direction |
-| Undefined field in a test | Incomplete design.md | Use only fields confirmed in design.md |
-| Use case not registered in the module | Task omitted | Always include the module.ts registration step |
+| No `docs/diagram.md` in the story | `DESIGN_OUTPUT_MODE = full-flow` | Not a gap: read the inline `sequenceDiagram` of each `docs/flows/*.md` |
+| Undefined field in a test | Incomplete design | Use only fields confirmed in `<api-artifact>` / `docs/data-model.md` |
+| Use case not registered in the module | Task omitted | Always include the module registration step |
 | A test with no AC behind it | Invented test | Every test must map to an AC in spec.md |
-| Relative path in imports | Convention violated | Use absolute paths from src/ |
+| Relative path in imports | Convention violated | Follow `docs/architecture/conventions.md` |
+| `plan.md` already has `[X]` tasks | `/build` already ran on this story | Ask before regenerating — a targeted fix is `/hotfix spec-<number>` |
+| `MODULE_TEST_CMD` is `—` | Project without a per-module command | Write the TDD steps and the final task against `FULL_TEST_CMD` |
 
 ---
 
@@ -364,7 +429,7 @@ After saving `work/active/spec-<number>/plan.md`:
 
 ---
 
-## CRITICAL: Output Language
+## Output language
 
 **Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
 `OUTPUT_LANGUAGE` if the project doesn't declare it): the task titles, the step

@@ -29,12 +29,14 @@ working tree (or a report of what's blocking it).
 
 ## Project profile (read first, always)
 
-Before anything else, read `.agents/profile.md` (at the root of the current project): it defines the base branch (`BASE_BRANCH`), the repo topology (`REPO_TOPOLOGY`: mono-repo vs multi-repo), the story ID pattern and the configured prep skill (`PREP_SKILL`). If it doesn't exist, tell the user to create it by copying `~/.agents/sdd-profile.template.md` to the project's `.agents/profile.md`, and stop: without a profile you don't know this project's conventions.
+Read `.agents/profile.md` at the root of the current project before anything else. If it
+doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
+`.agents/profile.md` and stop — without a profile you don't know this project's
+conventions. Then verify `pwd` matches `WORKING_DIRECTORY` (absolute path) and `cd`
+there if it doesn't, before running any command.
 
-**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
-
-**The literals in this document are only an example resolution**.
-The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
+**The literals in this document are only an example resolution.** The real values come
+from the project's `profile.md`; if they differ, the profile wins:
 
 | In this document | Key in profile.md |
 |---|---|

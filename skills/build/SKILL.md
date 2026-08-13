@@ -25,58 +25,70 @@ upon completion. Ask for review only once all tasks are complete.
 
 ## Project profile (read first, always)
 
-Before anything else, read `.agents/profile.md` (at the root of the current project): it defines the artifact
-paths, the output language, the **target stack** and the **test framework** that
-governs the TDD cycle (red → green → refactor). If it doesn't exist, tell the user to
-create it from the template and stop.
+Read `.agents/profile.md` at the root of the current project before anything else. If it
+doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
+`.agents/profile.md` and stop — without a profile you don't know this project's
+conventions.
 
-**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
-
-**The literals in this document are only an example resolution**.
-The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
-
-| In this document | Key in profile.md |
-|---|---|
-| `spec-<number>` | `STORY_ID_PATTERN` |
-| `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
-| "microservice" in the prose | `COMPONENT_TERM` (section 7) — read the term from the profile |
-| `develop` | `BASE_BRANCH` |
-| Jest / `*.spec.ts` | `TEST_FRAMEWORK` |
-| NestJS · TypeORM · `src/modules/` | section 7 "Stack and architecture" |
+Any path, branch name, command or framework shown in this document is an example
+resolution; the profile's value wins. The keys this skill reads are listed under
+**Profile keys** in the `Contract` below.
 
 ---
 
-## CRITICAL: Verify inputs
+## Contract
 
-Extract the story number from user input. Then verify:
+What this skill needs, what it guarantees to the next stage, and what it may
+not do. **Check every `Requires` row before any other work** — a failed
+precondition stops the run at the start, not halfway through.
 
-```bash
-[ -f work/active/spec-<number>/plan.md ] || echo "MISSING: plan.md"
-```
+**Requires**
 
-If missing → stop:
-"I couldn't find `work/active/spec-<number>/plan.md`.
-Run `/plan spec-<number>` first."
+| Condition | Check | If it fails |
+|---|---|---|
+| You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
+| `plan.md` exists | `[ -f work/active/spec-<number>/plan.md ]` | Stop: "I couldn't find `work/active/spec-<number>/plan.md`. Run `/plan spec-<number>` first." |
+| `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find `work/active/spec-<number>/spec.md`. Without the ACs there is nothing to validate the build against." |
+| Not on a base branch | `git branch --show-current` ∉ {`main`, `master`, `BASE_BRANCH`} | Stop: "You're on `<branch>`, a base branch. Switch to the working branch before continuing." |
+| Every AC maps to a task | the plan's "AC → Task traceability" table covers every AC in `spec.md` | Stop — see Step 1.3 |
 
----
+**Produces** — this is what `/sync` looks for
 
-## CRITICAL: Never execute on main or master
+- `plan.md` with every task marked `[X]`
+- an `## AC Coverage` section appended to `plan.md` (Step 3.3), one line per AC,
+  zero lines marked `✗`
+- a green test suite for every affected <component>
 
-Before executing Task 0, verify the current branch:
+**Writes** — nothing outside this list
 
-```bash
-git branch --show-current
-```
+- the project's source and test files, as the plan's tasks dictate
+- `work/active/spec-<number>/plan.md` — task markers and `## AC Coverage`
+- `work/active/spec-<number>/docs/postman_collection.json`
 
-If the result is `main` or `master` → stop immediately:
-"You're on the `main`/`master` branch. Switch to the working branch before continuing."
+Not `spec.md`, `context.md` or `design.md` (that's `/refine`), and not the
+unit's living docs under `<unit>/docs/` (that's `/sync`).
 
----
+**Never** — regardless of what a task appears to need
 
-## CRITICAL: Never execute commits
+- `git add`, `git commit`, `git push`, or any other state-changing git command.
+  Version control is managed by the user.
 
-Version control is managed by the user.
-Never run `git add`, `git commit`, or `git push` at any point.
+**Escalates** — the four valid reasons to stop mid-execution are the table in
+Step 2. There is no fifth.
+
+**Degrades** — `FULL_TEST_CMD` at `—` → `MODULE_TEST_CMD` per module;
+`POSTMAN_GEN_CMD` at `—` or unavailable → skip and note it, never block the close.
+
+**Profile keys**
+
+- `STORY_ID_PATTERN`, `WORKDIR_ACTIVE` — the story's id and workspace, written
+  throughout this document as `spec-<number>` and `work/active/spec-<number>/`
+- `WORKING_DIRECTORY`, `BASE_BRANCH` — the location and branch gates in `Requires`
+- `TEST_FRAMEWORK`, `MODULE_TEST_CMD`, `FULL_TEST_CMD` — the TDD cycle and the
+  closing suite
+- `POSTMAN_GEN_CMD`, `API_CONTRACT_MODE` — the Postman collection (Step 3.4)
+- `COMPONENT_TERM` and section 7 — the term for a deployable unit, and the stack
+- `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
 
 ---
 
@@ -150,16 +162,11 @@ The only valid reasons to stop mid-execution:
 
 After ALL tasks are complete:
 
-1. Run the full test suite for each affected microservice — run the profile's
-   `FULL_TEST_CMD` (section 10 — default):
+1. Run `FULL_TEST_CMD` (profile, section 10) once per affected <component> — from that
+   component's directory, returning to the working directory afterwards. A typical
+   resolution is `npx jest --no-coverage`, but run whatever the profile declares.
 
-```bash
-cd <microservice>
-npx jest --no-coverage
-cd ..
-```
-
-   If `FULL_TEST_CMD` is `—` → run `MODULE_TEST_CMD` per affected module.
+   If `FULL_TEST_CMD` is `—` → run `MODULE_TEST_CMD` per affected module instead.
 
 2. Delegate a conventions check to the `conventions-reviewer` subagent —
    it runs read-only against the diff and keeps the verbose review out of
@@ -168,29 +175,36 @@ cd ..
    - `model: "sonnet"` (pass explicitly even though the agent definition
      sets it — some Claude Code versions ignore the frontmatter `model` field)
    - A prompt naming each affected microservice, so it can run `git diff`
-     against `develop` in each one
+     against `BASE_BRANCH` in each one
 
 3. **Validate against the original spec:** read `work/active/spec-<number>/spec.md` again
    and build a closing checklist — one line per AC, marked against what was actually
-   implemented and tested (not against what the plan intended):
+   implemented and tested (not against what the plan intended). **Append it to
+   `plan.md`** under an `## AC Coverage` heading, at the end of the file:
 
-   ```
-   AC-1: <short text> — ✓ covered by <component-a>/.../file.spec.ts
-   AC-2: <short text> — ✓ covered by <component-b>/.../file.spec.ts
+   ```markdown
+   ## AC Coverage
+
+   AC-1: <short text> — ✓ <component-a>/.../file.spec.ts::<test name>
+   AC-2: <short text> — ✓ <component-b>/.../file.spec.ts::<test name>
    ```
 
-   If any AC cannot be marked ✓ with a concrete test reference → mark it ✗ and
-   explain why before declaring the plan complete. Do not mark an AC ✓ just
-   because its task is [X] — verify the test actually exercises that AC's behavior.
+   `## AC Coverage` is a structural heading — a contract with `/sync`, which reads it
+   before closing the story. Never translate it, and write one line per AC in
+   `spec.md`, no more and no fewer.
+
+   Every line carries a concrete test reference. If an AC cannot be marked ✓ with one,
+   mark it `✗ <reason>` — and then **stop before declaring the plan complete**: report
+   the uncovered ACs and ask how to proceed. A `✗` is not a footnote to a finished
+   build, it's an unfinished build. Do not mark an AC ✓ just because its task is [X] —
+   verify the test actually exercises that AC's behavior.
 
 4. **Generate the Postman collection** from the approved contract — never hand-write it.
    `<api-artifact>` = `docs/api.delta.yaml` if `API_CONTRACT_MODE = delta`, otherwise
-   `docs/api.yaml` (profile, section 8). Run the profile's `POSTMAN_GEN_CMD`
-   (section 10 — default):
-
-```bash
-npx -y openapi-to-postmanv2 -s work/active/spec-<number>/docs/<api-artifact> -o work/active/spec-<number>/docs/postman_collection.json -p
-```
+   `docs/api.yaml` (profile, section 8). Run `POSTMAN_GEN_CMD` (section 10) with
+   `docs/<api-artifact>` as input and `docs/postman_collection.json` as output, both
+   under the story's workspace. A typical resolution is
+   `npx -y openapi-to-postmanv2 -s <input> -o <output> -p`.
 
    Expected: `docs/postman_collection.json` created/updated.
 
@@ -209,7 +223,7 @@ npx -y openapi-to-postmanv2 -s work/active/spec-<number>/docs/<api-artifact> -o 
    - Files created (list of paths)
    - Files modified (list of paths)
    - Test results per microservice
-   - AC validation checklist (step 3)
+   - The `## AC Coverage` checklist as written into `plan.md` (step 3)
    - Postman collection generated at `docs/postman_collection.json` (or why it was skipped)
    - The subagent's conventions findings (if any)
 
@@ -255,6 +269,7 @@ Quick summary:
 | Branch is main/master | User forgot to switch | Stop immediately, ask for correct branch |
 | Use case not injected | Module registration missing | Check module.ts providers array |
 | An AC with no task in the traceability table | `/plan` produced the plan before this change, or PHASE 3.5 was skipped | STOP at Step 1.3, ask for the plan to be regenerated with `/plan spec-<number>` |
+| An AC ends up `✗` in `## AC Coverage` | The tasks are done but no test exercises that AC's behavior | STOP at Step 3.3 — report the uncovered ACs and ask; `/sync` will refuse to close the story anyway |
 | A `[P]` task modifies a file another group already touched | Wrong grouping in `/plan` | Abort the parallel batch, continue the rest sequentially |
 | `openapi-to-postmanv2` unavailable or `POSTMAN_GEN_CMD` is `—` | Tool not installed or project doesn't use it | Skip the step, suggest importing `<api-artifact>` straight into Postman, don't block the close |
 | `<api-artifact>` doesn't exist | Story with no new/changed endpoints | Skip the Postman generation silently |
@@ -295,11 +310,12 @@ Executing plan spec-1933.
 
 ---
 
-## CRITICAL: Output Language
+## Output language
 
 **Any note you append to `plan.md` follows `ARTIFACT_LANGUAGE`** (profile, section 5 —
-falls back to `OUTPUT_LANGUAGE` if the project doesn't declare it). The `[X]` markers
-and the `Task N` headings are structural — never touch their wording.
+falls back to `OUTPUT_LANGUAGE` if the project doesn't declare it). The `[X]` markers,
+the `Task N` headings and the `## AC Coverage` heading are structural — never touch
+their wording.
 
 **Code comments and test names follow the code**, i.e. `IDENTIFIER_LANGUAGE`
 (normally English) — they are part of the codebase, not of the artifact prose.

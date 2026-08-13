@@ -5,8 +5,9 @@ description: >
   report with findings prioritized by severity, a trigger test battery and the
   concrete fixes to apply. Validates the frontmatter's hard rules, assesses the
   description's quality, detects over-triggering and under-triggering risks,
-  reviews the structure and the use of progressive disclosure, and checks that
-  the instructions are actionable.
+  reviews the structure and the use of progressive disclosure, checks that
+  the instructions are actionable, and verifies the handoff contract when the
+  skill chains with others.
   Use when the user says "/skill-evaluator", "review this skill",
   "evaluate a skill", "why doesn't my skill trigger", "the skill over-triggers",
   "audit a SKILL.md", "improve this skill", "review my skills", or points
@@ -74,6 +75,19 @@ is present, and `SKILL.md`'s word count.
 Read `SKILL.md` in full. Also read the `references/` files **only if** `SKILL.md`
 links them — if it doesn't link them, that's already a finding (see D3).
 
+### Step 4 — Classify: pipeline or standalone
+
+Decides whether **PHASE 6** applies. A skill is **pipeline** if a **named** skill
+produces its input or consumes its output, if it writes into a workspace shared with
+other skills, or if it reads a project profile for paths, branches or commands.
+Otherwise it's **standalone** — including a skill that operates on whatever file the
+user points it at: arbitrary input is not a handoff, however often it runs after
+some other skill.
+
+Say which one in the report's header. Getting this wrong costs in both directions:
+group C on a standalone skill produces findings demanding a contract that shouldn't
+exist, and skipping it on a pipeline skill drops the highest-impact checks there are.
+
 ---
 
 ## PHASE 2: Hard rules (blocking)
@@ -93,7 +107,7 @@ These are binary: either they hold or the skill is broken. Any failure here is
 | B6 | `name` doesn't contain "claude" or "anthropic" | Reserved |
 | B7 | `description` present | — |
 | B8 | `description` under 1024 characters | Count |
-| B9 | No angle brackets (`<` `>`) in the frontmatter | Search the whole block |
+| B9 | No XML angle brackets in the frontmatter | Search the whole block. **The YAML block-scalar indicators `>` and `\|` on `description:` are not a violation** — they're valid YAML, not markup. What's forbidden is a tag: `<tag>`, `</tag>`, `<placeholder>` |
 | B10 | No `README.md` inside the skill's folder | `ls` |
 
 To count the `description`'s characters without eyeballing it:
@@ -162,7 +176,7 @@ instructions*.
 | ID | Common cause | Check | Fix |
 |---|---|---|---|
 | I1 | Instructions too verbose | Long paragraphs where a list belongs? | Bullets and numbered lists; detail into `references/` |
-| I2 | Buried instructions | Is the critical part near the start? | Move it up; use `## Important` / `## Critical` headings |
+| I2 | Buried instructions | Is the critical part near the start? | Move it up — into the `Contract` if there is one. A `## CRITICAL` heading only for something irreversible it doesn't already cover (see C5) |
 | I3 | Ambiguous language | Does it say "validate properly" instead of what to validate? | Replace with verifiable criteria |
 | I4 | No error handling | Is there a common-issues section with cause and solution? | Add it |
 | I5 | No examples | Is there at least one end-to-end scenario? | Add user says / actions / result |
@@ -187,7 +201,52 @@ Code is deterministic; language interpretation isn't.
 
 ---
 
-## PHASE 6: Generate the trigger test battery
+## PHASE 6: Contract and handoff (pipeline skills only)
+
+Skip this phase if PHASE 1 Step 4 said **standalone**, and say so in one line in the
+report. `references/rubric.md` carries group C in full.
+
+The symptom this phase attacks: *each skill reads fine on its own and the chain still
+breaks*. A contract defect is only visible at the junction — reading either side
+alone shows nothing wrong.
+
+| ID | Check | Fails if… |
+|---|---|---|
+| C1 | A `## Contract` block after the Overview, with the rows that apply (`Requires`, `Produces`, `Writes`, `Never`, `Escalates`, `Degrades`, `Profile keys`, + `Reverting` if it overwrites live artifacts) | The block is absent, or scattered back across several `CRITICAL` sections |
+| C2 | Every key in `Profile keys` exists in the project's profile template, and the skill declares all the ones it actually reads | A key is invented, missing, or the catalog and the skill disagree |
+| C3 | No `\| In this document \| Key in profile.md \|` translation table | The table is still there |
+| C4 | Normative literals replaced by their key | A path, branch or command the project configures is hardcoded in a step |
+| C5 | No `## CRITICAL` heading the `Contract` already covers | `CRITICAL` used for language conventions, read paths or ordinary preconditions |
+| C6 | The handoff holds: the previous skill's `Produces` covers this one's `Requires` | This skill requires something nobody produces, or produces something nobody consumes |
+| C7 | The ecosystem's validator passes, if the project has one | It reports issues on this skill |
+
+### How to check C2 and C6 without guessing
+
+**C2** — read the profile template, not the catalog. Where a hand-maintained
+"keys per skill" table disagrees with the skill's own `Contract`, treat **the table
+as the suspect**: it's maintained by memory and drifts. Report the discrepancy;
+don't silently fix the table from inside this evaluation.
+
+**C6** — open the neighboring skill and read its `Contract`, both directions:
+
+```
+previous.Produces  ⊇  this.Requires      ← this skill can actually start
+this.Produces      ⊇  next.Requires      ← the next one can actually start
+```
+
+Any `Requires` row with no producer is a finding against **whoever should produce
+it**, not against the skill that needs it. Name both skills in the finding.
+
+### What C4 looks like in practice
+
+The failure this check exists for: a skill carried `| develop | BASE_BRANCH |` in its
+translation table and, hundreds of lines below, still verified
+`branch ∉ {main, master}` — passing through exactly the project the table was there
+to cover. The table was correct and useless; the check was the contract.
+
+---
+
+## PHASE 7: Generate the trigger test battery
 
 Derive the test cases from the `description` and the skill's examples — don't
 invent them from nothing.
@@ -213,7 +272,7 @@ the report as a collision risk.
 
 ---
 
-## PHASE 7: Report and close
+## PHASE 8: Report and close
 
 ### Report format
 
@@ -221,6 +280,7 @@ the report as a collision risk.
 ## Evaluation: <skill-name>
 
 **Verdict:** <Ready to use | Needs adjustments | Broken>
+**Kind:** <Pipeline | Standalone>   ← standalone means group C doesn't apply
 **Trigger risk:** <Under-triggering | Over-triggering | OK>
 
 ### Blocking (N)
@@ -249,6 +309,11 @@ Report rules:
 - Every finding carries the concrete fix, not just the diagnosis.
 - If a category has no findings, say so in one line — don't pad.
 - Don't report as a problem what the guidance leaves to the author's judgment.
+- **A C6 finding names both skills** — the one that requires and the one that should
+  produce. The fix usually belongs to the neighbor, not to the skill under review.
+- **Findings against a skill you weren't asked to evaluate are reported, not fixed.**
+  Editing a neighbor from inside this evaluation leaves a change with no record of
+  why it's there, and its own review won't know either.
 
 ### Handoff
 
@@ -264,10 +329,13 @@ Say:
 
 ---
 
-## CRITICAL: Output Language
+## Output language
 
 **The skills reviewed and any edit applied are written in English.** Finding IDs
-(B1, D3, E2, I4), frontmatter field names, paths and code are always English.
+(B1, D3, E2, I4, C6), frontmatter field names, paths and code are always English.
+So are structural headings that form a contract between skills (`## Contract`,
+`## AC Coverage`, `Task N`) — a translated one is a C6 finding, not a style note:
+the section is there and the next skill reports it missing.
 
 When proposing `description` fixes, keep the triggers in the language the user
 actually types — a trigger that never matches what the user writes is dead weight,
@@ -287,6 +355,10 @@ whatever language the rest of the file is in.
 | Two evaluated skills overlap | Overlapping scopes | Report the collision and propose cross negative triggers in both |
 | The user says "just fix it" | They want to skip the report | Show the blocking summary anyway before editing — it's the only moment to decide scope |
 | Huge but coherent skill | Progressive disclosure unused | Don't ask to cut content: ask to **move** it to `references/` and link it |
+| Group C fires on a convention skill | It was classified pipeline without a real handoff | Reclassify as standalone (PHASE 1 Step 4) and drop the C findings — a contract with nothing on either side is noise |
+| The `Requires` cites an artifact no skill produces | Junction never checked in both directions | C6: report it against the skill that should produce it, naming both |
+| The neighbor changed while you were evaluating | Several skills reviewed in parallel | Re-check the junction with both sides in their final version — intermediate state produces phantom findings |
+| The catalog and the skill declare different keys | The hand-maintained table drifted | Report the discrepancy; the profile template settles it. Historically the table has been the wrong side, so don't fix it from here (C2) |
 
 ---
 
@@ -296,15 +368,19 @@ whatever language the rest of the file is in.
 
 **Flow:**
 1. PHASE 1: resolves the symlink to `~/.agents/skills/report-builder`. Finds
-   `SKILL.md` (6,200 words), `references/` (2 files), `README.md`.
+   `SKILL.md` (6,200 words), `references/` (2 files), `README.md`. Step 4:
+   **pipeline** — it reads `.agents/profile.md` and writes into `work/`.
 2. PHASE 2: B10 fails → there's a `README.md` inside the folder. B1–B9 OK.
 3. PHASE 3: D2 and D6 fail → `description: Generates reports.` No trigger phrases.
    Diagnosis: **under-triggering**.
 4. PHASE 4: E2 fails (6,200 > 5,000 words). E3 fails → one of the `references/`
    isn't linked from `SKILL.md`.
 5. PHASE 5: I4 fails → no error-handling section.
-6. PHASE 6: generates 3 positive and 3 negative queries from the Examples.
-7. PHASE 7: report — 1 blocking, 3 important, 1 minor. Priority 1: rewrite the
+6. PHASE 6: C1 fails → no `## Contract`; preconditions scattered across three
+   `CRITICAL` sections (also C5). C4 fails → Step 2 runs `git checkout develop`
+   with the branch hardcoded, while the profile declares `BASE_BRANCH`.
+7. PHASE 7: generates 3 positive and 3 negative queries from the Examples.
+8. PHASE 8: report — 1 blocking, 5 important, 1 minor. Priority 1: rewrite the
    description with the user's phrases.
 
 **Output:**

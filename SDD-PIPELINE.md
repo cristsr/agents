@@ -35,7 +35,7 @@ this is the map. Validate the ecosystem with `/healthcheck`.
 | `/clarify` | `spec.md` | `spec.md` with precise ACs + a decision log, and `context.md` with the survey | `/design` |
 | `/design` | `spec.md` + `context.md` | `design.md` + `docs/` (contract, model, diagrams) | `/plan` |
 | `/plan` | design artifacts | `plan.md` (TDD tasks) | `/build` |
-| `/build` | `plan.md` | code + green tests, tasks `[X]` | `/sync` |
+| `/build` | `plan.md` | code + green tests, tasks `[X]`, `## AC Coverage` in `plan.md` | `/sync` |
 | `/sync` | closed story | module docs reconciled, `work/done/` | `/commit` |
 | `/commit` | `work/done/` | commits + drafted PR (no push) | the user |
 
@@ -112,9 +112,10 @@ Three axes, three profile keys (section 5) — no skill decides the language on 
 
 **Structural section headings stay in English regardless of `ARTIFACT_LANGUAGE`.**
 They are a contract between skills — `/sync` looks for `## Global Architecture Impact`
-and `## Design Decisions` in `design.md`, `/clarify` writes `## Ambiguity Resolution`
-in `spec.md`, `/build` and `/hotfix` locate `Task N` in `plan.md`. Translating a
-heading breaks the pipeline; only the text **under** it follows `ARTIFACT_LANGUAGE`.
+and `## Design Decisions` in `design.md` and for `## AC Coverage` in `plan.md`,
+`/clarify` writes `## Ambiguity Resolution` in `spec.md`, `/build` and `/hotfix`
+locate `Task N` in `plan.md`. Translating a heading breaks the pipeline; only the
+text **under** it follows `ARTIFACT_LANGUAGE`.
 
 **The git surface stays in English too**: commit messages, PR title and body, and
 branch descriptions (`/commit`, `/plan` Task 0) — shared history read outside the

@@ -60,31 +60,110 @@ written down.
 
 ## Project profile (read first, always)
 
-Before anything else, read `.agents/profile.md` (at the root of the current project): it defines the ID pattern,
-the artifact paths, the output language, the **target stack** and the **documentation
-paths**. Everything this skill looks for in the code comes from section 7. If it
-doesn't exist, tell the user to create it by copying `~/.agents/sdd-profile.template.md` to the project's `.agents/profile.md`, and stop: without a profile you don't know this project's conventions.
+Read `.agents/profile.md` at the root of the current project before anything else. If it
+doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
+`.agents/profile.md` and stop — without a profile you don't know this project's
+conventions.
 
-**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
-
-**The literals in this document are only an example resolution.**
-The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
-
-| In this document | Key in profile.md |
-|---|---|
-| `spec-<number>` | `STORY_ID_PATTERN` |
-| `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
-| "component" in the prose | `COMPONENT_TERM` (section 7) |
-| `develop` | `BASE_BRANCH` |
-| component catalog, per-component docs | `DOCS_COMPONENTS_INDEX`, `DOCS_COMPONENT_README`, `DOCS_COMPONENT_ARCH` (section 8) |
-| code artifacts to locate (entity, module, DTO, port) | section 7 "Stack and architecture" + `<STACK_REFS>` |
-| indexed graph `.codegraph/` + `codegraph_explore` tool | `CODEGRAPH` (section 10) |
-| `code-explorer` subagent | `EXPLORER_SUBAGENT` / `EXPLORER_MODEL` (section 9) |
-| interaction language | `OUTPUT_LANGUAGE` |
+Any path, branch name, command or tool shown in this document is an example
+resolution; the profile's value wins. The keys this skill reads are listed under
+**Profile keys** in the `Contract` below.
 
 ---
 
-## CRITICAL: Prerequisites
+## Contract
+
+What this skill needs, what it guarantees to `/design`, and what it may not do.
+**Check every `Requires` row before any other work** — a failed precondition stops
+the run at the start, not after the survey has been paid for.
+
+**Requires**
+
+| Condition | Check | If it fails |
+|---|---|---|
+| You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
+| An item id was given | the input carries an id matching `STORY_ID_PATTERN` | Ask: "Which item? (e.g. spec-1933)" |
+| `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find `work/active/spec-<number>/spec.md`. Run `/spec spec-<number>` first." (a legacy `hu.md` counts — see Step 2) |
+| `spec.md` has acceptance criteria | the `## Acceptance Criteria` section holds at least one numbered AC | Stop: "`spec-<number>` has no acceptance criteria. There is nothing to clarify — run `/spec spec-<number>` again to write them." |
+| The item isn't already clarified | `## Ambiguity Resolution` present, **zero** `[NEEDS CLARIFICATION]` markers left, and `context.md` exists | Don't re-run: offer `/scan` (refresh the context) or `/refine` (adjust ACs) — see Step 4 |
+
+**Produces** — this is what `/design` looks for
+
+- `spec.md` with **zero** `[NEEDS CLARIFICATION]` markers (the count in "Handoff" is
+  the same gate `/design` re-runs before designing anything)
+- an `## Ambiguity Resolution` section in `spec.md` with one entry per unknown —
+  decision, rationale, source and confidence — including the searches that came back
+  empty
+- every AC verifiable as written, rephrased in EARS where it wasn't
+- `## Technical Context` in `spec.md` **only** if the developer declared constraints
+  or debt in R5; omitted entirely otherwise
+- `context.md` with the inventory `<STACK_REFS>/references/context-template.md` asks
+  for, per affected <component>, and a **detected gaps** section that is always
+  present even when empty
+
+**Writes** — nothing outside this list
+
+- `work/active/spec-<number>/spec.md` — the ACs, `## Ambiguity Resolution`,
+  `## Technical Context`
+- `work/active/spec-<number>/context.md` — regenerated whole on every run
+
+Not `design.md` or `plan.md` (they don't exist yet at this stage), not the project's
+source code or its living docs, and not the authority sources (`docs/rules.md`,
+`CLAUDE.md`, `.agents/profile.md`) — those are read-only inputs here.
+
+**Never**
+
+- **Allowed (read-only git):** `git branch --show-current`, `git status --porcelain`,
+  `git fetch --dry-run`.
+- **Forbidden:** `git checkout`, `git pull`, `git add`, `git commit`, `git push` and
+  any other state-changing git command. A stale base is warned about and surveyed as
+  it stands — freshening it is `/prepare`'s job (R3).
+- Never delete a `[NEEDS CLARIFICATION]` marker without writing its decision into
+  `## Ambiguity Resolution`. An unlogged resolution is indistinguishable from a guess.
+
+**Escalates** — the four classes only: **scope**, **business intent**,
+**irreversible choices**, and **rule conflicts**. Everything else is decided against
+the source hierarchy and recorded with its confidence. They are asked in a **single
+`AskUserQuestion` call, at most 3 per run** (P3/P4); above that the item's scope
+isn't ready and the wrap-up says so. Two questions sit outside that batch and outside
+the budget: the affected <component>s when the catalog can't identify them (R3 — it
+can't be deferred, there is nothing to survey without one), and R5's conditional
+free-text question about unwritten constraints. With `--ask` there is no budget and
+no autonomy — every unknown is asked, one per turn.
+
+**Degrades**
+
+- `CODEGRAPH` at `no` (or no indexed graph on disk) → the **inventory** goes to the
+  `EXPLORER_SUBAGENT` (default `code-explorer`) with an explicit `model:` =
+  `EXPLORER_MODEL`, one call per <component>, in parallel; **precedent** queries are
+  not delegated — those unknowns fall back to level 4-5 sources and are recorded as
+  "no precedent" (R4 fallback).
+- `EXPLORER_SUBAGENT` at `none`, or a host with no subagents → survey inline with
+  Read/Grep, same scope, and say so in the wrap-up.
+- `DOCS_COMPONENTS_INDEX` missing or inconclusive → ask which <component>s the item
+  affects (R3).
+- A missing authority source (`docs/rules.md`, `CLAUDE.md`) → continue without it;
+  the hierarchy just drops one level (R2).
+
+**Profile keys**
+
+- `STORY_ID_PATTERN`, `WORKDIR_ACTIVE` — the item's id and workspace, written
+  throughout this document as `spec-<number>` and `work/active/spec-<number>/`
+- `WORKING_DIRECTORY` — the first `Requires` row
+- `BASE_BRANCH` — the fresh-base check in R3
+- `COMPONENT_TERM` and section 7 — the term for a deployable unit, and the code
+  artifacts to locate per module
+- `STACK_REFS` — `scan-guide.md` (progressive disclosure in R4) and
+  `context-template.md` (the shape of `context.md` in I5)
+- `DOCS_COMPONENTS_INDEX`, `DOCS_COMPONENT_README`, `DOCS_COMPONENT_ARCH`
+  (section 8) — identifying the affected <component>s and reading their docs (R3, R4)
+- `CODEGRAPH` (section 10), `EXPLORER_SUBAGENT` / `EXPLORER_MODEL` (section 9) — the
+  survey and its fallback
+- `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
+
+---
+
+## Prerequisites
 
 ### Step 1 — Extract the item id and the mode
 
@@ -100,8 +179,7 @@ interactive mode (see `## Legacy mode` at the end).
 [ -f work/active/spec-<number>/spec.md ] && echo "OK" || echo "MISSING"
 ```
 
-If it does NOT exist → STOP:
-> "I couldn't find `work/active/spec-<number>/spec.md`. Run `/spec spec-<number>` first."
+Missing → stop, per the `Requires` row.
 
 > **Legacy items:** if there's an `hu.md` instead of a `spec.md`, it's the same
 > artifact under its former name — work on it in place, without renaming it.
@@ -114,6 +192,10 @@ Read the whole file. Extract and keep in memory:
 - Complete, numbered list of ACs
 - Business Rules if present
 - **`[NEEDS CLARIFICATION: ...]` markers** inserted by `/spec`
+
+If `## Acceptance Criteria` is absent or empty, stop per the `Requires` row: the ACs
+are the only contract with the rest of the pipeline, and writing them is `/spec`'s
+job, not this skill's.
 
 ### Step 4 — Verify existing state
 
@@ -205,9 +287,9 @@ A single batch of graph queries, with **two classes of question**:
 solve this before?" is pertinent qualify for *precedent* — lengths, error names,
 formats, column conventions, port patterns. A business-intent unknown never qualifies.
 
-`codegraph_explore` returns in one call: symbols with verbatim source grouped by
-file, call paths, blast radius (who depends on what and which tests cover it), and
-framework routes.
+With `CODEGRAPH` at `yes`, one graph query (`codegraph_explore`) returns: symbols with
+verbatim source grouped by file, call paths, blast radius (who depends on what and
+which tests cover it), and framework routes. If it isn't, see the fallback below.
 
 With the results:
 
@@ -233,12 +315,14 @@ and carry it to P, where it gets escalated along with the rest.
 
 #### Fallback — CodeGraph unavailable
 
-If `CODEGRAPH` is `no` or `.codegraph/` doesn't exist:
+If `CODEGRAPH` is `no`, or no indexed graph exists on disk (`.codegraph/`):
 
 1. Suggest initializing it once (`codegraph init`) — after that it stays auto-synced.
 2. Meanwhile, delegate the **inventory** to the `EXPLORER_SUBAGENT` subagent
    (default `code-explorer`), one call per component, **in parallel**, passing an
-   explicit `model:` = `EXPLORER_MODEL`. The prompt must include: component name,
+   explicit `model:` = `EXPLORER_MODEL`. If `EXPLORER_SUBAGENT` is `none` — or the
+   host has no subagents — survey inline with Read/Grep instead, same scope, and note
+   it in the wrap-up. The prompt must include: component name,
    item keywords, the instruction to read the component's docs, locate the module,
    and the pack's `scan-guide.md` — which **overrides the agent's own generic table**.
 
@@ -475,7 +559,7 @@ sight — typically a new domain or strong contractual implications.
 
 ---
 
-## CRITICAL: Output Language
+## Output language
 
 **Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
 `OUTPUT_LANGUAGE` if the project doesn't declare it): the ACs you rewrite in
@@ -498,6 +582,8 @@ user's language when that differs.
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | spec.md doesn't exist | `/spec` never ran | STOP: tell the user to run `/spec spec-<number>` first |
+| spec.md exists but has no ACs | `/spec` left the section empty | STOP: the ACs are the contract with the rest of the pipeline — run `/spec spec-<number>` again to write them |
+| `EXPLORER_SUBAGENT: none` and no graph | Project that delegates nothing | Survey inline with Read/Grep, same scope; note it in the wrap-up |
 | Component not identifiable | Item with no clear keywords | Ask in R3 — it can't be deferred, without a component there's nothing to survey |
 | Module not found in the component | New module or under a different name | Not a blocker: it's just another unknown, escalated in P with the rest |
 | A new doubt appears in phase I | Phase R was incomplete | Resolve it with the hierarchy and mark it low confidence; don't open questions in I |

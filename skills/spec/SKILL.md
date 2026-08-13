@@ -35,28 +35,103 @@ is identical for a feature, a bug or a piece of technical debt.
 
 ## Project profile (read first, always)
 
-Before anything else, read `.agents/profile.md` (at the root of the current project): it defines the ID pattern,
-the intake, the artifact paths, the item types and this project's output language. If
-it doesn't exist, tell the user to create it by copying `~/.agents/sdd-profile.template.md` to the project's `.agents/profile.md`, and stop: without a profile you don't know this project's conventions.
+Read `.agents/profile.md` at the root of the current project before anything else. If it
+doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
+`.agents/profile.md` and stop — without a profile you don't know this project's
+conventions.
 
-**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
-
-**The literals in this document are only an example resolution.**
-The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
-
-| In this document | Key in profile.md |
-|---|---|
-| `<story-id>`, `spec-<number>` | `STORY_ID_PATTERN` |
-| tracker export format | sections 2-3 (intake) |
-| ID mode (next free / slug / tracker key) | `STORY_ID_MODE` (section 2) |
-| `work/active/<story-id>/` | `WORKDIR_ACTIVE` |
-| available types (`feat`, `bug`, `debt`, `incident`, `chore`) | `ITEM_TYPES` (section 2) |
-| legacy prefixes still readable (e.g. `us-`) | `STORY_ID_LEGACY_PREFIXES` |
-| interaction language | `OUTPUT_LANGUAGE` |
+Any path, id, item type or tracker name shown in this document is an example
+resolution; the profile's value wins. The keys this skill reads are listed under
+**Profile keys** in the `Contract` below.
 
 ---
 
-## CRITICAL: Collect inputs before writing anything
+## Contract
+
+What this skill needs, what it guarantees to `/clarify`, and what it may not do.
+**Check every `Requires` row before any other work** — this is the pipeline's first
+link, so nothing upstream will catch a bad input for you.
+
+**Requires**
+
+| Condition | Check | If it fails |
+|---|---|---|
+| You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
+| The input carries something to structure | raw text, or a path to an `INTAKE_FORMATS` export | Ask for the item's content — an id alone is not an item, and nothing here is invented from it |
+| A tracker export is readable | the `Read` tool returns content for the given path (Step 1, Mode A) | Report the path and ask for the raw text instead; never guess the export's fields |
+| The item's id resolves under `STORY_ID_MODE` | Step 1, Input 2 | `sequential` → propose the next free id and confirm; `tracker-code` → ask for the key; never write under a guessed id |
+| It is a new item, not a correction | Step 2, "Cases that are not a new item" | Redirect to `/hotfix <story-id>` (defect in already-built code from an ambiguous AC) or `/refine <story-id>` (artifact not built yet) and stop |
+| `work/active/<story-id>/spec.md` does not exist yet | `[ -f work/active/<story-id>/spec.md ]` (Step 3) | Ask for explicit overwrite confirmation before writing anything |
+
+**Produces** — this is what `/clarify` looks for
+
+- `work/active/<story-id>/spec.md`, structured per `references/spec-template.md`
+- frontmatter with `type` (one of `ITEM_TYPES`) and `origin` — `/clarify` reads `type`
+  to keep the framing and the tone of the ACs
+- **exactly one** framing block, the one matching that `type` — never two, never a
+  user-story mold forced onto an item that isn't one
+- `## Acceptance Criteria` with **at least one** `### AC-N:` heading, numbered in order
+  of appearance. Zero ACs is not a valid outcome for any type — the ACs are the only
+  contract with the rest of the pipeline
+- `## Business Rules` verbatim, when the input carried any
+- every unresolved gap as an inline `[NEEDS CLARIFICATION: <question>]` marker, placed
+  and left unresolved — `/clarify` resolves and removes them, `/design` refuses to
+  proceed while any remain
+- countable close (Step 5): the summary reports the AC count and the marker count; a
+  summary with zero ACs means the artifact isn't finished
+
+Not `## Ambiguity Resolution` or `## Technical Context` (that's `/clarify`), and not
+`## Hotfixes` (that's `/hotfix`).
+
+**Writes** — nothing outside this list
+
+- `work/active/<story-id>/spec.md`
+- the story folder itself (`mkdir -p work/active/<story-id>/`)
+
+Not `context.md`, `design.md` or `plan.md`, not the project's source code, and not the
+project's documentation.
+
+**Never** — regardless of how incomplete the input looks
+
+- resolve or delete a `[NEEDS CLARIFICATION]` marker. Placing them is this skill's job;
+  resolving them is `/clarify`'s
+- add an acceptance criterion, a business rule or a technical note that isn't in the
+  input, or change the meaning of one that is
+- survey the codebase, read modules or start the design — `/spec` structures the input
+  and nothing else
+- any git command. This skill only reads the filesystem (listing `work/active/` and
+  `work/done/` to compute the next free id)
+
+**Escalates** — asks and waits, never guesses
+
+- the type inference isn't clear → `AskUserQuestion` with the candidate types (Step 2)
+- the item comes from a tracker and no title came with it → ask for the exact title
+- the next free id under `STORY_ID_MODE: sequential` → propose and confirm before writing
+- `spec.md` already exists → overwrite confirmation (Step 3)
+
+**Reverting** — overwriting an existing `spec.md` is confirmed, not undone: if the story
+folder is already tracked by git, `git checkout -- work/active/<story-id>/spec.md`
+restores it; if the item was created and never committed, there is no way back. That is
+exactly why the confirmation in Step 3 is mandatory.
+
+**Degrades** — the profile's section 3 with no intake mapping → the generic reading of
+the export in Step 1, Mode A; `STORY_ID_MODE` unset → `sequential`;
+`STORY_ID_LEGACY_PREFIXES` at `—` → only the current prefix counts toward the next free
+number.
+
+**Profile keys**
+
+- `STORY_ID_MODE`, `STORY_ID_PREFIX`, `STORY_ID_PATTERN`, `STORY_KEY_PATTERN`,
+  `STORY_ID_LEGACY_PREFIXES` — how the item's id is resolved and written, shown
+  throughout this document as `<story-id>` / `spec-<number>`
+- `WORKDIR_ACTIVE` — the story's workspace, written here as `work/active/<story-id>/`
+- `ITEM_TYPES` — the types this project classifies among (Step 2)
+- `TRACKER`, `INTAKE_FORMATS` and the intake mapping of section 3 — Mode A's extraction
+- `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
+
+---
+
+## Step 1: Collect the inputs (before writing anything)
 
 Two modes are supported. Detect automatically which one applies.
 
@@ -64,13 +139,15 @@ Two modes are supported. Detect automatically which one applies.
 
 ### Mode A — Tracker export file path
 
-**Trigger:** The user provides a file path (ends in `.pdf`, contains `\` or `/`,
-or looks like a file reference).
+**Trigger:** The user provides a path to an export in one of the project's
+`INTAKE_FORMATS` (contains `\` or `/`, or otherwise looks like a file reference — a
+typical resolution is a `.pdf` tracker export).
 
-**Step 1 — Read the file:**
-Use the `Read` tool on the provided path.
+**A1 — Read the file:**
+Use the `Read` tool on the provided path. If it can't be read, stop and ask for the raw
+text instead — an unreadable export is not a reason to guess the fields.
 
-**Step 2 — Extract fields, mapping per the profile's intake table (section 3):**
+**A2 — Extract fields, mapping per the profile's intake table (section 3):**
 
 **The label for each field comes from the profile's intake table** — the project
 declares which heading of its export feeds each `spec.md` field, in its own tracker
@@ -91,7 +168,7 @@ this generic reading of the export:
 > profile declares them. What you **write** into `spec.md` always uses the English
 > section names of `references/spec-template.md`.
 
-**Step 3 — Confirm extracted values (brief, inline):**
+**A3 — Confirm extracted values (brief, inline):**
 Show a one-line summary: "Extracted: <key> · <title> · <type> · <N> ACs · <M> rules."
 Then proceed — do NOT ask the user to re-paste anything already in the export.
 
@@ -104,7 +181,7 @@ Then proceed — do NOT ask the user to re-paste anything already in the export.
 Collect these inputs. Ask for any that are missing — one question at a time.
 
 **Input 1 — Type**
-See `## Classify the item` below. It's inferred and confirmed; never asked flatly.
+See Step 2 below. It's inferred and confirmed; never asked flatly.
 
 **Input 2 — Number / ID**
 The ID mode comes from `STORY_ID_MODE` (profile, section 2):
@@ -142,7 +219,7 @@ If it doesn't come: "What's the item's content (acceptance criteria included)?"
 
 ---
 
-## Classify the item
+## Step 2: Classify the item
 
 The `type` determines the framing block. **Infer it from the content and confirm it**
 before writing — getting it wrong produces an artifact that contradicts itself (the
@@ -157,6 +234,10 @@ to fill the mold).
 | Something that already failed in production, with impact and a need for remediation | `incident` |
 | Updating dependencies, tooling, configuration, with no behavior change | `chore` |
 
+The rows above are the default set; the types you may actually assign are the project's
+`ITEM_TYPES` (section 2). A project that trims the list classifies only among what it
+declares — never assign a type the profile doesn't list.
+
 Confirm with `AskUserQuestion` (`header: "Type"`) **only if the inference isn't
 clear**, offering the 2-3 candidate types with the inferred one first and
 `" (Recommended)"`. If it's obvious, announce it at the start and move on.
@@ -168,7 +249,7 @@ clear**, offering the 2-3 candidate types with the inferred one first and
 
 ---
 
-## CRITICAL: Check for existing file
+## Step 3: Check for an existing file
 
 Before writing, check if the item already exists:
 
@@ -190,7 +271,11 @@ Before writing, check if the item already exists:
 
 ---
 
-## Processing Rules
+## Step 4: Write `spec.md`
+
+Consult `references/spec-template.md` for the exact file structure to produce,
+including the framing block that corresponds to the item's `type`. The rules below
+govern what goes into it.
 
 ### What to preserve
 - Every acceptance criterion — do not omit, summarize, or merge any AC.
@@ -247,19 +332,14 @@ missing; never leave the section empty.
 
 ---
 
-## Output Format
-
-Consult `references/spec-template.md` for the exact file structure to produce,
-including the framing block that corresponds to the item's `type`.
-
----
-
-## Save and hand off
+## Step 5: Save and hand off
 
 After saving `work/active/<story-id>/spec.md`:
 
-1. Show a brief summary: ID, type, title, number of ACs, number of
-   `[NEEDS CLARIFICATION]` markers (if any).
+1. Show a brief summary: ID, type, title, **number of ACs** and **number of
+   `[NEEDS CLARIFICATION]` markers**. Both counts are the stage's closing signal, so
+   state them even when a count is zero — and if the AC count is zero, the item isn't
+   finished: go back to Step 4 rather than handing it off.
 
 2. Say, depending on whether markers were inserted:
    - **With markers:** "Saved to `work/active/<story-id>/spec.md` with <N>
@@ -274,7 +354,7 @@ After saving `work/active/<story-id>/spec.md`:
 
 ---
 
-## CRITICAL: Output Language
+## Output language
 
 **Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
 `OUTPUT_LANGUAGE` if the project doesn't declare it). The framing block, the ACs and
@@ -283,8 +363,8 @@ English on your own: the language is the profile's decision, not this skill's.
 
 Two things stay in English regardless of that key: the **section headings** (other
 skills locate them by name) and the **identifiers** — the `type` field's values
-(`feat`, `bug`, `debt`, `incident`, `chore`), the item ID and any path or symbol
-(`IDENTIFIER_LANGUAGE`).
+(the project's `ITEM_TYPES`, e.g. `feat`, `bug`, `debt`), the item ID and any path or
+symbol (`IDENTIFIER_LANGUAGE`).
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The message samples in this document are written in English; render them in the

@@ -44,7 +44,8 @@ name: my-cool-skill
   - What the skill does.
   - When to use it (trigger conditions).
 - Under 1024 characters.
-- No XML angle brackets (`<` or `>`).
+- No XML angle brackets — no `<tag>`, `</tag>` or `<placeholder>`. The YAML
+  block-scalar indicator (`description: >`) is syntax, not markup, and is fine.
 - Include specific tasks the user might say.
 - Mention file types if they're relevant.
 

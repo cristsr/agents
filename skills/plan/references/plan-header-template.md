@@ -6,7 +6,7 @@ Every plan MUST start with this exact header structure:
 # spec-<number>: [Feature Name] — Implementation Plan
 
 **Story:** `work/active/spec-<number>/`
-**Microservice(s):** `<service-name>`
+**<Component>(s):** `<component-name>`  ← the term comes from `COMPONENT_TERM`
 **Goal:** [One sentence describing what this builds]
 **Architecture:** [2-3 sentences about the approach and the patterns used]
 **Stack:** <language> · <framework> · <ORM> · <DB> · <test framework>  ← from profile section 7
@@ -35,30 +35,33 @@ if there is only one group.]
 ```markdown
 ### Task 0: Prepare the working branch
 
-> When executing this plan, ask the user for the branch name before continuing.
-
-**Ask:** "What's the branch name? (e.g. feat/<story-key>-description or fix/<story-key>-description,
-where `<story-key>` follows `STORY_KEY_PATTERN` from the profile)"
+> The branch name is resolved when the plan is written (PHASE 3), never at execution
+> time — `/build` runs the plan without stopping, so it must not have to ask.
+> Write the resolved name literally into the commands below.
 
 **Steps:**
 
 **Step 1: Verify the base is fresh (read-only)**
 
 ```bash
-git -C <microservice> branch --show-current   # expected: develop
-git -C <microservice> status --porcelain      # expected: empty (clean working tree)
+git -C <component> branch --show-current   # expected: BASE_BRANCH (e.g. develop)
+git -C <component> status --porcelain      # expected: empty (clean working tree)
 ```
-Expected: on `develop`, up to date and with no uncommitted changes. Preparing the base
-(`checkout develop` + `pull`) is `/prepare`'s job, not this plan's. If it isn't on an
-up-to-date `develop` or the working tree is dirty → stop and recommend
-`/prepare <microservice>` before creating the branch.
+Expected: on `BASE_BRANCH`, up to date and with no uncommitted changes. Refreshing the
+base (`checkout` + `pull` of `BASE_BRANCH`) is `/prepare`'s job, not this plan's. If it
+isn't on an up-to-date `BASE_BRANCH` or the working tree is dirty → stop and recommend
+`/prepare <component>` before creating the branch.
+
+If the working branch already exists and is checked out (created by hand, or by
+`/forge`), verify it and skip Step 2 — Task 0 is re-runnable.
 
 **Step 2: Create the working branch**
 
 ```bash
-git -C <microservice> checkout -b <branch-name-given-by-the-user>
+git -C <component> checkout -b <branch-name> BASE_BRANCH
 ```
-Expected: new branch created and active, starting from an up-to-date `develop`.
+Expected: new branch created and active, starting **explicitly** from `BASE_BRANCH`
+rather than from whatever happened to be checked out.
 ```
 
 ## Language rules

@@ -42,14 +42,14 @@ if an input is missing, and **stops at the edge of git** (it never commits or pu
 
 ## Project profile (read first, always)
 
-Before anything else, read `.agents/profile.md` (root of the current project): it
-defines the story ID pattern, the artifact paths, the base branch and the output
-language. If it doesn't exist, tell the user to create it from the template and stop.
-
-**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
+Read `.agents/profile.md` at the root of the current project before anything else. If it
+doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
+`.agents/profile.md` and stop — without a profile you don't know this project's
+conventions. Then verify `pwd` matches `WORKING_DIRECTORY` (absolute path) and `cd`
+there if it doesn't, before running any command.
 
 **The literals in this document are only an example resolution.** The real values come
-from the project's `profile.md` — if they differ, the profile wins:
+from the project's `profile.md`; if they differ, the profile wins:
 
 | In this document | Key in profile.md |
 |---|---|

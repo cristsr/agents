@@ -28,6 +28,11 @@ description: [what it does] + [when to use it, with the user's literal phrases] 
 
 ---
 
+[If the skill is PIPELINE, the `## Contract` block goes here — see below.
+ If it's standalone, delete this line and move on.]
+
+---
+
 ## Instructions
 
 ### Step 1: [First major step]
@@ -74,12 +79,73 @@ Solution: [how it's fixed]
 
 ---
 
+## `## Contract` — pipeline skills only
+
+Goes right after the Overview, before the first step. Write only the rows that
+apply; delete the rest. `Reverting` is optional — include it when the skill
+overwrites live artifacts.
+
+```markdown
+## Contract
+
+What this skill needs, what it guarantees to the next stage, and what it may not
+do. **Check every `Requires` row before any other work** — a failed precondition
+stops the run at the start, not halfway through.
+
+**Requires**
+
+| Condition | Check | If it fails |
+|---|---|---|
+| [precondition] | [the literal command or comparison] | Stop: "[what the user is told, with the command that fixes it]" |
+
+**Produces** — this is what `/<next-skill>` looks for
+
+- [artifact, in terms someone can count or test]
+
+**Writes** — nothing outside this list
+
+- [path]
+
+Not [what a reader would reasonably expect it to touch and it doesn't] (that's
+`/<other-skill>`).
+
+**Never** — regardless of what a step appears to need
+
+- [forbidden verb, with the reason it's forbidden]
+
+**Escalates** — [the closed list of reasons to stop and ask. "There is no fifth."]
+
+**Reverting** — [the real mechanism to undo, and its validity window]
+
+**Degrades** — `KEY` unavailable → [alternate route, and the mark it leaves]
+
+**Profile keys**
+
+- `KEY_A`, `KEY_B` — [what they're read for], written in this document as
+  [how they appear inline]
+```
+
+Two failure modes this block exists to prevent:
+
+- **`Produces` written as an adjective.** "Leaves the module documented" can't be
+  checked. "One line per AC, zero lines marked `✗`" can. If the next skill can't
+  verify it mechanically, it isn't a contract.
+- **`Requires` checked lazily.** All rows verified up front. A precondition that
+  fails at step 7 leaves a half-written workspace.
+
+---
+
 ## High-value optional sections
 
-### `## Important` / `## Critical` (recommended)
+### `## Important` / `## Critical` (use sparingly)
 
 Goes **near the top**, right after the Overview. Critical instructions buried in the
 middle don't get followed.
+
+**One per skill at most, and only for something irreversible.** If the skill has a
+`Contract`, that block already covers preconditions, forbidden verbs and escalation
+— a `## CRITICAL` repeating any of them subtracts. Language conventions, read paths
+and ordinary preconditions never qualify. When everything is critical, nothing is.
 
 ```markdown
 ## Critical
@@ -152,6 +218,7 @@ If you see "Connection refused":
 | Unambiguous | "CRITICAL: verify the name isn't empty" | "Make sure to validate things properly" |
 | Concise | Bullets and numbered lists | Long paragraphs |
 | Progressive disclosure | Core in `SKILL.md`, detail in `references/` | Everything inline |
+| Config keys inline | ``Run `FULL_TEST_CMD` (e.g. `npx jest`)`` in the sentence itself | A `\| In this document \| Key in profile.md \|` table the reader must remember to consult |
 
 ---
 

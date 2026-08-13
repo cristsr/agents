@@ -13,8 +13,11 @@ The full rubric with severities. The IDs are used in `skill-evaluator`'s report.
 | **MINOR** | Polish, maintainability, consistency | Doesn't change behavior |
 
 Prioritization rule: **first what prevents loading, then what prevents triggering,
-wording last.** A skill with brilliant instructions and a vague `description` never
-runs; the reverse at least works when invoked by hand.
+then what breaks the chain, wording last.** A skill with brilliant instructions and a
+vague `description` never runs; the reverse at least works when invoked by hand.
+
+Groups B and D apply to every skill. **Group C applies only to pipeline skills** —
+see its own preamble; forcing it on a standalone skill manufactures findings.
 
 ---
 
@@ -30,7 +33,7 @@ runs; the reverse at least works when invoked by hand.
 | B6 | `name` without "claude"/"anthropic" | `claude-helper` | Rename — they're reserved |
 | B7 | `description` present | Field absent | Write it (group D) |
 | B8 | `description` < 1024 characters | Enormous description | Trim to the what+when core |
-| B9 | No `<` or `>` in the frontmatter | An example with XML tags in the description | Remove them — the frontmatter goes into the system prompt and is injection surface |
+| B9 | No XML angle brackets in the frontmatter | An example with XML tags in the description | Remove them — the frontmatter goes into the system prompt and is injection surface. **Not a violation:** the YAML block-scalar indicator (`description: >` / `description: \|`), which is syntax, not markup. Flagging it marks every well-formed skill as broken |
 | B10 | No `README.md` in the skill's folder | A README dragged in from the repo | Delete it or move it out. Docs go in `SKILL.md` or `references/`. A repo-level README (outside the folder) is fine for humans |
 
 ---
@@ -158,6 +161,71 @@ If the skill feels slow or the responses degrade:
 
 ---
 
+## Group C — Contract and handoff (IMPORTANT / MINOR)
+
+**Applies only to pipeline skills** — those that consume or produce artifacts another
+skill handles, write into a shared workspace, or read a project profile. On a
+standalone skill this whole group is inapplicable, and reporting it produces findings
+demanding a contract that shouldn't exist.
+
+Symptom: every skill reads fine on its own and the chain still breaks. A contract
+defect is only visible at the junction.
+
+| ID | Check | Severity | Typical failure | Fix |
+|---|---|---|---|---|
+| C1 | `## Contract` after the Overview, with the rows that apply | IMPORTANT | Preconditions scattered across several `CRITICAL` sections | Consolidate into one block, as an index — reference the step where the detail already lives instead of copying it |
+| C2 | `Profile keys` complete and every key real | IMPORTANT | Declares a key the profile template doesn't define, or reads one it never declares | Contrast against the profile template. If a hand-maintained catalog disagrees, report it — don't fix it from here |
+| C3 | No `\| In this document \| Key in profile.md \|` table | MINOR | The translation table survives alongside the `Contract` | Delete it. `Profile keys` plus the key inline replaces it |
+| C4 | Normative literals replaced by their key | IMPORTANT | `git checkout develop` hardcoded while the profile declares `BASE_BRANCH` | Key inline, example in parentheses: `` `BASE_BRANCH` (`develop`) `` |
+| C5 | No `## CRITICAL` the `Contract` already covers | MINOR | `## CRITICAL: Output Language`, `## CRITICAL: read the profile first` | Demote to a plain heading. Reserve `CRITICAL` for the irreversible |
+| C6 | The junction holds in both directions | IMPORTANT | A `Requires` row nobody produces; a `Produces` nobody consumes | Name both skills. The fix usually belongs to the neighbor |
+| C7 | The ecosystem's validator passes | IMPORTANT | A `references/` path that doesn't exist; a key that isn't in the template | Run the project's validation script and fix what it reports |
+
+### The rows of the block
+
+| Row | What goes in it | Optional |
+|---|---|---|
+| `Requires` | Precondition · how it's checked · what happens if it fails. All verified before any work | No |
+| `Produces` | What the next skill will find, in countable terms | No |
+| `Writes` | Closed list of writable paths, plus what's explicitly out | No |
+| `Never` | Forbidden verbs, whatever a step appears to need | No |
+| `Escalates` | The closed list of reasons to stop and ask | If it never stops |
+| `Degrades` | Alternate route when a declared tool is unavailable, and the mark it leaves | If nothing is optional |
+| `Profile keys` | The config keys it reads, grouped by what for | If it reads no profile |
+| `Reverting` | The real way back, and its validity window | Only if it overwrites live artifacts |
+
+### C4 — classifying a literal
+
+Read sentence by sentence; there's no mechanical pass.
+
+| Kind | Test | What to do |
+|---|---|---|
+| **Normative** | The action changes if the value changes | Replace with the key |
+| **Illustrative** | It only clarifies the sentence | Keep it, in parentheses or in `## Example` |
+
+The failure the check exists for: a skill carried `| develop | BASE_BRANCH |` in its
+translation table and, hundreds of lines below, still verified
+`branch ∉ {main, master}` — passing through exactly the project the table covered.
+The table was correct and useless; the check was the contract.
+
+### C6 — reading a junction
+
+```
+previous.Produces  ⊇  this.Requires      ← this skill can actually start
+this.Produces      ⊇  next.Requires      ← the next one can actually start
+```
+
+Two rules:
+
+- **A `Produces` written as an adjective fails the check.** "Leaves the module
+  documented" can't be verified by the next skill; "one line per AC, zero lines
+  marked `✗`" can. A gate the model grades itself on is not a gate.
+- **Evaluating several skills at once, re-check the junctions at the end**, with both
+  sides in their final version. A neighbor rewritten mid-evaluation produces findings
+  that were already fixed.
+
+---
+
 ## Group I — Instructions (IMPORTANT / MINOR)
 
 Symptom: the skill loads but Claude doesn't follow the instructions.
@@ -165,7 +233,7 @@ Symptom: the skill loads but Claude doesn't follow the instructions.
 | ID | Cause | Severity | Fix |
 |---|---|---|---|
 | I1 | Instructions too verbose | IMPORTANT | Bullets and numbered lists; detail into separate files |
-| I2 | Critical instructions buried | IMPORTANT | Put them up top; use `## Important` / `## Critical`; repeat the key part if needed |
+| I2 | Critical instructions buried | IMPORTANT | Put them up top — in the `Contract` if the skill has one. A `## CRITICAL` heading only for something irreversible it doesn't already cover (see C5) |
 | I3 | Ambiguous language | IMPORTANT | Verifiable criteria |
 | I4 | No error handling | IMPORTANT | Add a common-issues section |
 | I5 | No examples | MINOR | Add user says / actions / result |
@@ -264,11 +332,20 @@ With the skill:
 - [ ] Frontmatter with `---` delimiters
 - [ ] `name`: kebab-case, no spaces, no uppercase
 - [ ] `description` includes WHAT and WHEN
-- [ ] No XML tags (`<` `>`) anywhere
+- [ ] No XML tags in the frontmatter (the YAML `>` block scalar doesn't count)
 - [ ] Clear, actionable instructions
 - [ ] Error handling included
 - [ ] Examples provided
 - [ ] References clearly linked
+
+### Pipeline skills only
+- [ ] `## Contract` after the Overview, with the rows that apply
+- [ ] `Produces` in countable terms, not adjectives
+- [ ] No `| In this document | Key in profile.md |` table
+- [ ] Every key in `Profile keys` exists in the profile template
+- [ ] No `## CRITICAL` the `Contract` already covers
+- [ ] Junction verified in both directions with the neighboring skills
+- [ ] The project's validation script passes
 
 ### Before shipping
 - [ ] Triggering tested on obvious tasks

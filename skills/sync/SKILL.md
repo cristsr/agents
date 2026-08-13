@@ -52,55 +52,89 @@ gate check, but the git close-out lives in `/commit`.
 
 ## Project profile (read first, always)
 
-Before anything else, read `.agents/profile.md` (at the root of the current project): it defines the story ID
-pattern, the artifact paths, the base branch, the per-module docs convention and the output language.
-If it doesn't exist, tell the user to create it by copying `~/.agents/sdd-profile.template.md` to the project's
-`.agents/profile.md`, and stop: without a profile you don't know this project's conventions.
+Read `.agents/profile.md` at the root of the current project before anything else. If it
+doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
+`.agents/profile.md` and stop — without a profile you don't know this project's
+conventions.
 
-**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
+Any path, branch name or command shown in this document is an example resolution; the
+profile's value wins. The keys this skill reads are listed under **Profile keys** in
+the `Contract` below.
 
-**The literals in this document are only an example resolution**.
-The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
+---
 
-| In this document | Key in profile.md |
+## Contract
+
+What this skill needs, what it guarantees, and what it may not do. **Check every
+`Requires` row before any other work**, in this order — a failed precondition
+stops the close-out at the start.
+
+**Requires**
+
+| Condition | If it fails |
 |---|---|
-| `spec-<number>` | `STORY_ID_PATTERN` |
-| `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
-| "microservice" in the prose | `COMPONENT_TERM` (section 7) — read the term from the profile |
-| `work/done/spec-<number>/` | `WORKDIR_DONE` |
-| `master` | `BASE_BRANCH` |
-| `apps/<app>/docs/<module>/` | `DOCS_MODULE_ARTIFACTS` |
-| interaction language | `OUTPUT_LANGUAGE` |
+| `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
+| `work/active/spec-<number>/` exists | Check `work/done/spec-<number>/` — if it's already there the story was already synced: report it and stop |
+| `plan.md` exists and **all** its tasks are marked `[X]` | Stop: "The plan still has incomplete tasks. Run `/build spec-<number>` first." |
+| `plan.md` has an `## AC Coverage` section with **zero** lines marked `✗` | Stop: "AC-<N> is not covered by any test (`<reason from the line>`). The story isn't ready to close." If the section is missing entirely, the plan predates this convention — ask the user to confirm AC coverage; don't infer it from the `[X]` markers |
+| `design.md` exists | Ask the user whether to skip doc promotion; do not invent module docs |
+| `git branch --show-current` ≠ `BASE_BRANCH` | Stop and ask the user to switch to the working branch |
 
----
+The `[X]` markers say the *tasks* were executed; `## AC Coverage` says the
+*acceptance criteria* were met. Those are different claims, and a story can satisfy
+the first without the second — which is exactly what this gate catches.
 
-## CRITICAL: Verify inputs
+**Produces**
 
-Extract the story number from user input. Then verify, in order:
+- the design delta reconciled into the unit's living docs (Step 3)
+- a new entry at the top of `docs/decisions.md`, if `design.md` had one (Step 4)
+- `work/done/spec-<number>/` (Step 5) — the whole workspace folder moved intact, so
+  `spec.md` and the `plan.md` that closed with `## AC Coverage` travel with it.
+  `/commit` reads both from there
+- `docs/architecture/` refreshed **through `/architecture`**, never written here (Step 6)
 
-1. `work/active/spec-<number>/` exists.
-   If missing, check `work/done/spec-<number>/` — if it is already there, the
-   story was already synced: report it and stop.
-2. `plan.md` exists and **all** its tasks are marked `[X]`.
-   If there are pending tasks → stop:
-   "The plan still has incomplete tasks. Run `/build spec-<number>` first."
-3. `design.md` exists — defines the destination of each artifact. If missing,
-   ask the user whether to skip doc promotion; do not invent module docs.
+**Writes** — nothing outside this list
 
----
+- `<unit>/docs/` — the living docs of the units named in `design.md`: canonical
+  `api.yaml`, `flows/*.md`, unit README
+- `docs/decisions.md` at the repo root
+- `work/active/spec-<number>/` → `work/done/spec-<number>/` (filesystem move)
 
-## CRITICAL: Never run git mutations
+Not the project's source code (that's `/build` or `/hotfix`), not the story's own
+`spec.md`/`design.md` (that's `/refine`), and not `docs/architecture/` — that scope
+belongs strictly to `/architecture`, which sync invokes rather than replaces.
 
-Version control is managed by the user — same rule as `/build`. Sync doesn't
-even propose a commit plan anymore (that moved to `/commit`); it only reads
+**Never** — version control is managed by the user, same rule as `/build`. Sync
+doesn't even propose a commit plan anymore (that moved to `/commit`); it only reads
 git state for the Step 2 gate check.
 
 - **Allowed (read-only):** `git status`, `git diff`, `git log`, `git branch --show-current`.
 - **Forbidden:** `git add`, `git commit`, `git push`, `git merge`, `git rebase`,
   `git checkout -b`, `gh pr create` and any other state-changing git/gh command.
 
-Also: if `git branch --show-current` returns the base branch (`master`), stop
-immediately and ask the user to switch to the working branch first.
+**Reverting** — every destination this skill overwrites is tracked by git, on the
+story's working branch: `git checkout -- <path>` restores any living doc, and Step 5's
+`mv` is undone by moving the folder back. That is the entire safety net, and it holds
+only because sync never touches anything git doesn't already track.
+
+**Escalates** — an unidentifiable destination module, an ambiguous unit, a
+duplicate-flow clash (Step 3), or a failed CI gate (Step 2). Ask; never guess.
+
+**Degrades** — `CI_GATES_CMD` at `—` → offer per-app gates or an explicit warning;
+`API_DIFF_TOOL` at `—` → manual diff; `MODEL_VALIDATE_CMD` at `—` → manual review.
+
+**Profile keys**
+
+- `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`, `WORKDIR_DONE` — the story's id and its
+  workspace before and after the close, written throughout this document as
+  `spec-<number>`, `work/active/spec-<number>/` and `work/done/spec-<number>/`
+- `WORKING_DIRECTORY`, `BASE_BRANCH` — the location and branch gates in `Requires`
+- `SYNC_MODE`, `API_CONTRACT_MODE`, `DESIGN_OUTPUT_MODE` — the decision table in Step 3
+- `DOCS_MODULE_ARTIFACTS`, `DOCS_MODULE_API`, `DOCS_UNIT_FLOWS`, `DOCS_UNIT_README`,
+  `DOCS_ARCHITECTURE` — where the living docs go (section 8)
+- `CI_GATES_CMD`, `API_DIFF_TOOL`, `MODEL_VALIDATE_CMD` — the pre-close gates (section 10)
+- `COMPONENT_TERM` and section 7 — the term for a deployable unit, and the stack
+- `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
 
 ---
 
@@ -118,11 +152,8 @@ Read from `work/active/spec-<number>/`:
 2. `git status --porcelain` and `git diff --stat` (read-only) — inventory of
    what the story changed.
 3. Offer to run the same gates as CI before closing the story. **Ask first** —
-   it takes minutes. Run the profile's `CI_GATES_CMD` (section 10 — default):
-
-   ```bash
-   npx nx run-many -t lint,test,build --projects=<affected apps>
-   ```
+   it takes minutes. Run `CI_GATES_CMD` (section 10) scoped to the affected apps; a
+   typical resolution is `npx nx run-many -t lint,test,build --projects=<affected apps>`.
 
    If `CI_GATES_CMD` is `—` (project with no declared command) → offer to run the
    gates per app (individual lint/test/build) or continue the close-out with an
@@ -134,11 +165,17 @@ Read from `work/active/spec-<number>/`:
 
 ## Step 3: Reconcile the design delta into the living module docs
 
-The behavior depends on `SYNC_MODE` (profile.md), with **per-artifact granularity**:
-the contract is merged if `API_CONTRACT_MODE = delta` (default) and copied if `full`;
-flows are replaced if `SYNC_MODE = replace` and promoted (copied) if `promote`. A
-project may mix both axes (e.g. delta contract + Markdown diagrams) — in that case the
-contract is merged here and the diagrams are copied in the promote section.
+Two profile keys decide this step, one per artifact class. **They are resolved
+independently** — read both rows of the table below and execute what each one says.
+A project that mixes modes runs one row from each section; that is normal, not an
+exception:
+
+| Artifact class | Key | Value | Action | Section below |
+|---|---|---|---|---|
+| OpenAPI contract | `API_CONTRACT_MODE` | `delta` (default) | merge the delta into the canonical `api.yaml` | reconcile |
+| OpenAPI contract | `API_CONTRACT_MODE` | `full` | copy the file as is | promote |
+| Flows / diagrams | `SYNC_MODE` | `replace` | replace the whole `flows/<slug>.md` | reconcile |
+| Flows / diagrams | `SYNC_MODE` | `promote` (default, and when unset) | copy the Markdown artifacts as is | promote |
 
 ### When `SYNC_MODE = replace` (docs-as-code with Mermaid — only if the profile declares it; the default is `promote`)
 
@@ -146,9 +183,6 @@ contract is merged here and the diagrams are copied in the promote section.
 inline. With no global model to merge, the flow is **replaced whole** in the living
 docs. The only real reconciliation that survives is the canonical `api.yaml`, which is
 genuinely cumulative.
-
-> If the project declares `API_CONTRACT_MODE=full`, the contract is **copied** rather
-> than merged — see the promote section below.
 
 **Identity keys & duplicate guard (run BEFORE writing).** Every living entity has a
 stable key: the flow = `use_case` (slug of `flows/*.md`), the endpoint = `path`+method /
@@ -222,10 +256,6 @@ For each file under `work/active/spec-<number>/docs/`:
      in the PR body that the module docs were updated by this story.
 4. The original stays inside the story folder as a point-in-time record — it
    travels to `work/done/` in Step 4.
-
-> In mixed projects (`API_CONTRACT_MODE=delta` + `DESIGN_OUTPUT_MODE=full`), only the
-> diagrams (`diagram.md`/`component.md`) are copied here; the contract
-> (`api.delta.yaml`) is merged per the reconcile section.
 
 Stories without design artifacts (no `docs/` folder) skip this step silently;
 note it in the final summary.
@@ -387,6 +417,8 @@ next steps.
 | Issue | Cause | Resolution |
 |---|---|---|
 | `plan.md` has tasks without `[X]` | `/build` didn't finish | Stop — suggest `/build spec-<number>` |
+| `plan.md` has an AC marked `✗` in `## AC Coverage` | Tasks executed, but an acceptance criterion has no test behind it | Stop — the story isn't ready to close; fix the gap, or `/hotfix spec-<number>` if it traces back to an ambiguous AC |
+| `plan.md` has no `## AC Coverage` section at all | Plan built before this convention existed | Don't infer coverage from the `[X]` markers — ask the user to confirm the ACs are met before closing |
 | Folder is already in `work/done/` | sync already ran for this story | Report it and stop |
 | No `docs/` folder in the story | Story with no API/diagram changes | Skip Step 3, note it in the final summary |
 | `design.md` has no "Design Decisions" section | Story with no significant decisions | Skip Step 4 silently — not every story has a decision worth recording |
@@ -402,7 +434,7 @@ next steps.
 
 ---
 
-## CRITICAL: Output Language
+## Output language
 
 **Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
 `OUTPUT_LANGUAGE` if the project doesn't declare it): the entries appended to
