@@ -1,31 +1,30 @@
-# Patrones de skills
+# Skill patterns
 
-Estos patrones surgieron de skills creadas por early adopters y equipos internos
-de Anthropic. Son enfoques que funcionaron bien, **no plantillas prescriptivas**.
-
----
-
-## Elegir el framing: problem-first vs tool-first
-
-Analogía de Home Depot: podés entrar con un problema ("necesito arreglar un
-mueble de cocina") y que un empleado te apunte a las herramientas correctas; o
-podés elegir un taladro nuevo y preguntar cómo usarlo para tu trabajo.
-
-- **Problem-first:** "necesito armar un workspace de proyecto" → la skill
-  orquesta las llamadas MCP correctas en la secuencia correcta. El usuario
-  describe resultados; la skill maneja las herramientas.
-- **Tool-first:** "tengo Notion MCP conectado" → la skill le enseña a Claude los
-  workflows y buenas prácticas óptimas. El usuario ya tiene el acceso; la skill
-  aporta el expertise.
-
-La mayoría de las skills se inclinan hacia un lado. Saber cuál encaja ayuda a
-elegir el patrón.
+These patterns emerged from skills built by early adopters and Anthropic's internal
+teams. They are approaches that worked well, **not prescriptive templates**.
 
 ---
 
-## Patrón 1: Orquestación secuencial de workflow
+## Choosing the framing: problem-first vs tool-first
 
-**Usar cuando:** el usuario necesita procesos multi-paso en un orden específico.
+The Home Depot analogy: you can walk in with a problem ("I need to fix a kitchen
+cabinet") and have an employee point you at the right tools; or you can pick out a
+new drill and ask how to use it for your job.
+
+- **Problem-first:** "I need to set up a project workspace" → the skill orchestrates
+  the right MCP calls in the right sequence. The user describes outcomes; the skill
+  handles the tools.
+- **Tool-first:** "I have the Notion MCP connected" → the skill teaches Claude the
+  optimal workflows and best practices. The user already has the access; the skill
+  brings the expertise.
+
+Most skills lean one way. Knowing which one fits helps pick the pattern.
+
+---
+
+## Pattern 1: Sequential workflow orchestration
+
+**Use when:** the user needs multi-step processes in a specific order.
 
 ```markdown
 ## Workflow: Onboard New Customer
@@ -40,222 +39,222 @@ Wait for: payment method verification
 
 ### Step 3: Create Subscription
 Call MCP tool: `create_subscription`
-Parameters: plan_id, customer_id (del Step 1)
+Parameters: plan_id, customer_id (from Step 1)
 
 ### Step 4: Send Welcome Email
 Call MCP tool: `send_email`
 Template: welcome_email_template
 ```
 
-**Técnicas clave:**
-- Orden explícito de pasos
-- Dependencias entre pasos
-- Validación en cada etapa
-- Instrucciones de rollback ante fallas
+**Key techniques:**
+- Explicit step order
+- Dependencies between steps
+- Validation at each stage
+- Rollback instructions on failure
 
 ---
 
-## Patrón 2: Coordinación multi-MCP
+## Pattern 2: Multi-MCP coordination
 
-**Usar cuando:** el workflow abarca varios servicios.
+**Use when:** the workflow spans several services.
 
-Ejemplo — handoff de diseño a desarrollo:
+Example — design-to-development handoff:
 
 ```markdown
 ### Phase 1: Design Export (Figma MCP)
-1. Exportar assets de diseño desde Figma
-2. Generar especificaciones de diseño
-3. Crear manifiesto de assets
+1. Export design assets from Figma
+2. Generate design specifications
+3. Create an asset manifest
 
 ### Phase 2: Asset Storage (Drive MCP)
-1. Crear carpeta del proyecto en Drive
-2. Subir todos los assets
-3. Generar links compartibles
+1. Create the project folder in Drive
+2. Upload all assets
+3. Generate shareable links
 
 ### Phase 3: Task Creation (Linear MCP)
-1. Crear tareas de desarrollo
-2. Adjuntar links de assets a las tareas
-3. Asignar al equipo de ingeniería
+1. Create development tasks
+2. Attach asset links to the tasks
+3. Assign to the engineering team
 
 ### Phase 4: Notification (Slack MCP)
-1. Postear resumen del handoff en #engineering
-2. Incluir links de assets y referencias de tareas
+1. Post the handoff summary in #engineering
+2. Include asset links and task references
 ```
 
-**Técnicas clave:**
-- Separación clara de fases
-- Paso de datos entre MCPs
-- Validación antes de avanzar de fase
-- Manejo de errores centralizado
+**Key techniques:**
+- Clear phase separation
+- Data passing between MCPs
+- Validation before advancing a phase
+- Centralized error handling
 
 ---
 
-## Patrón 3: Refinamiento iterativo
+## Pattern 3: Iterative refinement
 
-**Usar cuando:** la calidad del output mejora iterando.
+**Use when:** output quality improves with iteration.
 
-Ejemplo — generación de reportes:
+Example — report generation:
 
 ```markdown
 ## Iterative Report Creation
 
 ### Initial Draft
-1. Traer datos vía MCP
-2. Generar primer borrador del reporte
-3. Guardar en archivo temporal
+1. Fetch data via MCP
+2. Generate the first report draft
+3. Save to a temporary file
 
 ### Quality Check
-1. Correr script de validación: `scripts/check_report.py`
-2. Identificar problemas:
-   - Secciones faltantes
-   - Formato inconsistente
-   - Errores de validación de datos
+1. Run the validation script: `scripts/check_report.py`
+2. Identify problems:
+   - Missing sections
+   - Inconsistent formatting
+   - Data validation errors
 
 ### Refinement Loop
-1. Resolver cada problema identificado
-2. Regenerar las secciones afectadas
-3. Re-validar
-4. Repetir hasta alcanzar el umbral de calidad
+1. Resolve each identified problem
+2. Regenerate the affected sections
+3. Re-validate
+4. Repeat until the quality threshold is met
 
 ### Finalization
-1. Aplicar formato final
-2. Generar resumen
-3. Guardar versión final
+1. Apply final formatting
+2. Generate a summary
+3. Save the final version
 ```
 
-**Técnicas clave:**
-- Criterios de calidad explícitos
-- Mejora iterativa
-- Scripts de validación
-- **Saber cuándo parar de iterar**
+**Key techniques:**
+- Explicit quality criteria
+- Iterative improvement
+- Validation scripts
+- **Knowing when to stop iterating**
 
 ---
 
-## Patrón 4: Selección contextual de herramienta
+## Pattern 4: Contextual tool selection
 
-**Usar cuando:** mismo resultado, distintas herramientas según el contexto.
+**Use when:** same outcome, different tools depending on the context.
 
-Ejemplo — almacenamiento de archivos:
+Example — file storage:
 
 ```markdown
 ## Smart File Storage
 
 ### Decision Tree
-1. Chequear tipo y tamaño del archivo
-2. Determinar la mejor ubicación:
-   - Archivos grandes (>10MB): usar MCP de cloud storage
-   - Documentos colaborativos: usar MCP de Notion/Docs
-   - Archivos de código: usar MCP de GitHub
-   - Archivos temporales: usar almacenamiento local
+1. Check the file's type and size
+2. Determine the best location:
+   - Large files (>10MB): use the cloud storage MCP
+   - Collaborative documents: use the Notion/Docs MCP
+   - Code files: use the GitHub MCP
+   - Temporary files: use local storage
 
 ### Execute Storage
-Según la decisión:
-- Llamar a la herramienta MCP apropiada
-- Aplicar metadata específica del servicio
-- Generar link de acceso
+Per the decision:
+- Call the appropriate MCP tool
+- Apply service-specific metadata
+- Generate an access link
 
 ### Provide Context to User
-Explicar por qué se eligió ese almacenamiento
+Explain why that storage was chosen
 ```
 
-**Técnicas clave:**
-- Criterios de decisión claros
-- Opciones de fallback
-- Transparencia sobre las decisiones tomadas
+**Key techniques:**
+- Clear decision criteria
+- Fallback options
+- Transparency about the decisions made
 
 ---
 
-## Patrón 5: Inteligencia de dominio
+## Pattern 5: Domain intelligence
 
-**Usar cuando:** la skill aporta conocimiento especializado más allá del acceso
-a herramientas.
+**Use when:** the skill brings specialized knowledge beyond tool access.
 
-Ejemplo — compliance financiero:
+Example — financial compliance:
 
 ```markdown
 ## Payment Processing with Compliance
 
 ### Before Processing (Compliance Check)
-1. Traer detalles de la transacción vía MCP
-2. Aplicar reglas de compliance:
-   - Chequear listas de sanciones
-   - Verificar permisos por jurisdicción
-   - Evaluar nivel de riesgo
-3. Documentar la decisión de compliance
+1. Fetch the transaction details via MCP
+2. Apply the compliance rules:
+   - Check sanctions lists
+   - Verify per-jurisdiction permissions
+   - Assess the risk level
+3. Document the compliance decision
 
 ### Processing
 IF compliance passed:
-  - Llamar a la herramienta MCP de procesamiento de pagos
-  - Aplicar los chequeos de fraude correspondientes
-  - Procesar la transacción
+  - Call the payment processing MCP tool
+  - Apply the relevant fraud checks
+  - Process the transaction
 ELSE:
-  - Marcar para revisión
-  - Crear caso de compliance
+  - Flag for review
+  - Create a compliance case
 
 ### Audit Trail
-- Loggear todos los chequeos de compliance
-- Registrar las decisiones de procesamiento
-- Generar reporte de auditoría
+- Log every compliance check
+- Record the processing decisions
+- Generate an audit report
 ```
 
-**Técnicas clave:**
-- Expertise de dominio embebido en la lógica
-- Compliance antes de la acción
-- Documentación exhaustiva
-- Gobernanza clara
+**Key techniques:**
+- Domain expertise embedded in the logic
+- Compliance before action
+- Thorough documentation
+- Clear governance
 
 ---
 
-## Categorías de casos de uso
+## Use case categories
 
-### Categoría 1: Creación de documentos y assets
+### Category 1: Document and asset creation
 
-**Para:** output consistente y de alta calidad — documentos, presentaciones,
-apps, diseños, código.
+**For:** consistent, high-quality output — documents, presentations, apps, designs,
+code.
 
-Ejemplo real: skill `frontend-design` (también las de docx, pptx, xlsx).
+Real example: the `frontend-design` skill (also the docx, pptx, xlsx ones).
 
-**Técnicas clave:**
-- Style guides y estándares de marca embebidos
-- Estructuras de plantilla para output consistente
-- Checklists de calidad antes de finalizar
-- Sin herramientas externas — usa capacidades built-in de Claude
+**Key techniques:**
+- Embedded style guides and brand standards
+- Template structures for consistent output
+- Quality checklists before finalizing
+- No external tools — uses Claude's built-in capabilities
 
-### Categoría 2: Automatización de workflow
+### Category 2: Workflow automation
 
-**Para:** procesos multi-paso que se benefician de metodología consistente,
-incluyendo coordinación entre varios servidores MCP.
+**For:** multi-step processes that benefit from a consistent methodology, including
+coordination across several MCP servers.
 
-Ejemplo real: la propia skill `skill-creator`.
+Real example: the `skill-creator` skill itself.
 
-**Técnicas clave:**
-- Workflow paso a paso con validation gates
-- Plantillas para estructuras comunes
-- Revisión y sugerencias de mejora incorporadas
-- Loops de refinamiento iterativo
+**Key techniques:**
+- Step-by-step workflow with validation gates
+- Templates for common structures
+- Built-in review and improvement suggestions
+- Iterative refinement loops
 
-### Categoría 3: Enhancement de MCP
+### Category 3: MCP enhancement
 
-**Para:** guía de workflow que potencia el acceso a herramientas que da un
-servidor MCP.
+**For:** workflow guidance that amplifies the tool access an MCP server provides.
 
-Ejemplo real: skill `sentry-code-review` (de Sentry).
+Real example: the `sentry-code-review` skill (from Sentry).
 
-**Técnicas clave:**
-- Coordina múltiples llamadas MCP en secuencia
-- Embebe expertise de dominio
-- Aporta contexto que el usuario tendría que especificar
-- Manejo de errores para problemas comunes del MCP
+**Key techniques:**
+- Coordinates multiple MCP calls in sequence
+- Embeds domain expertise
+- Supplies context the user would otherwise have to specify
+- Error handling for common MCP problems
 
 ---
 
-## MCP y skills: la analogía de la cocina
+## MCP and skills: the kitchen analogy
 
-- **MCP provee la cocina profesional:** acceso a herramientas, ingredientes y equipamiento. Es *qué puede hacer* Claude.
-- **Las skills proveen las recetas:** instrucciones paso a paso para crear algo valioso. Es *cómo debería hacerlo* Claude.
+- **MCP provides the professional kitchen:** access to tools, ingredients and
+  equipment. It's *what Claude can do*.
+- **Skills provide the recipes:** step-by-step instructions for creating something
+  valuable. It's *how Claude should do it*.
 
-| MCP (conectividad) | Skills (conocimiento) |
+| MCP (connectivity) | Skills (knowledge) |
 |---|---|
-| Conecta Claude a tu servicio (Notion, Asana, Linear) | Le enseña a Claude a usar tu servicio efectivamente |
-| Da acceso a datos en tiempo real e invocación de herramientas | Captura workflows y buenas prácticas |
-| Qué puede hacer Claude | Cómo debería hacerlo Claude |
+| Connects Claude to your service (Notion, Asana, Linear) | Teaches Claude to use your service effectively |
+| Gives access to real-time data and tool invocation | Captures workflows and best practices |
+| What Claude can do | How Claude should do it |

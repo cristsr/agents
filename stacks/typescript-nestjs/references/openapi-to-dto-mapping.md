@@ -1,7 +1,7 @@
 # OpenAPI → NestJS DTO Mapping
 
 Reference for the DTO task(s) in `/plan`. Every field in a generated DTO
-class must trace back to a field in `work/active/sm-<number>/docs/<api-artifact>`
+class must trace back to a field in `work/active/spec-<number>/docs/<api-artifact>`
 (`api.delta.yaml` si `API_CONTRACT_MODE=delta`; si no `api.yaml`)
 — never invent a field, decorator, or type not implied by this mapping.
 

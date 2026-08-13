@@ -5,11 +5,11 @@ description: >
   clarification gap in spec.md — corrects or adds the affected AC and applies
   the fix as a single targeted task on plan.md and the already-built code,
   without regenerating the full plan or re-running /build from scratch.
-  Use when the user says "/hotfix sm-XXX", "esto quedó mal porque no se
-  clarificó bien", "hay un bug post-build por un AC ambiguo", "necesito
-  corregir algo que ya se construyó", "encontré un caso que no se cubrió",
-  or reports a defect in already-built code that traces back to a
-  missing/ambiguous AC.
+  Use when the user says "/hotfix spec-XXXX", "this came out wrong because it
+  wasn't clarified properly", "there's a post-build bug from an ambiguous AC",
+  "I need to fix something that's already been built", "I found a case that
+  wasn't covered", or reports a defect in already-built code that traces back
+  to a missing/ambiguous AC.
   Do NOT use for artifacts that haven't been built yet (use /refine).
   Do NOT use for defects unrelated to spec ambiguity — fix those directly
   in the code without going through this flow.
@@ -17,63 +17,64 @@ description: >
 
 # hotfix
 
-## Perfil del proyecto (leer primero, siempre)
+## Project profile (read first, always)
 
-Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyecto actual): define el patrón de ID
-de historia, las rutas de artefactos, el idioma de salida, el **stack objetivo** y
-el **framework de tests** (esta skill ejecuta una tarea con disciplina TDD). Si no
-existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
+Before anything else, read `.agents/profile.md` (at the root of the current project): it defines the story ID
+pattern, the artifact paths, the output language, the **target stack** and the
+**test framework** (this skill executes one task with TDD discipline). If it doesn't
+exist, tell the user to create it by copying `~/.agents/sdd-profile.template.md` to the project's `.agents/profile.md`, and stop: without a profile you don't know this project's conventions.
 
-**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
 
-**Los literales de este documento son solo un ejemplo de resolución** (el perfil de Smart Mobility).
-Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
+**The literals in this document are only an example resolution**.
+The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
 
-| En este documento | Clave en profile.md |
+| In this document | Key in profile.md |
 |---|---|
-| `sm-<number>` | `STORY_ID_PATTERN` |
-| `work/active/sm-<number>/` | `WORKDIR_ACTIVE` |
-| «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
+| `spec-<number>` | `STORY_ID_PATTERN` |
+| `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
+| "microservice" in the prose | `COMPONENT_TERM` (section 7) — read the term from the profile |
 | Jest / `*.spec.ts` | `TEST_FRAMEWORK` |
-| NestJS · TypeORM | sección 7 «Stack y arquitectura» |
+| NestJS · TypeORM | section 7 "Stack and architecture" |
 
 ---
 
 ## Overview
 
-Bridge between `/refine` (corrige artefactos) y `/build` (ejecuta planes) para
-un caso específico: **el código ya existe**, `plan.md` ya tiene tareas `[X]`,
-y el defecto se debe a que `spec.md` no clarificó bien un AC (o le faltaba uno).
+Bridge between `/refine` (which corrects artifacts) and `/build` (which executes
+plans) for a specific case: **the code already exists**, `plan.md` already has `[X]`
+tasks, and the defect is due to `spec.md` not having clarified an AC properly (or
+missing one entirely).
 
-En vez de re-ejecutar `/plan` (que regeneraría el plan completo, perdiendo
-los `[X]` existentes) o `/refine` (que no toca código ni plan.md), esta skill:
-1. Corrige/agrega el AC en `spec.md`
-2. Agrega UNA tarea puntual `Tarea HOTFIX-N` al final de `plan.md`
-3. Ejecuta solo esa tarea con disciplina TDD
-4. Actualiza la trazabilidad AC → Tarea
+Instead of re-running `/plan` (which would regenerate the whole plan, losing the
+existing `[X]`s) or `/refine` (which touches neither code nor plan.md), this skill:
+1. Corrects/adds the AC in `spec.md`
+2. Appends ONE targeted `Task HOTFIX-N` to the end of `plan.md`
+3. Executes only that task, with TDD discipline
+4. Updates the AC → Task traceability
 
-**Announce at start:** "Aplicando hotfix sobre sm-<number>."
+**Announce at start:** "Applying a hotfix on spec-<number>."
 
-**Output:** `spec.md` (AC corregido/agregado + sección `## Hotfixes`),
-`plan.md` (tarea HOTFIX-N agregada y marcada `[X]`), código corregido.
+**Output:** `spec.md` (AC corrected/added + a `## Hotfixes` section),
+`plan.md` (HOTFIX-N task appended and marked `[X]`), corrected code.
 
 ---
 
 ## CRITICAL: Verify this is actually a post-build case
 
 ```bash
-[ -f work/active/sm-<number>/plan.md ] || echo "MISSING: plan.md"
-grep -c '\[X\]' work/active/sm-<number>/plan.md 2>/dev/null || echo 0
+[ -f work/active/spec-<number>/plan.md ] || echo "MISSING: plan.md"
+grep -c '\[X\]' work/active/spec-<number>/plan.md 2>/dev/null || echo 0
 ```
 
-- Si `plan.md` no existe → STOP:
-  "No hay nada construido todavía para sm-<number>. Usá `/refine` para
-  corregir el artefacto que corresponda y seguí con `/plan` y `/build`
-  normalmente — `/hotfix` es solo para defectos post-build."
+- If `plan.md` doesn't exist → STOP:
+  "Nothing has been built for spec-<number> yet. Use `/refine` to correct the relevant
+  artifact and continue with `/plan` and `/build` normally — `/hotfix` is only for
+  post-build defects."
 
-- Si `plan.md` existe pero NO tiene ninguna tarea `[X]` → STOP:
-  "El plan todavía no se ejecutó (`/build` no corrió ninguna tarea). Corregí
-  con `/refine` y seguí el flujo normal — no hace falta `/hotfix` todavía."
+- If `plan.md` exists but has NO `[X]` task → STOP:
+  "The plan hasn't been executed yet (`/build` ran no tasks). Fix it with `/refine`
+  and follow the normal flow — no `/hotfix` needed yet."
 
 ---
 
@@ -83,175 +84,173 @@ grep -c '\[X\]' work/active/sm-<number>/plan.md 2>/dev/null || echo 0
 git branch --show-current
 ```
 
-Si el resultado es `main` o `master` → detener:
-"Estás en la rama `main`/`master`. Cambiá a la rama de trabajo de la historia
-antes de continuar."
+If the result is `main` or `master` → stop:
+"You're on the `main`/`master` branch. Switch to the story's working branch before
+continuing."
 
 ---
 
 ## CRITICAL: Never execute commits
 
-Nunca ejecutar `git add`, `git commit`, ni `git push`. El control de versiones
-lo maneja el usuario.
+Never run `git add`, `git commit`, or `git push`. Version control is managed by the
+user.
 
 ---
 
 ## PHASE 1: Identify the gap
 
-1. Si el usuario no describió el defecto, preguntar:
-   > "¿Qué está pasando? Describí el comportamiento incorrecto observado."
+1. If the user didn't describe the defect, ask:
+   > "What's happening? Describe the incorrect behavior you observed."
 
-> **Ítems legados.** Si la carpeta tiene `hu.md` en vez de `spec.md`, es el mismo
-> artefacto con su nombre anterior: trabajarlo en su lugar, sin renombrarlo.
+> **Legacy items.** If the folder has an `hu.md` instead of a `spec.md`, it's the same
+> artifact under its former name: work on it in place, without renaming it.
 
-2. Leer `work/active/sm-<number>/spec.md` completo — ACs, Reglas de Negocio,
-   sección `## Hotfixes` si ya existe (para numerar `HOTFIX-N` correctamente).
+2. Read `work/active/spec-<number>/spec.md` in full — ACs, Business Rules, and the
+   `## Hotfixes` section if it already exists (so `HOTFIX-N` is numbered correctly).
 
-3. Clasificar el defecto:
-   - **AC existente mal clarificado:** hay un AC que cubre el área pero su
-     redacción era ambigua y se implementó la interpretación incorrecta.
-   - **AC faltante:** el caso reportado nunca estuvo descrito como AC —
-     es un edge case que se escapó por completo.
+3. Classify the defect:
+   - **Existing AC badly clarified:** there's an AC covering the area but its wording
+     was ambiguous and the wrong interpretation got implemented.
+   - **Missing AC:** the reported case was never described as an AC — it's an edge
+     case that escaped entirely.
 
-4. Mostrar el AC relevante (si existe) y la corrección propuesta:
-   > "**AC-N actual:** '<texto>' — **Propuesta:** '<texto corregido>'."
+4. Show the relevant AC (if it exists) and the proposed correction:
+   > "**Current AC-N:** '<text>' — **Proposal:** '<corrected text>'."
 
-   Si es un AC faltante, proponer el texto del AC nuevo siguiendo el
-   formato de `../spec/references/spec-template.md` (numeración siguiente a la última).
+   If it's a missing AC, propose the new AC's text following the format in
+   `../spec/references/spec-template.md` (numbered after the last one).
 
-   Confirmar con `AskUserQuestion`: `question: "¿Confirmás esta corrección del AC-N?"`,
-   `header: "AC-N"`, options `"Confirmar"` / `"Ajustar el texto"`. Si elige
-   "Ajustar el texto", seguir en texto libre hasta llegar a una redacción
-   confirmada antes de tocar `spec.md`.
+   Confirm with `AskUserQuestion`: `question: "Do you confirm this correction to AC-N?"`,
+   `header: "AC-N"`, options `"Confirm"` / `"Adjust the text"`. If they pick
+   "Adjust the text", continue in free text until you reach a confirmed wording before
+   touching `spec.md`.
 
-5. Esperar confirmación antes de tocar `spec.md`.
+5. Wait for confirmation before touching `spec.md`.
 
 ### Size check (important)
 
-Si el AC faltante implica un microservicio nuevo, un endpoint nuevo, o una
-tabla nueva — esto **no es un hotfix**, es una historia mal dimensionada.
-Usar `AskUserQuestion`:
-- `question`: "Esto excede el alcance de un hotfix (implica <razón>). ¿Cómo seguimos?"
-- `header`: "Alcance"
-- `options`: `"Tratarlo como ampliación de la historia (Recomendado)"` con
-  description "Usar /refine hu para agregar el AC y /plan para regenerar el
-  plan completo con la tarea nueva incluida" / `"Seguir igual como hotfix"`
-  con description "Aceptás el riesgo de un hotfix fuera de su alcance habitual".
+If the missing AC implies a new microservice, a new endpoint, or a new table — that's
+**not a hotfix**, it's a badly sized story. Use `AskUserQuestion`:
+- `question`: "This exceeds a hotfix's scope (it implies <reason>). How do we proceed?"
+- `header`: "Scope"
+- `options`: `"Treat it as an extension of the story (Recommended)"` with
+  description "Use /refine spec to add the AC and /plan to regenerate the full plan
+  with the new task included" / `"Continue as a hotfix anyway"`
+  with description "You accept the risk of a hotfix outside its usual scope".
 
-Si elige la opción recomendada, detenerse y redirigir — no continuar con el flujo de hotfix.
+If they pick the recommended option, stop and redirect — don't continue with the
+hotfix flow.
 
 ---
 
 ## PHASE 2: Correct spec.md
 
-1. Aplicar la corrección/adición del AC con Edit (misma disciplina que
-   `/refine` Modo Directo — texto exacto, sin inventar alcance).
-2. Agregar una entrada a `## Hotfixes` (crear la sección si no existe, al
-   final del archivo, después de `Fuera de Alcance` si existe):
+1. Apply the AC correction/addition with Edit (same discipline as `/refine`'s Direct
+   Mode — exact text, no invented scope).
+2. Add an entry to `## Hotfixes` (create the section if it doesn't exist, at the end
+   of the file, after `Out of Scope` if present):
 
 ```markdown
 ## Hotfixes
 
-- **HOTFIX-N (AC-N):** <qué estaba mal o faltaba> → <corrección aplicada> — implementado en `plan.md` Tarea HOTFIX-N.
+- **HOTFIX-N (AC-N):** <what was wrong or missing> → <correction applied> — implemented in `plan.md` Task HOTFIX-N.
 ```
 
-`N` continúa la numeración del último `HOTFIX-N` existente en el archivo
-(empieza en 1 si es el primero).
+`N` continues the numbering of the last existing `HOTFIX-N` in the file
+(starts at 1 if it's the first).
 
 ---
 
 ## PHASE 3: Determine impact scope
 
-1. Leer la tabla "Trazabilidad AC → Tareas" del header de `plan.md`.
-2. Si el AC ya existía: identificar qué Tarea(s) lo cubren — esos son los
-   archivos más probables a tocar.
-3. Leer `work/active/sm-<number>/context.md` para confirmar rutas exactas
-   de los archivos del microservicio afectado.
-4. Si el AC es nuevo (sin tareas previas): el archivo a modificar es el que
-   ya implementa el comportamiento relacionado más cercano — identificarlo
-   leyendo el código del microservicio afectado.
+1. Read the "AC → Task traceability" table in `plan.md`'s header.
+2. If the AC already existed: identify which Task(s) cover it — those are the files
+   most likely to be touched.
+3. Read `work/active/spec-<number>/context.md` to confirm the exact file paths of the
+   affected microservice.
+4. If the AC is new (no prior tasks): the file to modify is the one that already
+   implements the closest related behavior — identify it by reading the affected
+   microservice's code.
 
 ---
 
 ## PHASE 4: Append the hotfix task to plan.md
 
-Agregar al final de `plan.md`, bajo un header `## Hotfixes` (crearlo si no
-existe), una tarea con la misma estructura que
-`docs/architecture` ya define para tareas normales — consultar
-`<STACK_REFS>/references/task-structure-template.md` (default: `../plan/references/task-structure-template.md`
-local — genérica) — pero numerada `HOTFIX-N`
-en vez de un número secuencial de tarea:
+Append to the end of `plan.md`, under a `## Hotfixes` header (create it if it doesn't
+exist), a task with the same structure `docs/architecture` already defines for normal
+tasks — consult `<STACK_REFS>/references/task-structure-template.md` (default: the
+local `../plan/references/task-structure-template.md` — generic) — but numbered
+`HOTFIX-N` instead of a sequential task number:
 
 ```markdown
-### Tarea HOTFIX-N: <descripción breve del fix>
+### Task HOTFIX-N: <short description of the fix>
 
-**AC relacionado:** AC-N (corregido/agregado en spec.md)
+**Related AC:** AC-N (corrected/added in spec.md)
 
-**Archivos:**
-- Modificar: `sm-<micro>/src/exact/path/to/file.ts:123-145`
-- Test: `sm-<micro>/src/exact/path/to/file.spec.ts`
+**Files:**
+- Modify: `<component>/src/exact/path/to/file.ts:123-145`
+- Test: `<component>/src/exact/path/to/file.spec.ts`
 
-**Step 1: Escribir el test de regresión que falla**
+**Step 1: Write the failing regression test**
 ...
-**Step 2: Confirmar que falla**
+**Step 2: Confirm it fails**
 ...
-**Step 3: Aplicar el fix mínimo**
+**Step 3: Apply the minimum fix**
 ...
-**Step 4: Confirmar que pasa**
+**Step 4: Confirm it passes**
 ...
 ```
 
-Actualizar la tabla "Trazabilidad AC → Tareas" del header: agregar/actualizar
-la fila del AC afectado para que incluya `Tarea HOTFIX-N`.
+Update the "AC → Task traceability" table in the header: add/update the affected AC's
+row so it includes `Task HOTFIX-N`.
 
 ---
 
 ## PHASE 5: Execute the hotfix task
 
-Misma disciplina TDD que `/build` Step 2, pero acotada a esta única tarea:
-1. Marcar in_progress (TodoWrite opcional para una sola tarea)
-2. Test de regresión → confirmar que falla → implementar el fix mínimo →
-   confirmar que pasa
-3. Marcar `### Tarea HOTFIX-N: ... [X]` en `plan.md`
-4. Correr el suite completo del módulo afectado — `MODULE_TEST_CMD` del profile
-   (sección 10 — default):
+Same TDD discipline as `/build` Step 2, but scoped to this single task:
+1. Mark in_progress (TodoWrite optional for a single task)
+2. Regression test → confirm it fails → implement the minimum fix →
+   confirm it passes
+3. Mark `### Task HOTFIX-N: ... [X]` in `plan.md`
+4. Run the affected module's full suite — the profile's `MODULE_TEST_CMD`
+   (section 10 — default):
 
 ```bash
-cd <microservicio>
-npx jest src/modules/<modulo>/ --no-coverage
+cd <microservice>
+npx jest src/modules/<module>/ --no-coverage
 cd ..
 ```
 
-Esperado: PASS — incluyendo el test de regresión nuevo y todos los existentes
-(verificar que el fix no rompió nada que ya pasaba).
+Expected: PASS — including the new regression test and all existing ones (verify the
+fix didn't break anything that was already passing).
 
 ---
 
 ## PHASE 6: Coherence check + close
 
-1. Si el defecto también implica que `<api-artifact>` (el contrato: `api.delta.yaml`
-   o `api.yaml` según `API_CONTRACT_MODE`), `docs/diagram.md` o
-   `docs/data-model.md` quedaron desalineados (ej: el AC corregido cambia un
-   código de respuesta o un campo del contrato) → advertir, NO corregirlos
-   automáticamente:
-   > "⚠️ Este fix también afecta el contrato. Ejecutá `/refine api sm-<number>`
-   > (o `diagram`/`data-model` según corresponda) para mantenerlo alineado."
+1. If the defect also means `<api-artifact>` (the contract: `api.delta.yaml` or
+   `api.yaml` per `API_CONTRACT_MODE`), `docs/diagram.md` or `docs/data-model.md` are
+   now misaligned (e.g. the corrected AC changes a response code or a contract field)
+   → warn, do NOT correct them automatically:
+   > "⚠️ This fix also affects the contract. Run `/refine api spec-<number>`
+   > (or `diagram`/`data-model` as appropriate) to keep it aligned."
 
-2. Delegar un check de convenciones al subagente `conventions-reviewer`
-   sobre el diff de esta tarea puntual (mismo patrón que `/build` Step 3.2).
+2. Delegate a conventions check to the `conventions-reviewer` subagent over this
+   single task's diff (same pattern as `/build` Step 3.2).
 
-3. Mostrar resumen:
-   - AC corregido/agregado
-   - Archivos modificados
-   - Resultado de tests del módulo afectado
-   - Advertencias de contrato (si aplica)
-   - Hallazgos de convenciones (si hay)
+3. Show a summary:
+   - AC corrected/added
+   - Files modified
+   - Test results for the affected module
+   - Contract warnings (if any)
+   - Conventions findings (if any)
 
-4. Decir:
-   > "Hotfix aplicado. `spec.md` y `plan.md` actualizados con HOTFIX-N. Revisá
-   > los cambios y decime si hay algo que ajustar."
+4. Say:
+   > "Hotfix applied. `spec.md` and `plan.md` updated with HOTFIX-N. Review the
+   > changes and tell me if anything needs adjusting."
 
-5. Detener — no continuar con más cambios sin confirmación.
+5. Stop — don't continue with further changes without confirmation.
 
 ---
 
@@ -259,33 +258,49 @@ Esperado: PASS — incluyendo el test de regresión nuevo y todos los existentes
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| plan.md no existe | El flujo nunca llegó a `/plan` | Redirigir a `/refine` + `/plan` + `/build` normal |
-| plan.md sin ninguna tarea `[X]` | `/build` no se ejecutó todavía | Redirigir a `/refine` — no hace falta hotfix |
-| El gap implica micro/endpoint/tabla nueva | Historia mal dimensionada, no es un defecto puntual | Recomendar `/refine hu` + `/plan` completo en vez de hotfix |
-| AC corregido contradice otro AC existente | El AC original tenía una intención distinta a la reportada | Mostrar ambos ACs, confirmar con el usuario antes de aplicar |
-| El fix requiere tocar `api.yaml`/`diagram.md`/`data-model.md` | El gap era de contrato, no solo de wording | Advertir al cierre, no corregir automáticamente — usar `/refine` para esos archivos |
-| Tests del módulo fallan después del fix | El fix rompió un comportamiento ya cubierto | No marcar `[X]`, ajustar el fix hasta que todo el suite pase |
+| plan.md doesn't exist | The flow never reached `/plan` | Redirect to the normal `/refine` + `/plan` + `/build` |
+| plan.md with no `[X]` task | `/build` hasn't run yet | Redirect to `/refine` — no hotfix needed |
+| The gap implies a new service/endpoint/table | Badly sized story, not a targeted defect | Recommend `/refine spec` + a full `/plan` instead of a hotfix |
+| The corrected AC contradicts another existing AC | The original AC had a different intent than the one reported | Show both ACs, confirm with the user before applying |
+| The fix requires touching `api.yaml`/`diagram.md`/`data-model.md` | The gap was contractual, not just wording | Warn at close, don't correct automatically — use `/refine` for those files |
+| The module's tests fail after the fix | The fix broke behavior already covered | Don't mark `[X]`, adjust the fix until the whole suite passes |
 
 ---
 
 ## Example
 
-**Input:** `/hotfix sm-1933` — "el AC-2 solo decía 'retorna lista vacía' sin especificar el código HTTP, y se implementó devolviendo 404 — un cliente real espera 200 con array vacío"
+**Input:** `/hotfix spec-1933` — "AC-2 only said 'returns an empty list' without specifying the HTTP code, and it was implemented returning 404 — a real client expects 200 with an empty array"
 
-**Flujo:**
-1. Verifica `plan.md` → existe, 6 tareas, 6 marcadas `[X]`. Confirma caso post-build.
-2. Rama actual: `feat/SM-1933-filter-zones-by-service-type` (no es main). Continúa.
-3. Lee `spec.md` → AC-2: "Si no hay resultados, retorna lista vacía." — ambiguo, no especifica código HTTP. Propone:
-   > "**AC-2 actual:** 'Si no hay resultados, retorna lista vacía.' — **Propuesta:** 'Si no hay resultados, retorna lista vacía con código 200.'"
-   y llama `AskUserQuestion` (header "AC-2", opciones "Confirmar" / "Ajustar el texto").
-4. Usuario elige "Confirmar". PHASE 2: edita AC-2, agrega:
+**Flow:**
+1. Verifies `plan.md` → exists, 6 tasks, 6 marked `[X]`. Confirms a post-build case.
+2. Current branch: `feat/SPEC-1933-filter-zones-by-service-type` (not main). Continues.
+3. Reads `spec.md` → AC-2: "If there are no results, it returns an empty list." — ambiguous, doesn't specify the HTTP code. Proposes:
+   > "**Current AC-2:** 'If there are no results, it returns an empty list.' — **Proposal:** 'If there are no results, it returns an empty list with status 200.'"
+   and calls `AskUserQuestion` (header "AC-2", options "Confirm" / "Adjust the text").
+4. The user picks "Confirm". PHASE 2: edits AC-2, adds:
    ```markdown
    ## Hotfixes
 
-   - **HOTFIX-1 (AC-2):** El AC no especificaba código HTTP ante lista vacía y se implementó como 404 → se precisó que debe ser 200 — implementado en `plan.md` Tarea HOTFIX-1.
+   - **HOTFIX-1 (AC-2):** The AC didn't specify the HTTP code for an empty list and it was implemented as 404 → clarified that it must be 200 — implemented in `plan.md` Task HOTFIX-1.
    ```
-5. PHASE 3: tabla AC→Tareas dice AC-2 → Tarea 3 (Puerto de dominio) y Tarea 5 (Controller). El archivo a tocar es el controller.
-6. PHASE 4: agrega `### Tarea HOTFIX-1: Corregir código de respuesta en lista vacía` con test de regresión que pega al endpoint sin resultados y espera `200` + `[]`. Actualiza la fila de AC-2 en la tabla de trazabilidad para incluir `Tarea HOTFIX-1`.
-7. PHASE 5: test falla (devuelve 404) → corrige el controller → test pasa. Suite completo del módulo: PASS.
-8. PHASE 6: el código 200 ya estaba documentado en `api.yaml`, solo el código no lo respetaba — sin impacto de contrato. Cierra:
-   > "Hotfix aplicado. `spec.md` y `plan.md` actualizados con HOTFIX-1. Revisá los cambios y decime si hay algo que ajustar."
+5. PHASE 3: the AC→Task table says AC-2 → Task 3 (domain port) and Task 5 (controller). The file to touch is the controller.
+6. PHASE 4: appends `### Task HOTFIX-1: Fix the response code for an empty list` with a regression test hitting the endpoint with no results and expecting `200` + `[]`. Updates AC-2's row in the traceability table to include `Task HOTFIX-1`.
+7. PHASE 5: test fails (returns 404) → fixes the controller → test passes. Full module suite: PASS.
+8. PHASE 6: status 200 was already documented in `api.yaml`, only the code didn't honor it — no contract impact. Closes with:
+   > "Hotfix applied. `spec.md` and `plan.md` updated with HOTFIX-1. Review the changes and tell me if anything needs adjusting."
+
+---
+
+## CRITICAL: Output Language
+
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
+`OUTPUT_LANGUAGE` if the project doesn't declare it): the corrected AC, the body of
+the `## Hotfixes` entry and the steps of the `Task HOTFIX-N` block. Match the language
+the item's artifacts are already written in; never translate them.
+
+`## Hotfixes` and `Task HOTFIX-N` are structural names — always English, as are paths,
+classes and any other identifier (`IDENTIFIER_LANGUAGE`).
+
+**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
+The message samples in this document are written in English; render them in the
+user's language when that differs.

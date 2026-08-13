@@ -3,33 +3,33 @@
 Produce exactly this structure. Replace all `<placeholders>` with real content.
 Remove sections marked as optional if there is no content for them.
 
-El artefacto es **agnóstico al tipo de trabajo**. Lo único que varía es el
-**bloque de encuadre** (§ «Bloques de encuadre por tipo»); todo lo demás es común
-a features, bugs, deuda técnica, incidentes y chores.
+The artifact is **agnostic to the type of work**. The only thing that varies is the
+**framing block** (§ "Framing blocks per type"); everything else is common to
+features, bugs, technical debt, incidents and chores.
 
 ---
 
 ```markdown
 ---
-tipo: <feat | bug | debt | incident | chore>
-origen: <tracker:<clave> | audit:<referencia> | manual>
+type: <feat | bug | debt | incident | chore>
+origin: <tracker:<key> | audit:<reference> | manual>
 ---
 
-# <story-id>: <título>
+# <story-id>: <title>
 
-<!-- Bloque de encuadre — elegir el que corresponde al tipo. Ver la sección
-     «Bloques de encuadre por tipo» más abajo. Es UNO solo, nunca dos. -->
+<!-- Framing block — pick the one matching the type. See the section
+     "Framing blocks per type" below. Exactly ONE, never two. -->
 
-## Criterios de Aceptación
+## Acceptance Criteria
 
-### AC-1: <título derivado del contenido>
+### AC-1: <title derived from the content>
 
-<texto exacto del criterio tal como fue proporcionado>
+<exact text of the criterion as provided>
 
-### AC-2: <título derivado del contenido>
+### AC-2: <title derived from the content>
 
-<texto exacto del criterio tal como fue proporcionado>
-[NEEDS CLARIFICATION: <pregunta concreta si el AC es ambiguo o silencioso>]
+<exact text of the criterion as provided>
+[NEEDS CLARIFICATION: <concrete question if the AC is ambiguous or silent>]
 
 <!-- Repeat for each AC. Do not omit any.
      Insert [NEEDS CLARIFICATION: ...] markers inline where the input is silent
@@ -38,137 +38,150 @@ origen: <tracker:<clave> | audit:<referencia> | manual>
      edge case, contradiction). /spec only PLACES markers; /clarify resolves and
      removes them. No markers if the item is fully specified. -->
 
-## Reglas de Negocio
+## Business Rules
 
 <!-- OPTIONAL: Include only if the input explicitly provides business rules.
      Remove this section if not applicable. -->
 
-- <regla de negocio tal como fue proporcionada>
+- <business rule exactly as provided>
 
-## Fuera de Alcance
+## Out of Scope
 
 <!-- OPTIONAL: Include only if explicitly mentioned in the input.
      Remove this section if not applicable. -->
 
-- <lo que explícitamente NO entra en este ítem>
+- <what explicitly does NOT belong to this item>
 
 ## Hotfixes
 
 <!-- OPTIONAL: A defect found AFTER /build already produced code, traced
      back to a missing/ambiguous AC. Omit entirely if /hotfix was never run. -->
 
-- **HOTFIX-N (AC-N):** <qué estaba mal o faltaba en el AC> → <corrección aplicada al AC> — implementado en `plan.md` Tarea HOTFIX-N.
+- **HOTFIX-N (AC-N):** <what was wrong or missing in the AC> → <correction applied to the AC> — implemented in `plan.md` Task HOTFIX-N.
 ```
 
 ---
 
-## Bloques de encuadre por tipo
+## Framing blocks per type
 
-El encuadre responde **por qué existe este ítem**. El pipeline aguas abajo no lo
-lee — consume los ACs — pero es lo que permite que `/clarify` y `/design`
-entiendan la intención sin forzar un molde ajeno.
+The framing answers **why this item exists**. The downstream pipeline doesn't read
+it — it consumes the ACs — but it's what lets `/clarify` and `/design` grasp the
+intent without forcing an alien mold.
 
-### `feat` — funcionalidad nueva o cambio de comportamiento visible
-
-```markdown
-## Historia de Usuario
-
-**Como** <rol del usuario>
-**Quiero** <acción o funcionalidad>
-**Para** <beneficio o valor de negocio>
-```
-
-### `bug` — defecto en algo ya entregado
+### `feat` — new functionality or a visible behavior change
 
 ```markdown
-## Defecto
+## User Story
 
-**Síntoma:** <qué se observa, en términos verificables>
-**Reproducción:** <pasos mínimos, o el input que lo dispara>
-**Esperado:** <qué debería ocurrir>
-**Actual:** <qué ocurre en su lugar>
-**Impacto:** <a quién/qué afecta y con qué severidad>
+**As a** <user role>
+**I want** <action or functionality>
+**So that** <benefit or business value>
 ```
 
-> Si el defecto nace de un AC ambiguo de un ítem **ya construido**, no abras un
-> `bug` nuevo: usá `/hotfix` sobre el ítem original — corrige el AC y deja la
-> traza en su sección `## Hotfixes`.
-
-### `debt` — deuda técnica, refactor, mejora estructural
+### `bug` — a defect in something already delivered
 
 ```markdown
-## Deuda Técnica
+## Defect
 
-**Situación actual:** <qué hay hoy y por qué es un problema>
-**Riesgo o costo:** <qué se rompe, se frena o se encarece si sigue así>
-**Estado deseado:** <cómo se ve resuelto, en términos verificables>
+**Symptom:** <what is observed, in verifiable terms>
+**Reproduction:** <minimal steps, or the input that triggers it>
+**Expected:** <what should happen>
+**Actual:** <what happens instead>
+**Impact:** <who/what it affects and how severely>
 ```
 
-> Nunca inventar un «Como <mantenedor> / Quiero» para encajar deuda técnica en el
-> molde de historia de usuario. Este bloque existe exactamente para eso.
+> If the defect stems from an ambiguous AC of an **already-built** item, don't open a
+> new `bug`: use `/hotfix` on the original item — it corrects the AC and leaves the
+> trace in its `## Hotfixes` section.
 
-### `incident` — falla en ejecución que requiere remediación
+### `debt` — technical debt, refactor, structural improvement
 
 ```markdown
-## Incidente
+## Technical Debt
 
-**Impacto:** <qué se degradó o falló, alcance y duración>
-**Detección:** <cómo se descubrió — alerta, reporte, revisión>
-**Mitigación aplicada:** <qué se hizo para contenerlo, si aplica>
-**Causa raíz:** <el porqué, o `[NEEDS CLARIFICATION: causa raíz sin determinar]`>
+**Current situation:** <what exists today and why it's a problem>
+**Risk or cost:** <what breaks, stalls or gets more expensive if it stays this way>
+**Desired state:** <what "solved" looks like, in verifiable terms>
 ```
 
-> Los ACs de un `incident` describen la **remediación permanente**, no la
-> mitigación ya aplicada. Si la causa raíz todavía no se conoce, el marcador es
-> obligatorio: sin causa raíz no hay AC verificable que escribir.
+> Never invent an "As a <maintainer> / I want" to squeeze technical debt into the
+> user-story mold. This block exists for exactly that reason.
 
-### `chore` — mantenimiento sin cambio de comportamiento
+### `incident` — a production failure requiring remediation
 
 ```markdown
-## Mantenimiento
+## Incident
 
-**Motivación:** <por qué hay que hacerlo ahora>
-**Alcance:** <qué se toca y qué explícitamente no>
+**Impact:** <what degraded or failed, scope and duration>
+**Detection:** <how it was discovered — alert, report, review>
+**Mitigation applied:** <what was done to contain it, if any>
+**Root cause:** <the why, or `[NEEDS CLARIFICATION: root cause undetermined]`>
 ```
 
-> El AC de un `chore` casi siempre es «todo sigue funcionando igual»: nombrá los
-> gates concretos (suite verde, build, lint) en vez de dejarlo implícito.
+> An `incident`'s ACs describe the **permanent remediation**, not the mitigation
+> already applied. If the root cause is still unknown, the marker is mandatory:
+> without a root cause there is no verifiable AC to write.
+
+### `chore` — maintenance with no behavior change
+
+```markdown
+## Maintenance
+
+**Motivation:** <why it has to happen now>
+**Scope:** <what gets touched and what explicitly does not>
+```
+
+> A `chore`'s AC is almost always "everything keeps working the same": name the
+> concrete gates (green suite, build, lint) instead of leaving it implicit.
 
 ---
 
 ## Rules for each section
 
-**`tipo`:** obligatorio. Si el input no lo dice, inferirlo del contenido y
-**confirmarlo** con el usuario antes de escribir — el tipo determina el encuadre y
-equivocarlo produce un artefacto que se contradice a sí mismo.
+**`type`:** mandatory. If the input doesn't state it, infer it from the content and
+**confirm it** with the user before writing — the type determines the framing and
+getting it wrong produces an artifact that contradicts itself.
 
-**`origen`:** de dónde viene el ítem. `tracker:<clave>` si vino de un export o
-clave del tracker, `audit:<referencia>` si lo generó una auditoría (ej.
-`/hexagonal-audit`), `manual` si nació en la conversación.
+**`origin`:** where the item came from. `tracker:<key>` if it came from an export or a
+tracker key, `audit:<reference>` if an audit generated it (e.g. `/hexagonal-audit`),
+`manual` if it was born in the conversation.
 
-**Título:** depende del origen del ítem. Nunca derivarlo del contenido de los
-ACs — sale del tracker o del usuario, en ese orden de prioridad:
+**Title:** depends on the item's origin. Never derive it from the AC content — it
+comes from the tracker or from the user, in that order of priority:
 
-| Origen | Regla | Largo |
+| Origin | Rule | Length |
 |---|---|---|
-| Viene de un tracker (PDF/export/clave del `TRACKER` del profile) | **Verbatim.** No parafrasear, no acortar, no "mejorar" | El que tenga — la traza al backlog manda sobre la brevedad |
-| El usuario lo escribe al invocar `/spec` | Usar exactamente lo que escribió | El que haya escrito |
-| Nace en el proyecto y el usuario no dio título | Proponer uno y **confirmarlo** antes de escribir | 5-8 palabras |
+| Comes from a tracker (PDF/export/key of the profile's `TRACKER`) | **Verbatim.** Don't paraphrase, don't shorten, don't "improve" | Whatever it is — traceability to the backlog beats brevity |
+| The user writes it when invoking `/spec` | Use exactly what they wrote | Whatever they wrote |
+| Originates in the project and the user gave no title | Propose one and **confirm it** before writing | 5-8 words |
 
-La regla de 5-8 palabras aplica **solo al último caso** — es una guía para redactar
-un título nuevo, no un límite que recorte un título existente.
+The 5-8 word rule applies **only to the last case** — it's a guide for drafting a new
+title, not a limit that trims an existing one.
 
 **AC titles:** Short label for the criterion. Derive from its main concept.
-Example: "AC-1: Solo administradores pueden eliminar" not "AC-1: Criterio 1"
+Example: "AC-1: Only administrators can delete" not "AC-1: Criterion 1"
 
 **AC body:** Copy the original text exactly. Do not rewrite or summarize.
 
-**ACs son obligatorios en todos los tipos.** Es el único contrato con el resto del
-pipeline: `/clarify`, `/design`, `/plan` y `/build` consumen ACs verificables y
-nada más. Un ítem sin ACs no puede avanzar, sea del tipo que sea.
+**ACs are mandatory for every type.** They are the only contract with the rest of the
+pipeline: `/clarify`, `/design`, `/plan` and `/build` consume verifiable ACs and
+nothing else. An item with no ACs cannot advance, whatever its type.
 
-**Reglas de Negocio:** Copy each rule exactly as provided — do not infer or add
+**Business Rules:** Copy each rule exactly as provided — do not infer or add
 rules not present in the input. Omit the section entirely if none were given.
 
 **Hotfixes:** Never written by `/spec` itself — only `/hotfix` appends to this
 section, after correcting/adding an AC for a defect found in already-built code.
+
+## Language rules
+
+- Section headings: English. They are structural — `/clarify`, `/design`, `/plan`,
+  `/sync` and `/hotfix` locate them by name.
+- Prose, ACs, business rules: `ARTIFACT_LANGUAGE` (profile, section 5 — falls back to
+  `OUTPUT_LANGUAGE`).
+- The `type` values (`feat`, `bug`, `debt`, `incident`, `chore`) are identifiers and
+  never translated.
+- If the source item (tracker export, pasted text) is written in a language other than
+  `ARTIFACT_LANGUAGE`, translate its content into `ARTIFACT_LANGUAGE` when writing
+  `spec.md`, but keep proper nouns, identifiers, endpoints and error codes verbatim.
+  If both match, transcribe without translating anything.

@@ -1,65 +1,72 @@
-# context: sm-<number>
+# context: spec-<number>
 
-## Historia resumida
+## Item summary
 
-**Como** <rol>
-**Quiero** <acción>
-**Para** <beneficio>
+**As a** <role>
+**I want** <action>
+**So that** <benefit>
 
-## Componentes afectados
+<!-- For non-`feat` items, summarize the framing block that applies
+     (Defect / Technical Debt / Incident / Maintenance) instead of the user story. -->
+
+## Affected components
 
 - <component-1>
-- <component-2>  ← si aplica
+- <component-2>  ← if applicable
 
 ---
 
 ## <component-1>
 
-### Módulo afectado
+### Affected module
 `<absolute-path-to-module>/`
 
-### Entidad / modelo de persistencia
-**Archivo:** `<absolute-path>` (según `ORM` del profile)
-**Campos:**
-- `<field_name>`: `<type>` — <constraint si relevante>
+### Entity / persistence model
+**File:** `<absolute-path>` (per the profile's `ORM`)
+**Fields:**
+- `<field_name>`: `<type>` — <constraint if relevant>
 - `<field_name>`: `<type>`
 
-### Registro del módulo (providers)
-**Archivo:** `<absolute-path>` (según el framework)
-**Registrados:**
+### Module registration (providers)
+**File:** `<absolute-path>` (per the framework)
+**Registered:**
 - `<ProviderName>`
 - `<ProviderName>`
 
-### Patrón de inyección (caso de uso de referencia)
-**Archivo:** `<absolute-path>`
+### Injection pattern (reference use case)
+**File:** `<absolute-path>`
 **Constructor / init:**
 ```<language>
-<dependencias inyectadas, nombre y tipo>
+<injected dependencies, name and type>
 ```
 
-### DTOs existentes
+### Existing DTOs
 **Barrel:** `<absolute-path>/dtos/index`
-**Exportados:**
+**Exported:**
 - `<DtoClassName>`
 - `<DtoClassName>`
 
-### Puerto / servicio abstracto
-**Archivo:** `<absolute-path>`
-**Métodos:**
+### Port / abstract service
+**File:** `<absolute-path>`
+**Methods:**
 - `<methodName>(<params>): <returnType>`
 
-### Documentación disponible
-<path a docs si existe, o "Sin documentación para <component-1>">
+### Available documentation
+<path to docs if it exists, or "No documentation for <component-1>">
 
 ---
 
-## <component-2>  ← repetir sección si hay más de uno
+## <component-2>  ← repeat the section if there is more than one
 
-<misma estructura>
+<same structure>
 
 ---
 
-## Gaps detectados
+## Detected gaps
 
-<lista de cosas no encontradas que /design o /plan deberían tener en cuenta>
-<o "Ninguno" si todo fue encontrado>
+<list of things not found that /design or /plan should account for>
+<or "None" if everything was found>
+
+<!-- Language rules: section headings in English (structural — other skills read
+     them by name); prose in ARTIFACT_LANGUAGE (profile, section 5); paths, class
+     names, field names and signatures verbatim from the code. -->

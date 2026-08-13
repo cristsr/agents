@@ -1,37 +1,40 @@
-# context: sm-<number>
+# context: spec-<number>
 
-## Historia resumida
+## Item summary
 
-**Como** <rol>
-**Quiero** <acción>
-**Para** <beneficio>
+**As a** <role>
+**I want** <action>
+**So that** <benefit>
 
-## Microservicios afectados
+<!-- For non-`feat` items, summarize the framing block that applies
+     (Defect / Technical Debt / Incident / Maintenance) instead of the user story. -->
+
+## Affected microservices
 
 - <microservice-1>
-- <microservice-2>  ← si aplica
+- <microservice-2>  ← if applicable
 
 ---
 
 ## <microservice-1>
 
-### Módulo afectado
+### Affected module
 `<absolute-path-to-module>/`
 
-### Entidad TypeORM
-**Archivo:** `<absolute-path>.entity.ts`
-**Campos:**
-- `<field_name>`: `<type>` — <column constraint si relevante>
+### TypeORM entity
+**File:** `<absolute-path>.entity.ts`
+**Fields:**
+- `<field_name>`: `<type>` — <column constraint if relevant>
 - `<field_name>`: `<type>`
 
 ### Module providers
-**Archivo:** `<absolute-path>.module.ts`
-**Providers registrados:**
+**File:** `<absolute-path>.module.ts`
+**Registered providers:**
 - `<ProviderName>`
 - `<ProviderName>`
 
-### Patrón de inyección (use case de referencia)
-**Archivo:** `<absolute-path>.use-case.ts`
+### Injection pattern (reference use case)
+**File:** `<absolute-path>.use-case.ts`
 **Constructor:**
 ```typescript
 constructor(
@@ -40,29 +43,33 @@ constructor(
 ) {}
 ```
 
-### DTOs existentes
+### Existing DTOs
 **Barrel:** `<absolute-path>/dtos/index.ts`
-**Exportados:**
+**Exported:**
 - `<DtoClassName>`
 - `<DtoClassName>`
 
-### Servicio abstracto
-**Archivo:** `<absolute-path>.service.ts`
-**Métodos:**
+### Abstract service
+**File:** `<absolute-path>.service.ts`
+**Methods:**
 - `<methodName>(<params>): <returnType>`
 
-### Documentación disponible
-<path a docs si existe, o "Sin documentación en docs/services/<microservice>/">
+### Available documentation
+<path to docs if it exists, or "No documentation in docs/services/<microservice>/">
 
 ---
 
-## <microservice-2>  ← repetir sección si hay más de uno
+## <microservice-2>  ← repeat the section if there is more than one
 
-<misma estructura>
+<same structure>
 
 ---
 
-## Gaps detectados
+## Detected gaps
 
-<lista de cosas no encontradas que /design o /plan deberían tener en cuenta>
-<o "Ninguno" si todo fue encontrado>
+<list of things not found that /design or /plan should account for>
+<or "None" if everything was found>
+
+<!-- Language rules: section headings in English (structural — other skills read
+     them by name); prose in ARTIFACT_LANGUAGE (profile, section 5); paths, class
+     names, field names and signatures verbatim from the code. -->

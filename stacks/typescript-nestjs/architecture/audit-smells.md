@@ -1,9 +1,9 @@
 # TS/NestJS — Audit Smell Catalog (stack-specific)
 
-Detectores y smells concretos del stack TypeScript + NestJS para `/hexagonal-audit`.
-Cada entry: qué mirar → por qué está mal → el fix. Combinar con el detector
-automático `audit-scan.sh <src>` del mismo directorio (cada hit es un lead, no un
-hallazgo — confirmar leyendo el archivo).
+Concrete detectors and smells for the TypeScript + NestJS stack, for
+`/hexagonal-audit`. Each entry: what to look at → why it's wrong → the fix. Combine
+with the automatic `audit-scan.sh <src>` detector in the same directory (every hit is
+a lead, not a finding — confirm by reading the file).
 
 ### HIGH — boundary breaks
 

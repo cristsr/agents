@@ -2,11 +2,11 @@
 
 This file is the single source of the hexagonal rules. Both `hexagonal-architecture`
 (BUILD) and `hexagonal-audit` (AUDIT) load it. Never duplicate these rules elsewhere;
-the concrete syntax per stack lives in `<STACK_REFS>/architecture/` (ej.
+the concrete syntax per stack lives in `<STACK_REFS>/architecture/` (e.g.
 `module-blueprint.md`, `errors-and-logging.md`, `nestjs-binding.md`, `audit-scan.sh`).
 
-> Resolución por stack: donde una regla diga «abstracción», «token DI» o «naming»,
-> la concreción sale del pack de stack y de las claves del profile (sección 7:
+> Per-stack resolution: wherever a rule says "abstraction", "DI token" or "naming",
+> the concretion comes from the stack pack and the profile's keys (section 7:
 > `DI_TOKENS`, `DTO_STYLE`, `IDENTIFIER_LANGUAGE`).
 
 ## The Non-Negotiable Rule: Dependency Direction
@@ -254,7 +254,7 @@ implementation. Nothing else may name a concrete adapter.
   foreign use case in a local port adapter (anti-corruption layer) so only that
   adapter knows the other module exists.
 
-## Naming Quick Reference (genérico)
+## Naming Quick Reference (generic)
 
 | Artifact | Convention |
 |----------|------------|

@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# validate-skills.sh — healthcheck del ecosistema SDD (bash portable: Linux, WSL, Git Bash)
+# validate-skills.sh — SDD ecosystem healthcheck (portable bash: Linux, WSL, Git Bash)
 # Checks:
-#   1. Toda clave de profile referenciada por las skills existe en sdd-profile.template.md
-#   2. Toda ruta local references/<file> referenciada por una skill existe en esa skill
-#   3. Toda ruta <STACK_REFS>/<file> existe en los packs generic y typescript-nestjs
-# Uso: bash validate-skills.sh
+#   1. Every profile key referenced by the skills exists in sdd-profile.template.md
+#   2. Every local references/<file> path referenced by a skill exists in that skill
+#   3. Every <STACK_REFS>/<file> path exists in the generic and typescript-nestjs packs
+# Usage: bash validate-skills.sh
 set -u
 
-# Los checks usan `grep -P`, que en Git Bash falla con locales no-UTF8
-# ("grep: -P supports only unibyte and UTF-8 locales"). Sin esto, los greps
-# devuelven vacío y el script reporta un VERDE FALSO ("1 claves, sin issues")
-# en vez de fallar. Forzar UTF-8 antes de cualquier check.
+# The checks use `grep -P`, which in Git Bash fails on non-UTF8 locales
+# ("grep: -P supports only unibyte and UTF-8 locales"). Without this, the greps
+# return empty and the script reports a FALSE GREEN ("1 keys, no issues")
+# instead of failing. Force UTF-8 before any check.
 export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
 
 if ! echo 'X' | grep -qoP 'X' 2>/dev/null; then
-  echo "FAIL: este grep no soporta -P (PCRE). Instalar GNU grep con PCRE o correr en WSL." >&2
+  echo "FAIL: this grep does not support -P (PCRE). Install GNU grep with PCRE or run under WSL." >&2
   exit 2
 fi
 
@@ -24,9 +24,9 @@ SKILLS="$ROOT/skills"
 TEMPLATE="$ROOT/sdd-profile.template.md"
 STACKS="$ROOT/stacks"
 PACKS="generic typescript-nestjs"
-# Array, no string: sin comillas el shell expande `*/skill-creator/*` contra el
-# cwd antes de que find lo vea ("paths must precede expression"), los tres checks
-# quedan sin archivos que revisar y el script reporta un VERDE FALSO.
+# An array, not a string: unquoted, the shell expands `*/skill-creator/*` against
+# the cwd before find sees it ("paths must precede expression"), the three checks
+# end up with no files to review and the script reports a FALSE GREEN.
 NOT_META=( -not -path '*/skill-creator/*' -not -path '*/skill-evaluator/*' )
 
 STOP_KEYS='^(AC|ACs|API|CI|DTO|DTOs|EARS|FAIL|FTS5|NEW|NEXT|OK|PASS|PR|REST|SQL|TDD|TODO|UI|UUID|YAML|X|Y|Z|M|N|P|A|B|C)$'
@@ -36,32 +36,32 @@ stack_re='<STACK_REFS>/\K[A-Za-z0-9_./-]+\.(md|sh)'
 
 issues=0
 
-# --- 1. Claves definidas en la plantilla ---
+# --- 1. Keys defined in the template ---
 defined_keys=$(grep -oP "$key_re" "$TEMPLATE" | grep -E -v "$STOP_KEYS" | sort -u)
 
-# --- 2. Claves referenciadas por las skills (no-meta) ---
+# --- 2. Keys referenced by the skills (non-meta) ---
 referenced=$(find "$SKILLS" -type f -name '*.md' "${NOT_META[@]}" -exec grep -h -oP "$key_re" {} + | grep -E -v "$STOP_KEYS" | sort -u)
 
 warnings=$(comm -23 <(printf '%s\n' "$referenced") <(printf '%s\n' "$defined_keys"))
 if [ -n "$warnings" ]; then
-  echo "AVISOS — tokens en backticks que no son claves de profile (revisar si alguna es nueva):"
+  echo "WARNINGS — backticked tokens that are not profile keys (check whether any is new):"
   printf '%s\n' "$warnings" | sed 's/^/  /'
 fi
 
-# --- 3. Rutas locales references/<file> ---
+# --- 3. Local references/<file> paths ---
 while IFS= read -r file; do
   dir="$(dirname "$file")"
   while IFS= read -r rel; do
     if [ ! -f "$dir/$rel" ]; then
-      echo "ISSUE [$file]: falta archivo local $rel"
+      echo "ISSUE [$file]: missing local file $rel"
       issues=$((issues+1))
     fi
   done < <(grep -oP "(?<![./])${refs_re}" "$file")
 done < <(find "$SKILLS" -type f -name '*.md' "${NOT_META[@]}")
 
-# --- 4. Rutas <STACK_REFS>/<file> ---
-# Las refs ya llevan el subcarpeta del pack: `references/<f>` (obligatorio en TODOS
-# los packs) o `architecture/<f>` (por stack — alcanza con que exista en UNO).
+# --- 4. <STACK_REFS>/<file> paths ---
+# The refs already carry the pack subfolder: `references/<f>` (mandatory in ALL
+# packs) or `architecture/<f>` (per stack — existing in ONE is enough).
 while IFS= read -r file; do
   while IFS= read -r f; do
     if [[ "$f" == architecture/* ]]; then
@@ -70,13 +70,13 @@ while IFS= read -r file; do
         [ -f "$STACKS/$pack/$f" ] && found=1
       done
       if [ "$found" -eq 0 ]; then
-        echo "ISSUE [$file]: $f no existe en ningún pack"
+        echo "ISSUE [$file]: $f does not exist in any pack"
         issues=$((issues+1))
       fi
     else
       for pack in $PACKS; do
         if [ ! -f "$STACKS/$pack/$f" ]; then
-          echo "ISSUE [$file]: falta en pack $pack: $f"
+          echo "ISSUE [$file]: missing from pack $pack: $f"
           issues=$((issues+1))
         fi
       done
@@ -85,7 +85,7 @@ while IFS= read -r file; do
 done < <(find "$SKILLS" -type f -name '*.md' "${NOT_META[@]}")
 
 if [ "$issues" -eq 0 ]; then
-  echo "OK: $(printf '%s\n' "$defined_keys" | wc -l) claves de profile, sin issues."
+  echo "OK: $(printf '%s\n' "$defined_keys" | wc -l) profile keys, no issues."
   exit 0
 else
   echo "ISSUES ($issues):"

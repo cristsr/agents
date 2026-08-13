@@ -2,12 +2,12 @@
 name: prepare
 description: >
   Prepares a fresh base branch (checkout + pull) for the components affected by
-  an item, so /clarify surveys current code and /plan's Tarea 0 creates the working
+  an item, so /clarify surveys current code and /plan's Task 0 creates the working
   branch off an up-to-date base. Runs right after /spec, before /clarify.
-  Use when the user says "/prepare", "/prepare spec-XXXX", "preparar ramas",
-  "checkout y pull", "traer la base actualizada", "dejar la base fresca", or
+  Use when the user says "/prepare", "/prepare spec-XXXX", "prepare the branches",
+  "checkout and pull", "bring the base up to date", "leave the base fresh", or
   right after /spec to leave the base ready before scanning.
-  Do NOT use to create working branches (that's /plan's Tarea 0), to commit or
+  Do NOT use to create working branches (that's /plan's Task 0), to commit or
   push (that's /commit), or to survey the codebase (use /clarify).
 ---
 
@@ -15,117 +15,117 @@ description: >
 
 ## Overview
 
-Pone cada componente afectado por una historia en la rama base fresca
-(`BASE_BRANCH` del profile) haciendo `checkout` + `pull`, para que el pipeline
-siempre arranque sobre código actualizado. **No crea la rama de trabajo** — eso
-es Tarea 0 de `/plan` — y **no muta nada más** que el checkout/pull de la base.
+Puts every component affected by a story onto a fresh base branch
+(`BASE_BRANCH` from the profile) via `checkout` + `pull`, so the pipeline always
+starts on up-to-date code. It **doesn't create the working branch** — that's
+`/plan`'s Task 0 — and it **mutates nothing beyond** the base checkout/pull.
 
-**Announce at start:** "Preparando la rama base para <componentes>."
+**Announce at start:** "Preparing the base branch for <components>."
 
-**Output:** cada componente afectado en `BASE_BRANCH`, actualizado y con el
-working tree limpio (o un reporte de qué impide prepararlo).
+**Output:** every affected component on `BASE_BRANCH`, up to date and with a clean
+working tree (or a report of what's blocking it).
 
 ---
 
-## Perfil del proyecto (leer primero, siempre)
+## Project profile (read first, always)
 
-Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyecto actual): define la rama base (`BASE_BRANCH`), la topología del repo (`REPO_TOPOLOGY`: mono-repo vs multi-repo), el patrón de ID de historia y la skill de prep configurada (`PREP_SKILL`). Si no existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
+Before anything else, read `.agents/profile.md` (at the root of the current project): it defines the base branch (`BASE_BRANCH`), the repo topology (`REPO_TOPOLOGY`: mono-repo vs multi-repo), the story ID pattern and the configured prep skill (`PREP_SKILL`). If it doesn't exist, tell the user to create it by copying `~/.agents/sdd-profile.template.md` to the project's `.agents/profile.md`, and stop: without a profile you don't know this project's conventions.
 
-**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
 
-**Los literales de este documento son solo un ejemplo de resolución** (el perfil de admin-back).
-Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
+**The literals in this document are only an example resolution**.
+The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
 
-| En este documento | Clave en profile.md |
+| In this document | Key in profile.md |
 |---|---|
 | `spec-<number>` | `STORY_ID_PATTERN` |
-| «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
+| "microservice" in the prose | `COMPONENT_TERM` (section 7) — read the term from the profile |
 | `develop` | `BASE_BRANCH` |
-| mono-repo (un solo repo git en la raíz) | `REPO_TOPOLOGY` |
-| `apps/finances`, `apps/ledger` | sección 7 / estructura de componentes del proyecto |
-| salida en español | `OUTPUT_LANGUAGE` |
+| mono-repo (a single git repo at the root) | `REPO_TOPOLOGY` |
+| `apps/finances`, `apps/ledger` | section 7 / the project's component structure |
+| interaction language | `OUTPUT_LANGUAGE` |
 
 ---
 
 ## CRITICAL: Identify the components to prepare
 
-1. Extraé el número de historia del input (patrón `STORY_ID_PATTERN`, ej. `spec-XXXX`).
-2. Para identificar los componentes afectados, en este orden:
-   - Leer `work/active/spec-<number>/spec.md` (corrida normal: `/prepare` corre justo
-     después de `/spec`) — los microservicios/modulos nombrados en la historia y sus
-     keywords sirven como pista inicial.
-   - Si existe `work/active/spec-<number>/context.md` (porque `/clarify` ya corrió),
-     usarlo como fuente de verdad.
-   - Si aun así no queda claro → preguntar: "¿Qué componente(s) preparo?
-     (ej: apps/finances, apps/ledger)" y esperar. No adivinar.
-3. Si el perfil define `REPO_TOPOLOGY = mono-repo` → un solo repositorio git en la
-   raíz: preparar la raíz una vez, sin `git -C`. Si es `multi-repo` → repetir los
-   pasos por cada componente con `git -C <componente>`.
+1. Extract the story number from the input (pattern `STORY_ID_PATTERN`, e.g. `spec-XXXX`).
+2. To identify the affected components, in this order:
+   - Read `work/active/spec-<number>/spec.md` (normal run: `/prepare` runs right
+     after `/spec`) — the microservices/modules named in the story and its keywords
+     serve as the initial hint.
+   - If `work/active/spec-<number>/context.md` exists (because `/clarify` already ran),
+     use it as the source of truth.
+   - If it's still unclear → ask: "Which component(s) should I prepare?
+     (e.g. apps/finances, apps/ledger)" and wait. Don't guess.
+3. If the profile defines `REPO_TOPOLOGY = mono-repo` → a single git repository at the
+   root: prepare the root once, without `git -C`. If it's `multi-repo` → repeat the
+   steps for each component with `git -C <component>`.
 
 ---
 
 ## CRITICAL: Never lose work, never create branches, never commit
 
-- **Permitido:** `git checkout <BASE_BRANCH>`, `git pull` (solo en modo
-  fast-forward; si el pull pide merge/rebase → detenerse y reportar).
-- **Prohibido:** `git checkout -b` (rama de trabajo = Tarea 0 de `/plan`),
+- **Allowed:** `git checkout <BASE_BRANCH>`, `git pull` (fast-forward only;
+  if the pull asks for a merge/rebase → stop and report).
+- **Forbidden:** `git checkout -b` (working branch = `/plan`'s Task 0),
   `git add`, `git commit`, `git push`, `git merge`, `git rebase`, `git stash`,
-  y cualquier comando que descarte o esconda cambios.
-- Antes de tocar cualquier componente, verificar (read-only) que su working tree
-  está limpio. Si hay cambios sin commitear → **STOP** para ese componente:
-  no los perdés ni los movés de rama; avisás y seguís con el resto.
+  and any command that discards or hides changes.
+- Before touching any component, verify (read-only) that its working tree is clean.
+  If there are uncommitted changes → **STOP** for that component: you neither lose
+  them nor move them across branches; you report it and continue with the rest.
 
 ---
 
-## Step 1: State check (read-only) por componente
+## Step 1: State check (read-only) per component
 
-Para CADA componente afectado (o para la raíz en mono-repo):
+For EACH affected component (or for the root in a mono-repo):
 
 ```bash
 git status --porcelain
 git branch --show-current
 ```
 
-- `status` NO está vacío → **STOP para ese componente**:
-  > "`<componente>` tiene cambios sin commitear. No los toco. Commitearlos,
-  > stashearlos o descartarlos es decisión tuya; volvé a correr `/prepare` cuando
-  > el working tree esté limpio."
-- `status` vacío y ya está en `BASE_BRANCH` → pasar directo al pull (Step 2).
-- `status` vacío y está en otra rama → checkout de la base y luego pull (Step 2).
+- `status` is NOT empty → **STOP for that component**:
+  > "`<component>` has uncommitted changes. I'm not touching them. Committing,
+  > stashing or discarding them is your call; re-run `/prepare` once the working tree
+  > is clean."
+- `status` empty and already on `BASE_BRANCH` → go straight to the pull (Step 2).
+- `status` empty and on another branch → checkout the base and then pull (Step 2).
 
 ---
 
 ## Step 2: Checkout + pull
 
-En mono-repo (desde la raíz):
+In a mono-repo (from the root):
 
 ```bash
 git checkout <BASE_BRANCH>
 git pull
 ```
 
-En multi-repo, por cada componente:
+In a multi-repo, per component:
 
 ```bash
-git -C <componente> checkout <BASE_BRANCH>
-git -C <componente> pull
+git -C <component> checkout <BASE_BRANCH>
+git -C <component> pull
 ```
 
-- Si el pull no es fast-forward (pide merge o rebase) → **detenerse** y reportar:
-  el repo tiene divergencia local que requiere decisión humana, no la resuelvas.
-- Si el checkout falla porque hay archivos sin commitear → reportar; no forzar
-  (`git checkout` no los pierde, pero la causa ya se detectó en el Step 1).
+- If the pull isn't fast-forward (it asks for a merge or rebase) → **stop** and report:
+  the repo has local divergence requiring a human decision, don't resolve it.
+- If the checkout fails because there are uncommitted files → report it; don't force
+  (`git checkout` doesn't lose them, but the cause was already detected in Step 1).
 
 ---
 
 ## Step 3: Report and hand off
 
-1. Mostrar por componente: rama anterior → `BASE_BRANCH`, resultado del pull
-   (up-to-date / fast-forward), y estado del working tree.
-2. Cerrar:
-   > "Base preparada: <componentes> en `<BASE_BRANCH>` actualizado. Ahora podés
-   > correr `/clarify spec-<number>`."
-3. Stop — no clarificar ni escanear.
+1. Show per component: previous branch → `BASE_BRANCH`, pull result
+   (up-to-date / fast-forward), and the working tree state.
+2. Close with:
+   > "Base prepared: <components> on an up-to-date `<BASE_BRANCH>`. You can now run
+   > `/clarify spec-<number>`."
+3. Stop — don't clarify or scan.
 
 ---
 
@@ -133,29 +133,37 @@ git -C <componente> pull
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Working tree sucio en un componente | Trabajo sin commitear | STOP para ese componente; no tocar — que el usuario resuelva y reintente |
-| Pull pide merge/rebase | Divergencia local con el remoto | Detenerse y reportar; decisión humana |
-| No se identifica el componente | Falta `context.md` o el usuario no dijo cuál | Preguntar explícitamente — no adivinar |
-| `PREP_SKILL` en el perfil apunta a otra skill | El proyecto define su propia prep | Ejecutar la que el profile nombre; esta skill es el default |
-| Rama base actual es la de trabajo | El usuario ya creó la rama y volvió a correr `/prepare` | Avisar que la base ya está preparada y que no se tocan ramas de trabajo |
+| Dirty working tree in a component | Uncommitted work | STOP for that component; don't touch it — let the user resolve it and retry |
+| Pull asks for merge/rebase | Local divergence from the remote | Stop and report; human decision |
+| Component can't be identified | Missing `context.md` or the user didn't say which | Ask explicitly — don't guess |
+| `PREP_SKILL` in the profile points to another skill | The project defines its own prep | Run the one the profile names; this skill is the default |
+| The current base branch is the working branch | The user already created the branch and re-ran `/prepare` | Say the base is already prepared and that working branches aren't touched |
 
 ---
 
 ## Example
 
-**Input del usuario:**
-> `/prepare hu-0009`
+**User input:**
+> `/prepare spec-0009`
 
-**Flujo:**
-1. Historia `hu-0009`; `spec.md` menciona `apps/finances` y `apps/ledger`. Profile: `REPO_TOPOLOGY = mono-repo`, `BASE_BRANCH = develop`.
-2. En la raíz: `git status --porcelain` → vacío; `git branch --show-current` → `feat/ledger-transfers`.
+**Flow:**
+1. Story `spec-0009`; `spec.md` mentions `apps/finances` and `apps/ledger`. Profile: `REPO_TOPOLOGY = mono-repo`, `BASE_BRANCH = develop`.
+2. At the root: `git status --porcelain` → empty; `git branch --show-current` → `feat/ledger-transfers`.
 3. `git checkout develop` + `git pull` → up-to-date.
-4. Reporta:
-   > "Base preparada: admin-back en `develop` actualizado (estabas en `feat/ledger-transfers`). Ahora podés correr `/clarify hu-0009`."
+4. Reports:
+   > "Base prepared: the mono-repo on an up-to-date `develop` (you were on `feat/ledger-transfers`). You can now run `/clarify spec-0009`."
 
-**Input del usuario (con working tree sucio):**
-> `/prepare hu-0009`
+**User input (with a dirty working tree):**
+> `/prepare spec-0009`
 
-**Flujo:**
-1. `git status --porcelain` → 3 archivos modificados.
-2. STOP: "admin-back tiene cambios sin commitear. No los toco. Commitearlos, stashearlos o descartarlos es decisión tuya; volvé a correr `/prepare` cuando el working tree esté limpio."
+**Flow:**
+1. `git status --porcelain` → 3 modified files.
+2. STOP: "The repo has uncommitted changes. I'm not touching them. Committing, stashing or discarding them is your call; re-run `/prepare` once the working tree is clean."
+
+---
+
+## CRITICAL: Output Language
+
+This skill writes no artifacts. **Chat interaction follows the user's language**
+(`OUTPUT_LANGUAGE` in the profile) — the message samples above are written in English;
+render them in the user's language when that differs.

@@ -1,87 +1,98 @@
-# flow `<use-case>.md` Template (Mermaid, diagrama inline)
+# flow `<use-case>.md` Template (Mermaid, inline diagram)
 
-Un archivo por caso de uso tocado, en `work/active/sm-<number>/docs/flows/<slug>.md`.
-`/sync` lo promueve a `DOCS_UNIT_FLOWS` (`<unidad>/flows/<slug>.md`).
+One file per use case touched, at `work/active/spec-<number>/docs/flows/<slug>.md`.
+`/sync` promotes it to `DOCS_UNIT_FLOWS` (`<unit>/flows/<slug>.md`).
 
-El diagrama del flujo **vive aquí**, inline: un bloque ` ```mermaid ` con un
-`sequenceDiagram`. No hay modelo aparte que mantener ni `viewId` al que apuntar — el
-diagrama y su semántica se editan juntos, en un solo archivo.
+The flow's diagram **lives here**, inline: a ` ```mermaid ` block with a
+`sequenceDiagram`. There's no separate model to maintain and no `viewId` to point at —
+the diagram and its semantics are edited together, in a single file.
 
 ---
 
 ````markdown
 ---
-use_case: <slug-kebab>          # p.ej. open-account
-module: <module>                # p.ej. accounts
+use_case: <kebab-slug>          # e.g. open-account
+module: <module>                # e.g. accounts
 trigger: <rest|cron|queue|domain-event|cli>
-entrypoint: <ruta REST | nombre de cron/job | evento de dominio>
-command: <Command o Query que dispara>
-invariants: [<AC/INV que aplican>]
-introduced_by: <spec-XXXX que lo creó>       # no cambia en 'modify'
-last_modified_by: <spec-XXXX de este cambio>
+entrypoint: <REST route | cron/job name | domain event>
+command: <Command or Query it fires>
+invariants: [<ACs/INVs that apply>]
+introduced_by: <spec-XXXX that created it>   # doesn't change on 'modify'
+last_modified_by: <spec-XXXX of this change>
 status: active                  # active | deprecated | removed
 ---
 
-# <Nombre del caso de uso>
+# <Use case name>
 
-<1-2 párrafos: qué hace el flujo y cómo viaja el dato entre componentes.>
+<1-2 paragraphs: what the flow does and how the data travels between components.>
 
 ```mermaid
 sequenceDiagram
   actor Client
-  participant C as <NombreExactoDelController>
+  participant C as <ExactControllerName>
   participant CB as CommandBus
-  participant H as <NombreExactoDelHandler>
-  participant A as <NombreExactoDelAgregado>
+  participant H as <ExactHandlerName>
+  participant A as <ExactAggregateName>
   participant ES as EventStore
 
-  Client->>C: <MÉTODO> <ruta> (<RequestDto>)
+  Client->>C: <METHOD> <route> (<RequestDto>)
   C->>CB: dispatch(<Command>)
   CB->>H: handle
-  H->>A: <método del agregado> — <invariante que valida>
-  H->>ES: append(<Evento>)
+  H->>A: <aggregate method> — <invariant it validates>
+  H->>ES: append(<Event>)
 ```
 
-## Reglas
+## Rules
 
-- **<AC/INV>:** <regla de negocio verificable>.
+- **<AC/INV>:** <verifiable business rule>.
 
-## Errores
+## Errors
 
-| Condición | Excepción | code | HTTP |
+| Condition | Exception | code | HTTP |
 |---|---|---|---|
-| <caso> | `<Exception>` | `<CODE>` | <código> |
+| <case> | `<Exception>` | `<CODE>` | <status> |
 
-## Respuesta
+## Response
 
-<código HTTP + DTO> — o, para triggers no-REST, el efecto observable.
+<HTTP status + DTO> — or, for non-REST triggers, the observable effect.
 ````
 
 ## Filling rules
 
-- `trigger` sale de la naturaleza del adaptador primario, no del verbo HTTP.
-- Para `trigger: rest`, `entrypoint` debe coincidir con un `path` del `api.yaml` del módulo.
-- En `modify`, conservar `introduced_by`; solo mover `last_modified_by`.
-- **Identidad estable = anti-duplicado.** El `use_case` (slug) y el `operationId` del
-  endpoint son la clave de un flujo. Si tu feature toca un flujo ya documentado, **reusá
-  ambos verbatim** — no acuñes un slug nuevo para el mismo `entrypoint`+`command`. Un mismo
-  caso de uso vive en un único `flows/<slug>.md`; su evolución es git + `last_modified_by`.
+- `trigger` comes from the nature of the primary adapter, not from the HTTP verb.
+- For `trigger: rest`, `entrypoint` must match a `path` in the module's `api.yaml`.
+- On `modify`, keep `introduced_by`; only move `last_modified_by`.
+- **Stable identity = anti-duplication.** The `use_case` (slug) and the endpoint's
+  `operationId` are a flow's key. If your feature touches an already-documented flow,
+  **reuse both verbatim** — don't mint a new slug for the same `entrypoint`+`command`.
+  A given use case lives in exactly one `flows/<slug>.md`; its evolution is git +
+  `last_modified_by`.
 
-## Convención de identificadores (la valida el CI)
+## Identifier convention (CI validates it)
 
-El gate de diagramas verifica que todo identificador nombre un símbolo real del código.
-Escribir el diagrama sin respetarla rompe el build.
+The diagram gate verifies that every identifier names a real symbol in the code.
+Writing the diagram without respecting it breaks the build.
 
-- **El nombre visible es lo que se verifica**, no el alias: en `participant CB as CommandBus`
-  se resuelve `CommandBus`. El alias queda libre para la legibilidad.
-- **Usá el nombre exacto de la clase**, puerto o excepción: `ReverseConfirmedTransactionHandler`,
-  no «el handler de reversa».
-- **Actores externos exentos:** `Client`, `User`, `Usuario`, `Postgres`, `Keycloak`.
-- En los `flowchart` de componentes, la forma declara la clase de nodo: `X("Nombre")` debe
-  resolver; `X[("tabla")]` (cilindro) y `subgraph` no.
+- **The visible name is what gets verified**, not the alias: in
+  `participant CB as CommandBus`, `CommandBus` is what resolves. The alias stays free
+  for legibility.
+- **Use the exact class name**, port or exception: `ReverseConfirmedTransactionHandler`,
+  not "the reversal handler".
+- **External actors are exempt:** `Client`, `User`, `Postgres`, `Keycloak`.
+- In component `flowchart`s, the shape declares the node class: `X("Name")` must
+  resolve; `X[("table")]` (cylinder) and `subgraph` don't.
 
-## Traducción de un flujo existente
+## Translating an existing flow
 
-Si estás migrando o reescribiendo un flujo ya documentado, la traducción es **1:1**: mismo
-orden de mensajes, mismos participantes, mismo texto. No enriquezcas con `alt`/`opt` que el
-original no tenía — los errores viven en la tabla `## Errores`, que es donde se leen mejor.
+If you're migrating or rewriting an already-documented flow, the translation is **1:1**:
+same message order, same participants, same text. Don't enrich it with `alt`/`opt` the
+original didn't have — errors live in the `## Errors` table, which is where they read
+best.
+
+## Language rules
+
+- Frontmatter keys and headings: English (structural — the pipeline reads them by
+  name). Prose and diagram labels: `ARTIFACT_LANGUAGE` (profile, section 5 — falls
+  back to `OUTPUT_LANGUAGE`).
+- `use_case`, `module`, `entrypoint`, `command` and every identifier in the diagram:
+  verbatim from the code — never translated.

@@ -1,77 +1,77 @@
-# Referencia de frontmatter YAML
+# YAML frontmatter reference
 
-El frontmatter es el **nivel 1 de progressive disclosure**: siempre está cargado
-en el system prompt de Claude. Es lo que decide si la skill se activa.
+The frontmatter is **progressive disclosure level 1**: it's always loaded in Claude's
+system prompt. It's what decides whether the skill activates.
 
 ---
 
-## Formato mínimo requerido
+## Minimum required format
 
 ```yaml
 ---
 name: your-skill-name
-description: Qué hace. Use when user asks to [frases específicas].
+description: What it does. Use when user asks to [specific phrases].
 ---
 ```
 
-Con eso alcanza para arrancar.
+That's enough to get started.
 
 ---
 
-## Campos
+## Fields
 
-### `name` (requerido)
+### `name` (required)
 
-- Solo kebab-case.
-- Sin espacios ni mayúsculas.
-- Debe coincidir con el nombre de la carpeta.
-- **No puede contener "claude" ni "anthropic"** (reservados).
+- kebab-case only.
+- No spaces, no uppercase.
+- Must match the folder name.
+- **Must not contain "claude" or "anthropic"** (reserved).
 
 ```yaml
-# Mal
+# Bad
 name: My Cool Skill
 name: my_cool_skill
 name: MyCoolSkill
 name: claude-helper
 
-# Bien
+# Good
 name: my-cool-skill
 ```
 
-### `description` (requerido)
+### `description` (required)
 
-- **DEBE incluir las dos cosas:**
-  - Qué hace la skill.
-  - Cuándo usarla (condiciones de disparo).
-- Menos de 1024 caracteres.
-- Sin corchetes angulares XML (`<` o `>`).
-- Incluir tareas específicas que el usuario podría decir.
-- Mencionar tipos de archivo si son relevantes.
+- **MUST include both things:**
+  - What the skill does.
+  - When to use it (trigger conditions).
+- Under 1024 characters.
+- No XML angle brackets (`<` or `>`).
+- Include specific tasks the user might say.
+- Mention file types if they're relevant.
 
-Estructura: `[qué hace] + [cuándo usarla] + [capacidades clave]`
+Structure: `[what it does] + [when to use it] + [key capabilities]`
 
-### `license` (opcional)
+### `license` (optional)
 
-- Usar si la skill es open source.
-- Comunes: `MIT`, `Apache-2.0`.
+- Use if the skill is open source.
+- Common ones: `MIT`, `Apache-2.0`.
 
-### `compatibility` (opcional)
+### `compatibility` (optional)
 
-- 1–500 caracteres.
-- Indica requisitos del entorno: producto previsto, paquetes de sistema
-  requeridos, necesidad de acceso a red, etc.
+- 1–500 characters.
+- States environment requirements: intended product, required system packages,
+  whether network access is needed, etc.
 
-### `allowed-tools` (opcional)
+### `allowed-tools` (optional)
 
-Restringe el acceso a herramientas:
+Restricts tool access:
 
 ```yaml
 allowed-tools: "Bash(python:*) Bash(npm:*) WebFetch"
 ```
 
-### `metadata` (opcional)
+### `metadata` (optional)
 
-Cualquier par clave-valor. Sugeridos: `author`, `version`, `mcp-server`.
+Any key-value pair. Suggested: `author`, `version`, `mcp-server`.
 
 ```yaml
 metadata:
@@ -86,12 +86,12 @@ metadata:
 
 ---
 
-## Ejemplo con todos los campos opcionales
+## Example with every optional field
 
 ```yaml
 ---
 name: skill-name
-description: [descripción requerida]
+description: [required description]
 license: MIT
 allowed-tools: "Bash(python:*) Bash(npm:*) WebFetch"
 metadata:
@@ -105,37 +105,37 @@ metadata:
 
 ---
 
-## Notas de seguridad
+## Security notes
 
-**Permitido:**
-- Cualquier tipo estándar de YAML (strings, números, booleanos, listas, objetos).
-- Campos de metadata custom.
-- Descripciones largas (hasta 1024 caracteres).
+**Allowed:**
+- Any standard YAML type (strings, numbers, booleans, lists, objects).
+- Custom metadata fields.
+- Long descriptions (up to 1024 characters).
 
-**Prohibido:**
-- Corchetes angulares XML (`<` `>`) — restricción de seguridad.
-- Ejecución de código en YAML (se usa parseo seguro).
-- Skills con "claude" o "anthropic" en el nombre (reservados).
+**Forbidden:**
+- XML angle brackets (`<` `>`) — security restriction.
+- Code execution in YAML (safe parsing is used).
+- Skills with "claude" or "anthropic" in the name (reserved).
 
-**Por qué:** el frontmatter aparece en el system prompt de Claude. Contenido
-malicioso podría inyectar instrucciones.
+**Why:** the frontmatter appears in Claude's system prompt. Malicious content could
+inject instructions.
 
 ---
 
-## Errores de YAML frecuentes
+## Frequent YAML errors
 
 ```yaml
-# Mal — faltan los delimitadores
+# Bad — delimiters missing
 name: my-skill
 description: Does things
 
-# Mal — comilla sin cerrar
+# Bad — unclosed quote
 ---
 name: my-skill
 description: "Does things
 ---
 
-# Bien
+# Good
 ---
 name: my-skill
 description: Does things
@@ -144,63 +144,63 @@ description: Does things
 
 ---
 
-## Ejemplos de descripciones
+## Description examples
 
-### Buenas
+### Good ones
 
 ```yaml
-# Específica y accionable
-description: Analiza archivos de diseño de Figma y genera documentación de
-  handoff para desarrollo. Use when user uploads .fig files, asks for "design
-  specs", "component documentation", or "design-to-code handoff".
+# Specific and actionable
+description: Analyzes Figma design files and generates handoff documentation for
+  development. Use when the user uploads .fig files, asks for "design specs",
+  "component documentation", or "design-to-code handoff".
 
-# Con frases disparadoras
-description: Gestiona workflows de proyectos en Linear incluyendo planificación
-  de sprint, creación de tareas y seguimiento de estado. Use when user mentions
-  "sprint", "Linear tasks", "project planning", or asks to "create tickets".
+# With trigger phrases
+description: Manages project workflows in Linear including sprint planning, task
+  creation and status tracking. Use when the user mentions "sprint",
+  "Linear tasks", "project planning", or asks to "create tickets".
 
-# Con propuesta de valor clara
-description: Workflow end-to-end de onboarding de clientes para PayFlow. Maneja
-  creación de cuenta, setup de pago y gestión de suscripción. Use when user says
+# With a clear value proposition
+description: End-to-end customer onboarding workflow for PayFlow. Handles account
+  creation, payment setup and subscription management. Use when the user says
   "onboard new customer", "set up subscription", or "create PayFlow account".
 ```
 
-### Malas
+### Bad ones
 
 ```yaml
-# Demasiado vaga
-description: Ayuda con proyectos.
+# Too vague
+description: Helps with projects.
 
-# Sin disparadores
-description: Crea sistemas de documentación multi-página sofisticados.
+# No triggers
+description: Creates sophisticated multi-page documentation systems.
 
-# Demasiado técnica, sin lenguaje de usuario
-description: Implementa el modelo de entidad Project con relaciones jerárquicas.
+# Too technical, no user language
+description: Implements the Project entity model with hierarchical relationships.
 ```
 
 ---
 
-## Disparadores negativos
+## Negative triggers
 
-Cuando una skill dispara de más, agregar exclusiones explícitas:
+When a skill over-triggers, add explicit exclusions:
 
 ```yaml
-# Excluir un dominio vecino
-description: Análisis avanzado de datos para archivos CSV. Use for statistical
+# Exclude a neighboring domain
+description: Advanced data analysis for CSV files. Use for statistical
   modeling, regression, clustering. Do NOT use for simple data exploration
-  (use data-viz skill instead).
+  (use the data-viz skill instead).
 
-# Acotar el alcance
+# Narrow the scope
 description: PayFlow payment processing for e-commerce. Use specifically for
   online payment workflows, not for general financial queries.
 ```
 
-Y cuando es demasiado amplia, hacerla más específica:
+And when it's too broad, make it more specific:
 
 ```yaml
-# Demasiado amplia
-description: Procesa documentos.
+# Too broad
+description: Processes documents.
 
-# Más específica
-description: Procesa documentos legales en PDF para revisión de contratos.
+# More specific
+description: Processes legal PDF documents for contract review.
 ```

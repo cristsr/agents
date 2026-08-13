@@ -8,80 +8,79 @@ description: >
   decides every unknown with problem and terrain in full view, escalating only
   what no source can determine (scope, business intent, irreversible choices,
   rule conflicts); I writes the decision log, the precise ACs, and the context
-  file. Use when the user says "/clarify sm-XXX", "clarificar historia",
-  "resolver ambigüedades", "enriquecer historia", "analizar la historia",
-  "escanear contexto", "relevar el módulo", or has created spec.md with /spec.
-  Add "--ask" to force the legacy question-by-question mode. Do NOT use to
-  refresh context.md alone after a code change (use /scan), to correct
-  artifacts once design/plan exist (use /refine), or to create the item
-  (use /spec).
+  file. Use when the user says "/clarify spec-XXXX", "clarify story", "resolve
+  ambiguities", "enrich the story", "analyze the story", "scan the context",
+  "survey the module", or has created spec.md with /spec. Add "--ask" to force
+  the legacy question-by-question mode. Do NOT use to refresh context.md alone
+  after a code change (use /scan), to correct artifacts once design/plan exist
+  (use /refine), or to create the item (use /spec).
 ---
 
 # clarify
 
 ## Overview
 
-Convierte un `spec.md` crudo en el par listo para diseñar — `spec.md` preciso +
-`context.md` con el terreno relevado — resolviendo por su cuenta todo lo que tenga
-respuesta determinable y consultando solo lo que es genuinamente del desarrollador.
+Turns a raw `spec.md` into the design-ready pair — a precise `spec.md` plus a
+`context.md` holding the surveyed terrain — resolving on its own everything that has
+a determinable answer and consulting only what genuinely belongs to the developer.
 
-Corre en **tres fases estrictamente separadas** (RPI). La separación no es
-cosmética — cada fase necesita el resultado completo de la anterior:
+It runs in **three strictly separated phases** (RPI). The separation is not
+cosmetic — each phase needs the complete result of the previous one:
 
-| Fase | Hace | **No** hace |
+| Phase | Does | Does **not** do |
 |---|---|---|
-| **R — Research** | Reúne toda la evidencia de una vez: ambigüedades, fuentes de autoridad, inventario del módulo, precedentes del código, y lo que solo el desarrollador sabe | No decide nada, no escribe nada |
-| **P — Plan** | Decide **cada** unknown con el problema y el terreno a la vista, y escala en una sola tanda lo que ninguna fuente determina | No escribe nada en disco |
-| **I — Implement** | Escribe el registro de decisiones, los ACs precisados, y `context.md` | No decide nada nuevo |
+| **R — Research** | Gathers all evidence at once: ambiguities, authority sources, module inventory, code precedent, and what only the developer knows | Decides nothing, writes nothing |
+| **P — Plan** | Decides **every** unknown with the problem and the terrain in view, and escalates in a single batch what no source determines | Writes nothing to disk |
+| **I — Implement** | Writes the decision log, the precise ACs, and `context.md` | Decides nothing new |
 
-**Por qué una sola pasada de research:**
-- Una decisión sobre un AC puede apoyarse en un puerto que el inventario acabó de
-  encontrar. Separar el relevamiento de la decisión desperdicia esa evidencia.
-- Las consultas al grafo — inventario y precedentes — se lanzan **en la misma tanda**,
-  en paralelo.
-- El presupuesto de escalamiento se aplica sobre la lista **completa** de unknowns:
-  los que vienen de los ACs y los que vienen del código, juntos y priorizados una vez.
-- Una restricción que el desarrollador menciona («no toques el contrato de X») llega
-  **antes** de decidir, no después de haber escrito los archivos.
+**Why a single research pass:**
+- A decision about an AC may rest on a port the inventory just found. Splitting the
+  survey from the decision wastes that evidence.
+- Graph queries — inventory and precedent — are fired **in the same batch**, in
+  parallel.
+- The escalation budget is applied against the **complete** list of unknowns: the ones
+  coming from the ACs and the ones coming from the code, together and prioritized once.
+- A constraint the developer mentions ("don't touch X's contract") arrives **before**
+  deciding, not after the files have been written.
 
-El principio: **una pregunta que el modelo puede responder con fundamento no es una
-pregunta, es un trámite.** Si podés escribir el porqué, no preguntes — decidí y
-dejá el porqué escrito.
+The principle: **a question the model can answer with grounding is not a question,
+it's paperwork.** If you can write the why, don't ask — decide and leave the why
+written down.
 
-**Announce at start:** "Clarificando sm-<number> — relevo, decido y te consulto solo lo que no puedo resolver."
+**Announce at start:** "Clarifying spec-<number> — I'll survey, decide, and only ask you what I can't resolve."
 
 **Output:**
-- `work/active/sm-<number>/spec.md` (modificado in-place)
-- `work/active/sm-<number>/context.md` (nuevo)
+- `work/active/spec-<number>/spec.md` (modified in place)
+- `work/active/spec-<number>/context.md` (new)
 
-> **`/scan` sigue existiendo** como skill de refresco: regenera solo `context.md`
-> cuando el código cambió, sin re-clarificar nada.
+> **`/scan` still exists** as the refresh skill: it regenerates only `context.md`
+> when the code changed, without re-clarifying anything.
 
 ---
 
-## Perfil del proyecto (leer primero, siempre)
+## Project profile (read first, always)
 
-Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyecto actual): define el patrón de ID,
-las rutas de artefactos, el idioma de salida, el **stack objetivo** y los **paths de
-documentación**. Todo lo que esta skill busca en el código sale de la sección 7. Si
-no existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
+Before anything else, read `.agents/profile.md` (at the root of the current project): it defines the ID pattern,
+the artifact paths, the output language, the **target stack** and the **documentation
+paths**. Everything this skill looks for in the code comes from section 7. If it
+doesn't exist, tell the user to create it by copying `~/.agents/sdd-profile.template.md` to the project's `.agents/profile.md`, and stop: without a profile you don't know this project's conventions.
 
-**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
 
-**Los literales de este documento son solo un ejemplo de resolución.**
-Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
+**The literals in this document are only an example resolution.**
+The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
 
-| En este documento | Clave en profile.md |
+| In this document | Key in profile.md |
 |---|---|
-| `sm-<number>` | `STORY_ID_PATTERN` |
-| `work/active/sm-<number>/` | `WORKDIR_ACTIVE` |
-| «componente» en la prosa | `COMPONENT_TERM` (sección 7) |
+| `spec-<number>` | `STORY_ID_PATTERN` |
+| `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
+| "component" in the prose | `COMPONENT_TERM` (section 7) |
 | `develop` | `BASE_BRANCH` |
-| catálogo de componentes, docs por componente | `DOCS_COMPONENTS_INDEX`, `DOCS_COMPONENT_README`, `DOCS_COMPONENT_ARCH` (sección 8) |
-| artefactos de código a ubicar (entidad, módulo, DTO, puerto) | sección 7 «Stack y arquitectura» + `<STACK_REFS>` |
-| grafo indexado `.codegraph/` + tool `codegraph_explore` | `CODEGRAPH` (sección 10) |
-| subagente `code-explorer` | `EXPLORER_SUBAGENT` / `EXPLORER_MODEL` (sección 9) |
-| salida en español | `OUTPUT_LANGUAGE` |
+| component catalog, per-component docs | `DOCS_COMPONENTS_INDEX`, `DOCS_COMPONENT_README`, `DOCS_COMPONENT_ARCH` (section 8) |
+| code artifacts to locate (entity, module, DTO, port) | section 7 "Stack and architecture" + `<STACK_REFS>` |
+| indexed graph `.codegraph/` + `codegraph_explore` tool | `CODEGRAPH` (section 10) |
+| `code-explorer` subagent | `EXPLORER_SUBAGENT` / `EXPLORER_MODEL` (section 9) |
+| interaction language | `OUTPUT_LANGUAGE` |
 
 ---
 
@@ -89,97 +88,98 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 
 ### Step 1 — Extract the item id and the mode
 
-Extraer `sm-<number>` del input. Si no está presente, preguntar:
-> "¿Para qué ítem? (ej: sm-1933)"
+Extract `spec-<number>` from the input. If absent, ask:
+> "Which item? (e.g. spec-1933)"
 
-**Modo:** RPI autónomo por defecto. Si el input incluye `--ask`, correr en modo
-interactivo legado (ver `## Legacy mode` al final).
+**Mode:** autonomous RPI by default. If the input includes `--ask`, run in legacy
+interactive mode (see `## Legacy mode` at the end).
 
 ### Step 2 — Verify spec.md exists
 
 ```bash
-[ -f work/active/sm-<number>/spec.md ] && echo "OK" || echo "MISSING"
+[ -f work/active/spec-<number>/spec.md ] && echo "OK" || echo "MISSING"
 ```
 
-Si NO existe → STOP:
-> "No encontré `work/active/sm-<number>/spec.md`. Ejecutá `/spec sm-<number>` primero."
+If it does NOT exist → STOP:
+> "I couldn't find `work/active/spec-<number>/spec.md`. Run `/spec spec-<number>` first."
 
-> **Ítems legados:** si hay `hu.md` en vez de `spec.md`, es el mismo artefacto con
-> su nombre anterior — trabajarlo en su lugar, sin renombrarlo.
+> **Legacy items:** if there's an `hu.md` instead of a `spec.md`, it's the same
+> artifact under its former name — work on it in place, without renaming it.
 
 ### Step 3 — Read spec.md
 
-Leer el archivo completo. Extraer y mantener en memoria:
-- `tipo` del frontmatter (determina el bloque de encuadre y el tono de los ACs)
-- Título y bloque de encuadre
-- Lista de ACs completa, numerada
-- Reglas de Negocio si existen
-- **Marcadores `[NEEDS CLARIFICATION: ...]`** insertados por `/spec`
+Read the whole file. Extract and keep in memory:
+- `type` from the frontmatter (determines the framing block and the tone of the ACs)
+- Title and framing block
+- Complete, numbered list of ACs
+- Business Rules if present
+- **`[NEEDS CLARIFICATION: ...]` markers** inserted by `/spec`
 
 ### Step 4 — Verify existing state
 
-- Si ya existe `## Resolución de Ambigüedades` **y no quedan marcadores** y existe
-  `context.md` → todo se completó antes. Anunciar y ofrecer `/scan` (refrescar
-  contexto) o `/refine` (ajustar ACs) en lugar de re-correr.
-- Si quedan marcadores → correr el ciclo RPI completo solo sobre los restantes,
-  **agregando** entradas a la sección existente (no recrearla).
-- Si `context.md` ya existe → se regenera al final; avisarlo en el cierre.
+- If `## Ambiguity Resolution` already exists **and no markers remain** and
+  `context.md` exists → everything was completed earlier. Announce it and offer
+  `/scan` (refresh context) or `/refine` (adjust ACs) instead of re-running.
+- If markers remain → run the full RPI cycle over the remaining ones only,
+  **appending** entries to the existing section (don't recreate it).
+- If `context.md` already exists → it gets regenerated at the end; say so in the
+  wrap-up.
 
 ---
 
 # PHASE R — Research
 
-**Regla de la fase: recolectar evidencia. No decidir, no escribir.**
+**Phase rule: collect evidence. Don't decide, don't write.**
 
-Si en algún momento sentís la tentación de resolver un unknown, anotá la evidencia y
-seguí — la resolución es de la fase P, con todo a la vista.
+If at any point you feel tempted to resolve an unknown, note the evidence and move
+on — resolution belongs to phase P, with everything in view.
 
 ### R1 — Build the complete list of unknowns
 
-Combinar dos fuentes y deduplicar:
+Combine two sources and deduplicate:
 
-**(a) Marcadores de `/spec`** — todos los `[NEEDS CLARIFICATION: ...]`, cada uno con
-su texto de pregunta.
+**(a) Markers from `/spec`** — every `[NEEDS CLARIFICATION: ...]`, each with its
+question text.
 
-**(b) Autochequeo de cada AC** contra el checklist (evaluar internamente, no mostrar
-el chequeo crudo):
+**(b) Self-check of every AC** against the checklist (evaluate internally, don't show
+the raw check):
 
 | Dimension | Question | What to look for |
 |---|---|---|
-| **Testabilidad** | ¿Es verificable tal como está escrito? | "razonable", "adecuado", "debería", "rápido" sin criterio objetivo |
-| **Testabilidad** | ¿Usa términos de negocio sin definición clara? | "activo", "vigente", "elegible" sin regla explícita |
-| **Happy path** | ¿Define formato de salida / código de respuesta / estado resultante? | AC que describe "qué" pero no "cómo se ve la respuesta exitosa" |
-| **Edge cases** | ¿Cubre los límites? (vacío, cero, máximo, duplicado, concurrencia) | Caso límite implícito en el encuadre o en las Reglas sin AC asociado |
-| **Errores/fallos** | ¿Define el comportamiento ante input inválido, faltante, o falla de una dependencia? | AC silencioso sobre validación, autorización, o error externo/BD |
-| **Inconsistencias** | ¿Contradice a otro AC o a una Regla de Negocio? | Dos ACs que se pisan, o un AC que viola una regla declarada |
-| **Cobertura** | ¿Hay comportamiento descrito en prosa sin ningún AC que lo capture? | Requisito mencionado que no quedó como criterio verificable |
+| **Testability** | Is it verifiable as written? | "reasonable", "adequate", "should", "fast" with no objective criterion |
+| **Testability** | Does it use business terms with no clear definition? | "active", "current", "eligible" with no explicit rule |
+| **Happy path** | Does it define output format / response code / resulting state? | AC that describes "what" but not "what the successful response looks like" |
+| **Edge cases** | Does it cover the boundaries? (empty, zero, maximum, duplicate, concurrency) | Boundary case implied by the framing or the Rules with no associated AC |
+| **Errors/failures** | Does it define behavior on invalid input, missing input, or a dependency failure? | AC silent about validation, authorization, or external/DB error |
+| **Inconsistencies** | Does it contradict another AC or a Business Rule? | Two ACs that overlap, or an AC that violates a stated rule |
+| **Coverage** | Is there behavior described in prose with no AC capturing it? | Mentioned requirement that never became a verifiable criterion |
 
-Ordenar por impacto (define el orden de resolución en P, no un recorte):
-1. **Inconsistencias/contradicciones** entre ACs o reglas
-2. Gaps que **bloquean el diseño de DTOs o reglas de negocio**
-3. Comportamiento ante **errores y edge cases**
-4. Testabilidad de wording
+Sort by impact (this sets the resolution order in P, it is not a cut):
+1. **Inconsistencies/contradictions** between ACs or rules
+2. Gaps that **block the design of DTOs or business rules**
+3. Behavior on **errors and edge cases**
+4. Wording testability
 
 ### R2 — Load the static authority sources
 
-Leer una sola vez, antes de tocar el código: `docs/rules.md`, `CLAUDE.md`,
-`.agents/profile.md`. Si alguno no existe, seguir sin él — solo baja un nivel la
-jerarquía.
+Read once, before touching the code: `docs/rules.md`, `CLAUDE.md`,
+`.agents/profile.md`. If any is missing, continue without it — it only lowers the
+hierarchy by one level.
 
-Consultar `references/decision-authority.md` — jerarquía de fuentes, test de
-escalamiento, niveles de confianza y casos calibrados con ítems reales del proyecto.
-**Leerla acá, una vez, no por unknown.**
+Consult `references/decision-authority.md` — source hierarchy, escalation test,
+confidence levels, and cases calibrated against real project items. **Read it here,
+once, not per unknown.**
 
 ### R3 — Identify affected components and verify a fresh base
 
-1. Leer el catálogo de componentes (`DOCS_COMPONENTS_INDEX`) y aplicarlo contra el
-   contenido del ítem. Listar **todos** los componentes afectados — puede ser más de uno.
+1. Read the component catalog (`DOCS_COMPONENTS_INDEX`) and apply it against the
+   item's content. List **all** affected components — there may be more than one.
 
-   Si no se identifican con certeza, **preguntar ahora** (no se puede diferir: sin
-   componente no hay nada que relevar):
-   > "¿Qué <COMPONENT_TERM>(s) afecta este ítem? (ej: `apps/ledger`)"
+   If they can't be identified with certainty, **ask now** (this can't be deferred:
+   without a component there's nothing to survey):
+   > "Which <COMPONENT_TERM>(s) does this item affect? (e.g. `apps/ledger`)"
 
-2. Verificar (read-only, nunca mutar git) que cada componente esté sobre base fresca:
+2. Verify (read-only, never mutate git) that each component sits on a fresh base:
 
 ```bash
 git -C <component> branch --show-current
@@ -187,300 +187,309 @@ git -C <component> status --porcelain
 git -C <component> fetch --dry-run 2>&1 | head -1
 ```
 
-Si alguno no está en `BASE_BRANCH`, tiene cambios sin commitear, o está detrás del
-remoto → **advertir y continuar** (se releva lo que esté checked out):
-> "`<component>` no está en `<BASE_BRANCH>` actualizado. Relevo el código tal como
-> está; si querés la base fresca, corré `/prepare` y volvé a ejecutar."
+If any is not on `BASE_BRANCH`, has uncommitted changes, or is behind the remote →
+**warn and continue** (you survey whatever is checked out):
+> "`<component>` is not on an up-to-date `<BASE_BRANCH>`. I'll survey the code as it
+> stands; if you want a fresh base, run `/prepare` and re-run this."
 
 ### R4 — Survey the code (one batch, in parallel)
 
-Una sola tanda de consultas al grafo, con **dos clases de pregunta**:
+A single batch of graph queries, with **two classes of question**:
 
-| Clase | Pregunta | Cuántas |
+| Class | Question | How many |
 |---|---|---|
-| **Inventario** | «¿Qué hay en el módulo M?» — para `context.md` | Una por componente afectado |
-| **Precedente** | «¿Cómo resolvimos X antes acá?» — para los unknowns de R1 | Una por unknown que lo amerite, techo **5** |
+| **Inventory** | "What's in module M?" — for `context.md` | One per affected component |
+| **Precedent** | "How did we solve X here before?" — for R1's unknowns | One per unknown that warrants it, cap **5** |
 
-**Lanzarlas todas en la misma respuesta**, en paralelo. Solo califican para
-*precedente* los unknowns donde «¿cómo lo resolvimos antes?» es pertinente —
-longitudes, nombres de error, formatos, convenciones de columna, patrones de puerto.
-Un unknown de intención de negocio nunca califica.
+**Fire them all in the same response**, in parallel. Only unknowns where "how did we
+solve this before?" is pertinent qualify for *precedent* — lengths, error names,
+formats, column conventions, port patterns. A business-intent unknown never qualifies.
 
-`codegraph_explore` devuelve en una llamada: símbolos con fuente verbatim agrupados
-por archivo, call paths, blast radius (quién depende de qué y qué tests lo cubren) y
-rutas de framework.
+`codegraph_explore` returns in one call: symbols with verbatim source grouped by
+file, call paths, blast radius (who depends on what and which tests cover it), and
+framework routes.
 
-Con los resultados:
+With the results:
 
-1. Identificar los archivos clave entre los devueltos y leer **solo esos** con Read,
-   aplicando progressive disclosure de `<STACK_REFS>/references/scan-guide.md`
-   (default: `../scan/references/scan-guide.md`) — no explorar el árbol completo.
-2. Revisar `DOCS_COMPONENT_README` / `DOCS_COMPONENT_ARCH` de cada componente y
-   anotar los **gaps de documentación** encontrados.
-3. Inventariar todo lo que pide `<STACK_REFS>/references/context-template.md` para
-   la fase I.
+1. Identify the key files among those returned and read **only those** with Read,
+   applying the progressive disclosure from `<STACK_REFS>/references/scan-guide.md`
+   (default: `../scan/references/scan-guide.md`) — don't explore the whole tree.
+2. Review each component's `DOCS_COMPONENT_README` / `DOCS_COMPONENT_ARCH` and note
+   the **documentation gaps** found.
+3. Inventory everything `<STACK_REFS>/references/context-template.md` asks for, ready
+   for phase I.
 
-**Qué cuenta como precedente (evidencia suficiente):**
+**What counts as precedent (sufficient evidence):**
 
-| Resultado | Veredicto |
+| Result | Verdict |
 |---|---|
-| Un caso análogo claro, con fuente verbatim | **Precedente** — nivel 3, confianza media |
-| Varios casos análogos coincidentes | **Precedente fuerte** — nivel 3, confianza media-alta |
-| Varios casos que **se contradicen** | **No hay precedente, hay inconsistencia** — bajar al nivel 4 y registrarla |
-| Sin resultados relevantes | **Sin precedente** — bajar al nivel 4. Que el repo no tenga convención acá es información para `/design` |
+| One clear analogous case, with verbatim source | **Precedent** — level 3, medium confidence |
+| Several matching analogous cases | **Strong precedent** — level 3, medium-high confidence |
+| Several cases that **contradict each other** | **No precedent, an inconsistency** — drop to level 4 and record it |
+| No relevant results | **No precedent** — drop to level 4. That the repo has no convention here is information for `/design` |
 
-**Si el módulo no aparece** → es un unknown más (no un bloqueo): anotarlo y llevarlo
-a P, donde se escala junto con el resto.
+**If the module doesn't show up** → it's just another unknown (not a blocker): note it
+and carry it to P, where it gets escalated along with the rest.
 
-#### Fallback — CodeGraph no disponible
+#### Fallback — CodeGraph unavailable
 
-Si `CODEGRAPH` es `no` o no existe `.codegraph/`:
+If `CODEGRAPH` is `no` or `.codegraph/` doesn't exist:
 
-1. Sugerir inicializarlo una vez (`codegraph init`) — después queda auto-sincronizado.
-2. Mientras tanto, delegar el **inventario** al subagente `EXPLORER_SUBAGENT`
-   (default `code-explorer`), una llamada por componente, **en paralelo**, pasando
-   `model:` = `EXPLORER_MODEL` explícito. El prompt debe incluir: nombre del
-   componente, keywords del ítem, instrucción de leer los docs del componente,
-   localizar el módulo, y el `scan-guide.md` del pack — que **manda sobre la tabla
-   genérica del propio agente**.
+1. Suggest initializing it once (`codegraph init`) — after that it stays auto-synced.
+2. Meanwhile, delegate the **inventory** to the `EXPLORER_SUBAGENT` subagent
+   (default `code-explorer`), one call per component, **in parallel**, passing an
+   explicit `model:` = `EXPLORER_MODEL`. The prompt must include: component name,
+   item keywords, the instruction to read the component's docs, locate the module,
+   and the pack's `scan-guide.md` — which **overrides the agent's own generic table**.
 
-   **Pedirle explícitamente las citas verbatim** (`<path>:<línea>` + snippet) de
-   convenciones que puedan servir de precedente: longitudes de columna, tipos de
-   error, nombres, firmas de puerto. Sin eso, la fase P no puede citar fuente de
-   nivel 3 y esos unknowns bajan al nivel 4.
-3. Las consultas de **precedente** no se delegan como búsquedas propias: sin grafo
-   salen caras. Se aprovecha lo que las citas verbatim del inventario ya trajeron;
-   lo que no quede cubierto se resuelve con las fuentes de nivel 4-5.
+   **Explicitly ask for verbatim citations** (`<path>:<line>` + snippet) of
+   conventions that could serve as precedent: column lengths, error types, names, port
+   signatures. Without those, phase P can't cite a level-3 source and those unknowns
+   drop to level 4.
+3. **Precedent** queries are not delegated as searches of their own: without a graph
+   they're expensive. You lean on whatever verbatim citations the inventory already
+   brought back; whatever remains uncovered is resolved with level 4-5 sources.
 
 ### R5 — Ask the one thing only the developer knows (conditional)
 
-Hay dos clases de información que no están en ningún archivo ni en el código:
-**restricciones no escritas** y **deuda técnica conocida**. Si alguna pudiera cambiar
-la resolución de un unknown, preguntarlo **ahora** — antes de decidir.
+There are two classes of information that live in no file and no code: **unwritten
+constraints** and **known technical debt**. If either could change the resolution of
+an unknown, ask **now** — before deciding.
 
-Preguntar en texto plano (respuesta libre, no `AskUserQuestion`):
+Ask in plain text (free-form answer, not `AskUserQuestion`):
 
-> "Ya relevé <componente(s)>. ¿Hay algo que **no esté escrito en ningún lado** y deba
-> tener en cuenta? Restricciones («no toques la tabla X», «no rompas el contrato
-> actual»), deuda técnica en la zona afectada, o integraciones que todavía no existen
-> en el código.
+> "I've surveyed <component(s)>. Is there anything **not written down anywhere** that
+> I should account for? Constraints ("don't touch table X", "don't break the current
+> contract"), technical debt in the affected area, or integrations that don't exist in
+> the code yet.
 >
-> Si no hay nada, respondé `-` y sigo."
+> If there's nothing, answer `-` and I'll continue."
 
-**Es condicional:** si todos los unknowns quedaron cubiertos por fuentes formales o
-por el relevamiento, **no preguntar nada** y pasar directo a P.
+**It is conditional:** if every unknown was covered by formal sources or by the
+survey, **ask nothing** and go straight to P.
 
 ### Research dossier
 
-Al cerrar R, tener en memoria: por cada unknown su texto, prioridad, fuentes
-consultadas y **qué se encontró y qué no**; el inventario completo por componente; los
-gaps de documentación; y la respuesta del desarrollador si la hubo. Ese dossier es el
-único input de la fase P.
+At the close of R, hold in memory: for each unknown its text, priority, consulted
+sources and **what was found and what wasn't**; the complete inventory per component;
+the documentation gaps; and the developer's answer if there was one. That dossier is
+the only input to phase P.
 
 ---
 
 # PHASE P — Plan
 
-**Regla de la fase: decidir todo. No escribir nada en disco.**
+**Phase rule: decide everything. Write nothing to disk.**
 
 ### P1 — Classify every unknown
 
-Recorrer la lista completa (los de los ACs y los que surgieron del relevamiento).
-Por cada uno, con el dossier a la vista:
+Walk the complete list (the ones from the ACs and the ones that surfaced during the
+survey). For each, with the dossier in view:
 
-1. **Buscar en la jerarquía** cuál fuente **determina** la respuesta:
-   `docs/rules.md` → `CLAUDE.md`/`profile.md` → precedente del código (R4) →
-   estándar formal → invariantes del propio ítem. «Determina» = la respuesta se
-   deduce de ella, no que sea meramente compatible.
-2. **Si alguna determina** → decisión autónoma; anotar decisión, fundamento, fuente
-   y confianza (alta/media/baja).
-3. **Si ninguna determina** → aplicar el test de escalamiento: ¿cae en **alcance**,
-   **intención de negocio**, **irreversibilidad** o **conflicto de reglas**? Si sí,
-   marcarlo como *candidato a escalar*. Si no, decidir con la mejor alternativa y
-   marcar confianza **baja**.
+1. **Search the hierarchy** for the source that **determines** the answer:
+   `docs/rules.md` → `CLAUDE.md`/`profile.md` → code precedent (R4) → formal
+   standard → the item's own invariants. "Determines" = the answer follows from it,
+   not merely that it's compatible with it.
+2. **If one determines it** → autonomous decision; record decision, rationale, source
+   and confidence (high/medium/low).
+3. **If none determines it** → apply the escalation test: does it fall under **scope**,
+   **business intent**, **irreversibility** or **rule conflict**? If so, mark it as an
+   *escalation candidate*. If not, decide with the best alternative and mark confidence
+   **low**.
 
-**Regla de oro:** si podés escribir el fundamento en una oración, no preguntes. La
-pregunta se justifica cuando el fundamento **depende de una preferencia que no es tuya**.
+**Golden rule:** if you can write the rationale in one sentence, don't ask. The
+question is justified when the rationale **depends on a preference that isn't yours**.
 
 ### P2 — Check interdependencies
 
-Con todas las decisiones sobre la mesa, revisar el conjunto antes de tocar nada:
+With every decision on the table, review the set before touching anything:
 
-- **¿Alguna decisión contradice a otra?** (ej. AC-2 resuelto con 200 y AC-5 con 404
-  para el mismo caso). Resolverlo acá, no en el archivo.
-- **¿Alguna decisión vuelve irrelevante a otro unknown?** Descartarlo con una nota.
-- **¿Alguna decisión choca con el terreno relevado?** (ej. se decidió reusar un puerto
-  que el inventario muestra con otra firma). Corregir la decisión, no el inventario.
-- **¿Alguna de confianza baja quedaría fijada por otra de confianza alta?** Alinearlas.
+- **Does any decision contradict another?** (e.g. AC-2 resolved with 200 and AC-5 with
+  404 for the same case). Resolve it here, not in the file.
+- **Does any decision make another unknown irrelevant?** Discard it with a note.
+- **Does any decision clash with the surveyed terrain?** (e.g. you decided to reuse a
+  port the inventory shows with a different signature). Fix the decision, not the
+  inventory.
+- **Would any low-confidence one be pinned down by a high-confidence one?** Align them.
 
-Este paso es imposible en un bucle por unknown — es la razón principal de separar P.
+This step is impossible in a per-unknown loop — it's the main reason P is separate.
 
 ### P3 — Select what to escalate
 
-Sobre la lista **completa** de candidatos, elegir los de mayor impacto.
+Over the **complete** candidate list, pick the highest-impact ones.
 
-**Presupuesto: máximo 3 escalamientos por corrida.** No es un recorte ciego, es una
-señal: si **más de 3** unknowns son de intención de producto o alcance, el ítem no
-está listo para clarificarse. Escalar los 3 de mayor impacto, resolver el resto con
-confianza baja, y **decirlo explícitamente en el cierre**:
+**Budget: at most 3 escalations per run.** It's not a blind cut, it's a signal: if
+**more than 3** unknowns are about product intent or scope, the item isn't ready to be
+clarified. Escalate the 3 with the highest impact, resolve the rest at low confidence,
+and **say so explicitly in the wrap-up**:
 
-> "<N> unknowns requerían tu criterio pero el presupuesto es 3. Los otros los resolví
-> con confianza baja — puede convenir revisar el alcance de este ítem antes de seguir."
+> "<N> unknowns needed your judgment but the budget is 3. I resolved the others at low
+> confidence — it may be worth reviewing this item's scope before moving on."
 
 ### P4 — Escalate in a single call
 
-Los seleccionados se preguntan con `AskUserQuestion`, **todos en una sola llamada**
-(hasta 3 preguntas juntas). Nunca un bucle de una por turno.
+The selected ones are asked via `AskUserQuestion`, **all in a single call** (up to 3
+questions together). Never a one-per-turn loop.
 
-Por cada pregunta:
-- `question`: el unknown formulado directo, mencionando por qué no se pudo resolver solo.
-- `header`: etiqueta corta (máx 12 caracteres) que identifique el AC (ej. "AC-2 alcance").
-- `options`: 2-4 alternativas. La recomendada **primero** con `" (Recomendado)"` al
-  final del `label`; su `description` lleva el fundamento en 1-2 oraciones.
-- El "Other" implícito ya cubre respuestas propias — no agregar opción "Otra".
+For each question:
+- `question`: the unknown stated directly, mentioning why it couldn't be resolved alone.
+- `header`: short label (max 12 characters) identifying the AC (e.g. "AC-2 scope").
+- `options`: 2-4 alternatives. The recommended one **first**, with `" (Recommended)"`
+  at the end of the `label`; its `description` carries the rationale in 1-2 sentences.
+- The implicit "Other" already covers custom answers — don't add an "Other" option.
 
 ### Decision table
 
-Al cerrar P: por cada unknown → decisión, fundamento, fuente, confianza, y si fue
-autónoma o consultada. **Todavía no se escribió nada.**
+At the close of P: per unknown → decision, rationale, source, confidence, and whether
+it was autonomous or consulted. **Nothing has been written yet.**
 
 ---
 
 # PHASE I — Implement
 
-**Regla de la fase: aplicar lo decidido. No decidir nada nuevo.**
+**Phase rule: apply what was decided. Decide nothing new.**
 
-Si acá aparece una duda que no estaba en la tabla, es que R fue incompleta:
-resolverla con la jerarquía y anotarla como confianza baja — no abrir una pregunta
-nueva a esta altura.
+If a doubt shows up here that wasn't in the table, R was incomplete: resolve it with
+the hierarchy and record it at low confidence — don't open a new question this late.
 
 ### I1 — Write the decision log first
 
-**Escribir `## Resolución de Ambigüedades` en `spec.md` antes que nada.** Si la
-corrida se interrumpe, lo que sobrevive es el razonamiento completo — que es lo caro
-de reconstruir; reaplicar edits es trivial.
+**Write `## Ambiguity Resolution` into `spec.md` before anything else.** If the run is
+interrupted, what survives is the complete reasoning — which is the expensive part to
+reconstruct; reapplying edits is trivial.
 
 ```markdown
-## Resolución de Ambigüedades
+## Ambiguity Resolution
 
-- **AC-2 · autónoma (alta):** ¿Qué código HTTP ante lista vacía? → **200 con array
-  vacío**.
-  *Fundamento:* es el estándar REST para colecciones sin resultados; 404 se reserva
-  para recurso inexistente. *Fuente:* convención HTTP (nivel 4).
+- **AC-2 · autonomous (high):** Which HTTP code for an empty list? → **200 with an
+  empty array**.
+  *Rationale:* it's the REST standard for collections with no results; 404 is reserved
+  for a nonexistent resource. *Source:* HTTP convention (level 4).
 
-- **AC-3 · autónoma (media):** ¿Largo máximo de `Payee`? → **255**.
-  *Fundamento:* consistencia con el campo análogo ya existente.
-  *Fuente:* `apps/finances/.../transaction.entity.ts:merchant` (nivel 3).
+- **AC-3 · autonomous (medium):** Max length of `Payee`? → **255**.
+  *Rationale:* consistency with the analogous field that already exists.
+  *Source:* `apps/finances/.../transaction.entity.ts:merchant` (level 3).
 
-- **AC-4 · consultada:** ¿`dryRun` en todos los commands de escritura o solo donde
-  el caso es claro? → **En todos, sin excepciones** (decisión del desarrollador).
-  *Por qué se consultó:* define la superficie transversal del ítem — categoría alcance.
+- **AC-4 · consulted:** `dryRun` on every write command or only where the case is
+  clear? → **On all of them, no exceptions** (developer's decision).
+  *Why it was consulted:* it defines the item's cross-cutting surface — scope category.
 
-- **AC-6 · autónoma (baja):** ¿Formato del identificador de lote? → **ULID**.
-  *Fundamento:* ordenable temporalmente, sin coordinación.
-  *Sin precedente:* el repo no tiene convención de identificadores de lote todavía.
+- **AC-6 · autonomous (low):** Format of the batch identifier? → **ULID**.
+  *Rationale:* time-sortable, no coordination required.
+  *No precedent:* the repo has no batch-identifier convention yet.
 ```
 
-Registrar también las búsquedas **sin resultado** y las inconsistencias halladas en
-R4 — son señales para `/design`.
+Also record the searches that came back **empty** and the inconsistencies found in
+R4 — they're signals for `/design`.
 
 ### I2 — Apply the resolutions to the ACs
 
-1. Editar cada AC en `spec.md` con la redacción precisada.
-2. **Eliminar el marcador `[NEEDS CLARIFICATION: ...]`** de esa línea si venía de uno.
-   No debe quedar ningún marcador resuelto en el archivo.
+1. Edit each AC in `spec.md` with the precise wording.
+2. **Remove the `[NEEDS CLARIFICATION: ...]` marker** from that line if it came from
+   one. No resolved marker may remain in the file.
 
 ### I3 — EARS rephrasing (automatic, never asked)
 
-Cuando un AC falla testabilidad, reescribirlo en notación **EARS** — sin preguntar.
-Es reformulación redaccional: no cambia comportamiento, no hay decisión que delegar.
+When an AC fails testability, rewrite it in **EARS** notation — without asking. It's
+a wording reformulation: it doesn't change behavior, there's no decision to delegate.
 
 | Pattern | Form | Use |
 |---|---|---|
-| Ubiquitous | `EL SISTEMA DEBE <respuesta>` | Regla siempre activa |
-| Event-driven | `CUANDO <evento>, EL SISTEMA DEBE <respuesta>` | Disparo por un evento |
-| State-driven | `MIENTRAS <estado>, EL SISTEMA DEBE <respuesta>` | Comportamiento durante un estado |
-| Unwanted | `SI <condición de error>, ENTONCES EL SISTEMA DEBE <respuesta>` | Manejo de error/edge case |
-| Optional | `DONDE <feature presente>, EL SISTEMA DEBE <respuesta>` | Condicional a una feature |
+| Ubiquitous | `THE SYSTEM SHALL <response>` | Always-active rule |
+| Event-driven | `WHEN <trigger>, THE SYSTEM SHALL <response>` | Fired by an event |
+| State-driven | `WHILE <state>, THE SYSTEM SHALL <response>` | Behavior during a state |
+| Unwanted | `IF <error condition>, THEN THE SYSTEM SHALL <response>` | Error/edge-case handling |
+| Optional | `WHERE <feature present>, THE SYSTEM SHALL <response>` | Conditional on a feature |
 
-- **Preservar el texto original** como línea `> Original: "<texto>"` debajo.
-- Usar varias líneas EARS si el AC tiene happy path + caso de error.
-- **Nunca** reformular un AC que ya es claro y testable.
+- **Preserve the original text** as a `> Original: "<text>"` line underneath.
+- Use several EARS lines if the AC has both a happy path and an error case.
+- **Never** reformulate an AC that is already clear and testable.
 
 ### I4 — Write `## Technical Context` (only what the human declared)
 
-Esta sección de `spec.md` lleva **exclusivamente lo que el desarrollador declaró en
-R5**: restricciones técnicas y deuda técnica relevante. Nada inferido, nada relevado
-del código — eso vive en `context.md`, que es su lugar.
+This `spec.md` section carries **exclusively what the developer declared in R5**:
+technical constraints and relevant technical debt. Nothing inferred, nothing surveyed
+from the code — that lives in `context.md`, which is its place.
 
-Usar `references/tech-context-template.md`. **Si el desarrollador no declaró nada,
-omitir la sección entera.**
+Use `references/tech-context-template.md`. **If the developer declared nothing, omit
+the whole section.**
 
 ### I5 — Write `context.md`
 
-Volcar el inventario de R4 en `<STACK_REFS>/references/context-template.md` (default:
-`../scan/references/context-template.md`) y guardarlo en
-`work/active/sm-<number>/context.md`.
+Pour R4's inventory into `<STACK_REFS>/references/context-template.md` (default:
+`../scan/references/context-template.md`) and save it at
+`work/active/spec-<number>/context.md`.
 
-Incluir siempre la sección de **gaps detectados**: lo que no se encontró, la
-documentación ausente, y las inconsistencias del repo halladas en R4. `/design` y
-`/plan` dependen de esa lista tanto como del inventario.
+Always include the **detected gaps** section: what wasn't found, the missing
+documentation, and the repo inconsistencies found in R4. `/design` and `/plan` depend
+on that list as much as on the inventory.
 
 ### I6 — Batch review
 
-Mostrar en el chat (no en los archivos), ordenado por **confianza ascendente** — lo
-dudoso arriba, que es donde el ojo tiene que caer:
+Show in the chat (not in the files), ordered by **ascending confidence** — the shaky
+ones on top, which is where the eye needs to land:
 
 ```
-Clarificado sm-<number>: <N> decisiones autónomas, <M> consultadas, <K> ACs en EARS.
-Relevamiento: <C> componente(s), <Q> consultas al grafo, <S> precedentes, <T> sin precedente.
+Clarified spec-<number>: <N> autonomous decisions, <M> consulted, <K> ACs in EARS.
+Survey: <C> component(s), <Q> graph queries, <S> precedents, <T> without precedent.
 
-⚠ Revisá con atención (confianza baja):
-  1. AC-6 — <pregunta> → <decisión>  ·  sin precedente en el repo
+⚠ Review these carefully (low confidence):
+  1. AC-6 — <question> → <decision>  ·  no precedent in the repo
 
-Decididas con fuente firme:
-  2. AC-2 — <pregunta> → <decisión>  ·  <fuente>
-  3. AC-3 — <pregunta> → <decisión>  ·  <fuente>
+Decided with a firm source:
+  2. AC-2 — <question> → <decision>  ·  <source>
+  3. AC-3 — <question> → <decision>  ·  <source>
 
-context.md: <n> módulos inventariados, <g> gaps detectados.
+context.md: <n> modules inventoried, <g> gaps detected.
 
-Para revertir cualquiera: «cambiá la 2 a <otra decisión>».
+To revert any of them: "change 2 to <other decision>".
 ```
 
-- Si no hubo ninguna de confianza baja, omitir el grupo `⚠`.
-- Si el presupuesto recortó escalamientos, incluir la advertencia de P3.
+- If there were no low-confidence ones, omit the `⚠` group.
+- If the budget cut escalations, include P3's warning.
 
 ### Handoff
 
 ```bash
-grep -c 'NEEDS CLARIFICATION' work/active/sm-<number>/spec.md
+grep -c 'NEEDS CLARIFICATION' work/active/spec-<number>/spec.md
 ```
 
-- Conteo `0` → "Listo para diseñar. Cuando revises, `/design sm-<number>`."
-- Quedan marcadores → "Quedan <N> marcadores. `/design` no avanza hasta resolverlos
-  — volvé a correr `/clarify sm-<number>`."
+- Count `0` → "Ready to design. Once you've reviewed it, `/design spec-<number>`."
+- Markers remain → "<N> markers left. `/design` won't proceed until they're resolved —
+  re-run `/clarify spec-<number>`."
 
-Stop — no iniciar el diseño.
+Stop — do not start the design.
 
 ---
 
 ## Legacy mode (`--ask`)
 
-Con `--ask` no hay separación RPI: cada unknown se resuelve con `AskUserQuestion`,
-uno a la vez, en bucle, sin presupuesto y sin auto-resolución; EARS se ofrece en vez
-de aplicarse; y el contexto técnico se releva preguntando (componente, artefactos,
-patrones, restricciones, integraciones, deuda técnica), una por turno. El inventario
-del código y `context.md` se producen igual.
+With `--ask` there is no RPI separation: every unknown is resolved with
+`AskUserQuestion`, one at a time, in a loop, with no budget and no auto-resolution;
+EARS is offered rather than applied; and the technical context is surveyed by asking
+(component, artifacts, patterns, constraints, integrations, technical debt), one per
+turn. The code inventory and `context.md` are produced all the same.
 
-Útil cuando el ítem toca terreno donde no querés que nada se decida sin verlo —
-típicamente dominio nuevo o implicancias contractuales fuertes.
+Useful when the item touches terrain where you don't want anything decided out of your
+sight — typically a new domain or strong contractual implications.
 
 ---
 
 ## CRITICAL: Output Language
 
-Todo el contenido de `spec.md` y `context.md` en español. Excepción: nombres de
-componentes, clases, rutas de archivo, identificadores y código — siempre en inglés.
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
+`OUTPUT_LANGUAGE` if the project doesn't declare it): the ACs you rewrite in
+`spec.md`, the rationale of each entry in the decision log, and `context.md`'s
+inventory prose. Never translate them to English on your own.
+
+Two things stay in English regardless of that key: the **section headings**
+(`## Acceptance Criteria`, `## Ambiguity Resolution`, `## Technical Context` — other
+skills read them by name) and the **identifiers** quoted from the code — paths,
+classes, fields, endpoints (`IDENTIFIER_LANGUAGE`).
+
+**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
+The message samples in this document are written in English; render them in the
+user's language when that differs.
 
 ---
 
@@ -488,49 +497,49 @@ componentes, clases, rutas de archivo, identificadores y código — siempre en 
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| spec.md no existe | `/spec` no ejecutado | STOP: indicar ejecutar `/spec sm-<number>` primero |
-| Componente no identificable | Ítem sin keywords claras | Preguntar en R3 — no se puede diferir, sin componente no hay relevamiento |
-| Módulo no encontrado en el componente | Módulo nuevo o con otro nombre | No es bloqueo: es un unknown más, se escala en P junto con el resto |
-| Aparece una duda nueva en fase I | La fase R fue incompleta | Resolverla con la jerarquía y marcarla confianza baja; no abrir preguntas en I |
-| El grafo devuelve resultados contradictorios | El repo resolvió lo mismo de dos formas | No es precedente: bajar al nivel 4 y registrar la inconsistencia en `context.md` |
-| Más de 3 unknowns califican para escalar | Ítem con mucha decisión de producto abierta | Escalar los 3 de mayor impacto y advertir que el alcance puede no estar listo |
-| `CODEGRAPH: no` en el profile | Proyecto sin grafo indexado | Delegar el **inventario** al subagente explorador; los **precedentes** se resuelven con niveles 4-5 |
-| Componente fuera de `BASE_BRANCH` | Base no preparada | Advertir y continuar — se releva lo que esté checked out; sugerir `/prepare` |
-| Solo hace falta refrescar `context.md` | El código cambió, los ACs no | Usar `/scan sm-<number>` — no re-clarificar |
-| El usuario revierte varias decisiones seguidas | Rúbrica mal calibrada para el dominio | Aplicar los cambios y sugerir `--ask` para los próximos ítems del área |
+| spec.md doesn't exist | `/spec` never ran | STOP: tell the user to run `/spec spec-<number>` first |
+| Component not identifiable | Item with no clear keywords | Ask in R3 — it can't be deferred, without a component there's nothing to survey |
+| Module not found in the component | New module or under a different name | Not a blocker: it's just another unknown, escalated in P with the rest |
+| A new doubt appears in phase I | Phase R was incomplete | Resolve it with the hierarchy and mark it low confidence; don't open questions in I |
+| The graph returns contradictory results | The repo solved the same thing two ways | Not a precedent: drop to level 4 and record the inconsistency in `context.md` |
+| More than 3 unknowns qualify for escalation | Item with a lot of open product decisions | Escalate the 3 with the highest impact and warn that the scope may not be ready |
+| `CODEGRAPH: no` in the profile | Project without an indexed graph | Delegate the **inventory** to the explorer subagent; **precedents** are resolved with levels 4-5 |
+| Component off `BASE_BRANCH` | Base not prepared | Warn and continue — you survey whatever is checked out; suggest `/prepare` |
+| Only `context.md` needs refreshing | The code changed, the ACs didn't | Use `/scan spec-<number>` — don't re-clarify |
+| The user reverts several decisions in a row | Rubric miscalibrated for the domain | Apply the changes and suggest `--ask` for the next items in that area |
 
 ---
 
 ## Example
 
-**Input:** `/clarify sm-1933`
+**Input:** `/clarify spec-1933`
 
-**Fase R:**
-- R1: 3 unknowns — AC-2 sin código HTTP, "tipo de servicio" sin definir, filtro
-  multi-valor sin semántica (AND/OR).
-- R2: carga `rules.md`, `CLAUDE.md`, profile y la rúbrica.
-- R3: identifica `apps/ledger`; está en `develop` limpio.
-- R4: **tres consultas en una sola tanda** — una de inventario (`apps/ledger` módulo
-  de zonas) y dos de precedente (`"service type enum"`, `"list empty response"`). La
-  primera de precedente encuentra `ServiceType`; la segunda no devuelve nada.
-- R5: los tres unknowns quedaron cubiertos por fuentes formales o son de negocio →
-  **no se pregunta nada**.
+**Phase R:**
+- R1: 3 unknowns — AC-2 with no HTTP code, "service type" undefined, multi-value
+  filter with no semantics (AND/OR).
+- R2: loads `rules.md`, `CLAUDE.md`, the profile and the rubric.
+- R3: identifies `apps/ledger`; it's on a clean `develop`.
+- R4: **three queries in a single batch** — one inventory (`apps/ledger` zones module)
+  and two precedent (`"service type enum"`, `"list empty response"`). The first
+  precedent query finds `ServiceType`; the second returns nothing.
+- R5: all three unknowns were covered by formal sources or are business ones →
+  **nothing is asked**.
 
-**Fase P:**
+**Phase P:**
 
-| Unknown | Fuente | Resultado |
+| Unknown | Source | Result |
 |---|---|---|
-| AC-2 código HTTP | Nivel 4 — convención REST | Autónoma (alta): 200 con array vacío |
-| AC-1 "tipo de servicio" | Nivel 3 — `ServiceType` hallado en R4 | Autónoma (media): los valores del enum |
-| AC-1 AND u OR | Ninguna lo determina; cambia el resultado que ve el operador | **Escalar** — intención de negocio |
+| AC-2 HTTP code | Level 4 — REST convention | Autonomous (high): 200 with an empty array |
+| AC-1 "service type" | Level 3 — `ServiceType` found in R4 | Autonomous (medium): the enum's values |
+| AC-1 AND or OR | Nothing determines it; it changes what the operator sees | **Escalate** — business intent |
 
-- P2: sin interdependencias. P3: 1 candidato, dentro del presupuesto.
-- P4: una llamada `AskUserQuestion`. El usuario elige OR.
+- P2: no interdependencies. P3: 1 candidate, within budget.
+- P4: one `AskUserQuestion` call. The user picks OR.
 
-**Fase I:** registro primero, después ACs, EARS en AC-1, sin `Technical Context` (el
-desarrollador no declaró restricciones), `context.md` con el módulo inventariado y 1
-gap de documentación, y el bloque de cierre.
+**Phase I:** log first, then ACs, EARS on AC-1, no `Technical Context` (the developer
+declared no constraints), `context.md` with the inventoried module and 1 documentation
+gap, and the closing block.
 
-**Antes (dos skills):** `/clarify` con 4 preguntas en bucle y sondeo acotado, después
-`/scan` re-explorando el mismo módulo con su propia ronda de unknowns.
-**Ahora:** una pasada, 3 consultas en paralelo, 1 pregunta, dos artefactos.
+**Before (two skills):** `/clarify` with 4 looping questions and a narrow probe, then
+`/scan` re-exploring the same module with its own round of unknowns.
+**Now:** one pass, 3 parallel queries, 1 question, two artifacts.

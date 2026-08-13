@@ -4,9 +4,9 @@ description: >
   Runs a story's implementation pipeline end to end: /plan, /build, then /sync in
   sequence, autonomously, without stopping between them — one command instead of
   three. Leaves built code with green tests and the module docs reconciled, ready
-  to commit. Use when the user says "/forge spec-XXXX", "forjar la historia",
-  "planear y construir", "plan build y sync de corrido", "ejecutá todo el pipeline
-  de una", or wants to go from an approved design straight to built-and-documented
+  to commit. Use when the user says "/forge spec-XXXX", "forge the story",
+  "plan and build", "plan build and sync in one go", "run the whole pipeline at
+  once", or wants to go from an approved design straight to built-and-documented
   in one shot. Do NOT use before /design is complete and approved (there is no plan
   input yet). Do NOT use to only plan (use /plan) or only build (use /build). Forge
   never runs git — it stops at /commit, so commits and the PR stay manual.
@@ -16,60 +16,60 @@ description: >
 
 ## Overview
 
-Encadena el pipeline de implementación de una historia: `/plan` → `/build` →
-`/sync`, de corrido y **sin pausar** entre etapas. Es un orquestador delgado — no
-reimplementa nada: invoca las skills `plan`, `build` y `sync` en orden y consolida
-el reporte final. La revisión humana queda **al final**, sobre el código ya
-construido y la documentación ya reconciliada — justo antes de `/commit`.
+Chains a story's implementation pipeline: `/plan` → `/build` → `/sync`, straight
+through and **without pausing** between stages. It's a thin orchestrator — it
+reimplements nothing: it invokes the `plan`, `build` and `sync` skills in order and
+consolidates the final report. Human review lands **at the end**, over already-built
+code and already-reconciled documentation — right before `/commit`.
 
-**Límite de seguridad:** forge llega hasta la documentación (docs-only). **No toca
-git**: los commits y el PR son de `/commit`, que sigue siendo un paso manual. Ese
-es el checkpoint donde el usuario revisa antes de que algo entre a la rama.
+**Safety boundary:** forge goes as far as the documentation (docs-only). **It doesn't
+touch git**: commits and the PR belong to `/commit`, which remains a manual step.
+That's the checkpoint where the user reviews before anything enters the branch.
 
-**Announce at start:** "Forjando spec-<number>: /plan → /build → /sync sin pausas."
+**Announce at start:** "Forging spec-<number>: /plan → /build → /sync without pauses."
 
 **Output:**
-- `work/active/spec-<number>/plan.md` (lo produce `/plan`).
-- El código implementado con sus tests en verde (lo produce `/build`).
-- Docs del módulo reconciliadas y la historia archivada en `work/done/spec-<number>/`
-  (lo produce `/sync`).
+- `work/active/spec-<number>/plan.md` (produced by `/plan`).
+- The implemented code with its tests green (produced by `/build`).
+- Module docs reconciled and the story archived in `work/done/spec-<number>/`
+  (produced by `/sync`).
 
-**Core principle:** una sola invocación reemplaza tres. Los gates propios de
-`/plan`, `/build` y `/sync` se respetan; forge solo los encadena, **falla temprano**
-si falta un input, y **se detiene en el borde de git** (nunca commitea ni pushea).
+**Core principle:** a single invocation replaces three. The gates belonging to
+`/plan`, `/build` and `/sync` are respected; forge only chains them, **fails early**
+if an input is missing, and **stops at the edge of git** (it never commits or pushes).
 
 ---
 
-## Perfil del proyecto (leer primero, siempre)
+## Project profile (read first, always)
 
-Antes de cualquier otra cosa, leé `.agents/profile.md` (raíz del proyecto actual):
-define el patrón de ID de historia, las rutas de artefactos, la rama base y el
-idioma de salida. Si no existe, avisá que lo creen desde la plantilla y detené.
+Before anything else, read `.agents/profile.md` (root of the current project): it
+defines the story ID pattern, the artifact paths, the base branch and the output
+language. If it doesn't exist, tell the user to create it from the template and stop.
 
-**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
 
-**Los literales de este documento son solo un ejemplo de resolución.** Los valores
-reales salen del `profile.md` del proyecto — si difieren, mandan los del perfil:
+**The literals in this document are only an example resolution.** The real values come
+from the project's `profile.md` — if they differ, the profile wins:
 
-| En este documento | Clave en profile.md |
+| In this document | Key in profile.md |
 |---|---|
 | `spec-<number>` | `STORY_ID_PATTERN` |
 | `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
 | `develop` | `BASE_BRANCH` |
-| salida en español | `OUTPUT_LANGUAGE` |
+| interaction language | `OUTPUT_LANGUAGE` |
 
 ---
 
-## CRITICAL: Preflight — verificar TODO antes de arrancar
+## CRITICAL: Preflight — verify EVERYTHING before starting
 
-Como el encadenado es autónomo (no hay pausa donde el usuario pueda corregir),
-validá los inputs de **todas las etapas** ANTES de generar nada — para no producir
-un `plan.md` y recién entonces morir en un gate de `/build` o `/sync`.
+Because the chain is autonomous (there's no pause where the user could correct
+course), validate the inputs of **every stage** BEFORE generating anything — so you
+don't produce a `plan.md` only to then die on a `/build` or `/sync` gate.
 
-Extraé el número de historia. `<api-artifact>` = `docs/api.delta.yaml` si
-`API_CONTRACT_MODE = delta` (default), si no `docs/api.yaml`. Verificá, en orden:
+Extract the story number. `<api-artifact>` = `docs/api.delta.yaml` if
+`API_CONTRACT_MODE = delta` (default), otherwise `docs/api.yaml`. Verify, in order:
 
-1. **Inputs de `/plan`** (artefactos de diseño aprobados):
+1. **`/plan` inputs** (approved design artifacts):
 
    ```bash
    [ -f work/active/spec-<number>/spec.md ]      || echo "MISSING: spec.md"
@@ -78,142 +78,148 @@ Extraé el número de historia. `<api-artifact>` = `docs/api.delta.yaml` si
    [ -f work/active/spec-<number>/docs/<api-artifact> ] || echo "MISSING: docs/<api-artifact>"
    ```
 
-   Si falta alguno → **STOP** con la instrucción de qué correr primero
-   (`/spec`, `/clarify` o `/design` según cuál falte). No sigas.
+   If any is missing → **STOP** with the instruction of what to run first
+   (`/spec`, `/clarify` or `/design`, depending on which is missing). Don't continue.
 
-2. **Guard de rama de `/build`** (la rama base del profile):
+2. **`/build`'s branch guard** (the profile's base branch):
 
    ```bash
    git branch --show-current
    ```
 
-   Si el resultado es `main`, `master` o `BASE_BRANCH` (`develop`) → **STOP**:
-   "Estás en la rama base. Cambiá a la rama de trabajo antes de forjar."
-   Si la rama de trabajo está detrás del remoto o la base no está fresca →
-   sugerir `/prepare spec-<number>` primero (la base fresca es prerrequisito del build).
+   If the result is `main`, `master` or `BASE_BRANCH` (`develop`) → **STOP**:
+   "You're on the base branch. Switch to the working branch before forging."
+   If the working branch is behind the remote or the base isn't fresh →
+   suggest `/prepare spec-<number>` first (a fresh base is a build prerequisite).
 
-3. **Ambigüedad:** si `spec.md` tiene marcadores `[NEEDS CLARIFICATION]` sin
-   resolver → **STOP**: "Resolvé las ambigüedades con `/clarify spec-<number>`
-   antes de forjar." (Construir sobre ambigüedades produce DTOs incorrectos.)
+3. **Ambiguity:** if `spec.md` has unresolved `[NEEDS CLARIFICATION]` markers →
+   **STOP**: "Resolve the ambiguities with `/clarify spec-<number>` before forging."
+   (Building on ambiguities produces incorrect DTOs.)
 
-Solo si los tres chequeos pasan, continuá al Step 1.
+Only if all three checks pass, continue to Step 1.
 
 ---
 
-## Step 1: Ejecutar /plan
+## Step 1: Run /plan
 
-Invocá la skill `plan` con `spec-<number>` y esperá a que termine. Debe dejar
+Invoke the `plan` skill with `spec-<number>` and wait for it to finish. It must leave
 `work/active/spec-<number>/plan.md`.
 
-Verificá que se haya producido y no esté vacío:
+Verify it was produced and isn't empty:
 
 ```bash
 [ -s work/active/spec-<number>/plan.md ] && echo OK || echo "PLAN FAILED"
 ```
 
-- Si `/plan` se detuvo por su cuenta (algún gate no cumplido) o `plan.md` quedó
-  vacío → **abortá forge: NO ejecutes `/build`.** Reportá por qué paró `/plan` y
-  qué hacer para resolverlo. Nunca construyas sobre un plan inexistente o parcial.
+- If `/plan` stopped on its own (some gate unmet) or `plan.md` came out empty →
+  **abort forge: do NOT run `/build`.** Report why `/plan` stopped and what to do to
+  resolve it. Never build on a nonexistent or partial plan.
 
-## Step 2: Ejecutar /build
+## Step 2: Run /build
 
-Con `plan.md` presente y no vacío, invocá la skill `build` con `spec-<number>`.
-`/build` ejecuta **todas** las tareas del plan de forma autónoma y marca cada una
-`[X]` al completarla.
+With `plan.md` present and non-empty, invoke the `build` skill with `spec-<number>`.
+`/build` executes **all** the plan's tasks autonomously and marks each one `[X]` on
+completion.
 
-- No interrumpas entre tareas — esa es la semántica de `/build`.
-- **En el chain, no te detengas en la pausa de revisión con la que `/build` cierra
-  normalmente.** Si `/build` terminó todas las tareas con los tests **en verde**,
-  continuá directo al Step 3 (`/sync`). La revisión humana es al final del pipeline,
-  antes de `/commit`, no entre build y sync.
-- Si una tarea falla de forma irrecuperable, `/build` se detiene y reporta; forge
-  **aborta antes de `/sync`** y propaga ese reporte tal cual, no lo enmascara. No
-  se reconcilia documentación sobre un build roto.
+- Don't interrupt between tasks — that's `/build`'s semantics.
+- **Within the chain, don't stop at the review pause `/build` normally closes with.**
+  If `/build` finished every task with the tests **green**, continue straight to
+  Step 3 (`/sync`). Human review comes at the end of the pipeline, before `/commit`,
+  not between build and sync.
+- If a task fails unrecoverably, `/build` stops and reports; forge **aborts before
+  `/sync`** and propagates that report as is, without masking it. Documentation is
+  never reconciled on top of a broken build.
 
-## Step 3: Ejecutar /sync
+## Step 3: Run /sync
 
-Con el build en verde, invocá la skill `sync` con `spec-<number>`. `/sync` reconcilia
-el delta del design según los modos del profile: el contrato se mergea si
-`API_CONTRACT_MODE = delta`, el modelo se reconcilia si `DESIGN_OUTPUT_MODE = delta`,
-los diagramas Markdown se copian si `full`; apila decisiones, y archiva la historia
-en `work/done/`.
+With the build green, invoke the `sync` skill with `spec-<number>`. `/sync` reconciles
+the design delta per the profile's modes: the contract is merged if
+`API_CONTRACT_MODE = delta`, the model is reconciled if `DESIGN_OUTPUT_MODE = delta`,
+Markdown diagrams are copied if `full`; it stacks decisions, and archives the story
+under `work/done/`.
 
-- `/build` ya corrió los tests en verde: informá a `/sync` que los gates ya pasaron
-  para que **no vuelva a pedirlos** (su Step 2 pregunta antes de re-correr lint/test/
-  build; en el chain se saltea porque acaban de pasar).
-- `/sync` es **docs-only**: no toca git. Si `/sync` se detiene por su propio gate
-  (p. ej. algo no reconcilia, o detecta un duplicado de flujo), forge propaga el
-  reporte y **para acá** — no fuerza el cierre.
+- `/build` already ran the tests green: tell `/sync` the gates already passed so it
+  **doesn't ask for them again** (its Step 2 asks before re-running lint/test/build;
+  in the chain it's skipped because they just passed).
+- `/sync` is **docs-only**: it doesn't touch git. If `/sync` stops on its own gate
+  (e.g. something doesn't reconcile, or it detects a duplicate flow), forge propagates
+  the report and **stops here** — it doesn't force the close.
 
-## Step 4: Reporte end-to-end
+## Step 4: End-to-end report
 
-Al terminar, consolidá en un solo resumen:
+When it finishes, consolidate into a single summary:
 
-1. **Plan:** cuántas tareas generó `/plan`.
-2. **Build:** cuántas quedaron `[X]` y el resultado de los tests (verde/rojo).
-3. **Sync:** qué se reconcilió (contrato/`<api-artifact>` · modelo · diagramas, según
-   los modos del profile) y que la historia quedó archivada en `work/done/spec-<number>/`.
-4. **Estado final** de la historia.
-5. **Siguiente paso — el borde de git (manual):** "Todo forjado y documentado.
-   Revisá los cambios; cuando estén OK, `/commit spec-<number>` agrupa los commits y
-   deja el PR redactado."
+1. **Plan:** how many tasks `/plan` generated.
+2. **Build:** how many ended up `[X]` and the test result (green/red).
+3. **Sync:** what was reconciled (contract/`<api-artifact>` · model · diagrams, per the
+   profile's modes) and that the story was archived in `work/done/spec-<number>/`.
+4. **Final state** of the story.
+5. **Next step — the edge of git (manual):** "All forged and documented. Review the
+   changes; once they're OK, `/commit spec-<number>` groups the commits and leaves the
+   PR drafted."
 
-Stop — forge no toca git. Agrupar/ejecutar commits y redactar el PR es de `/commit`.
+Stop — forge doesn't touch git. Grouping/executing commits and drafting the PR belong
+to `/commit`.
 
 ---
 
 ## Common Issues
 
-| Issue | Causa | Resolución |
+| Issue | Cause | Resolution |
 |---|---|---|
-| Falta `design.md` en preflight | `/design` no corrió o no se aprobó | STOP; correr `/design spec-<number>` primero |
-| Rama base | estás en `develop`/`main`/`master` | Cambiar a la rama de trabajo antes de forjar |
-| `plan.md` vacío tras `/plan` | `/plan` se detuvo por un gate | Abortar forge; resolver lo que reportó `/plan` (p. ej. `/clarify`) y reintentar |
-| `spec.md` con `[NEEDS CLARIFICATION]` | ambigüedades sin resolver | STOP; `/clarify spec-<number>` antes de forjar |
-| Un test no pasa al final | defecto de implementación | `/build` se detiene; forge **aborta antes de `/sync`**. Corregir el código, o `/hotfix` si es un gap de spec |
-| `/sync` reporta un duplicado de flujo | el design nombró distinto un flujo existente | forge para tras el build; resolver con `/refine` el design y reintentar `/sync` |
+| `design.md` missing at preflight | `/design` never ran or wasn't approved | STOP; run `/design spec-<number>` first |
+| Base branch | you're on `develop`/`main`/`master` | Switch to the working branch before forging |
+| Empty `plan.md` after `/plan` | `/plan` stopped on a gate | Abort forge; resolve what `/plan` reported (e.g. `/clarify`) and retry |
+| `spec.md` with `[NEEDS CLARIFICATION]` | unresolved ambiguities | STOP; `/clarify spec-<number>` before forging |
+| A test fails at the end | implementation defect | `/build` stops; forge **aborts before `/sync`**. Fix the code, or `/hotfix` if it's a spec gap |
+| `/sync` reports a duplicate flow | the design gave a different name to an existing flow | forge stops after the build; fix the design with `/refine` and retry `/sync` |
 
 ## Examples
 
-### Example 1: forjado feliz (pipeline completo)
+### Example 1: happy forge (full pipeline)
 
-User dice: "/forge hu-0006"
+User says: "/forge spec-0006"
 
-Acciones:
-1. Preflight: `spec.md`/`context.md`/`design.md` presentes; rama `feat/core` (no base);
-   sin marcadores `[NEEDS CLARIFICATION]`. OK.
-2. Step 1: invoca la skill `plan` con hu-0006 → genera `plan.md` con 12 tareas.
-   Chequeo `[ -s plan.md ]` → OK.
-3. Step 2: invoca la skill `build` con hu-0006 → ejecuta las 12 tareas, todas `[X]`,
-   tests en verde. No frena en la revisión de `/build`; continúa.
-4. Step 3: invoca la skill `sync` con hu-0006 (gates ya en verde, no los re-corre) →
-   mergea `<api-artifact>` en el canónico del módulo, reconcilia el modelo y los
-   flows, y archiva la historia en `work/done/hu-0006/`.
-5. Step 4: reporta 12/12 + verde + docs reconciliadas, y sugiere `/commit hu-0006`.
+Actions:
+1. Preflight: `spec.md`/`context.md`/`design.md` present; branch `feat/core` (not the
+   base); no `[NEEDS CLARIFICATION]` markers. OK.
+2. Step 1: invokes the `plan` skill with spec-0006 → generates `plan.md` with 12 tasks.
+   Check `[ -s plan.md ]` → OK.
+3. Step 2: invokes the `build` skill with spec-0006 → executes the 12 tasks, all `[X]`,
+   tests green. Doesn't stop at `/build`'s review; continues.
+4. Step 3: invokes the `sync` skill with spec-0006 (gates already green, doesn't re-run
+   them) → merges `<api-artifact>` into the module's canonical file, reconciles the
+   model and the flows, and archives the story in `work/done/spec-0006/`.
+5. Step 4: reports 12/12 + green + docs reconciled, and suggests `/commit spec-0006`.
 
-### Example 2: aborta antes de build
+### Example 2: aborts before build
 
-User dice: "/forge hu-0009"
+User says: "/forge spec-0009"
 
-Acciones:
-1. Preflight: falta `design.md` → **STOP**. "No encontré `work/active/hu-0009/design.md`.
-   Ejecutá `/design hu-0009` primero." No corre `/plan`, `/build` ni `/sync`.
+Actions:
+1. Preflight: `design.md` missing → **STOP**. "I couldn't find
+   `work/active/spec-0009/design.md`. Run `/design spec-0009` first." It runs neither
+   `/plan`, `/build` nor `/sync`.
 
-### Example 3: build rojo → no reconcilia docs
+### Example 3: red build → docs not reconciled
 
-User dice: "/forge hu-0007"
+User says: "/forge spec-0007"
 
-Acciones:
-1. Preflight OK. Step 1: plan con 9 tareas.
-2. Step 2: `/build` falla en la tarea 6 (test que no pasa de forma irrecuperable).
-   forge **aborta antes de `/sync`**: reporta la tarea que falló; no reconcilia docs
-   ni archiva la historia. El usuario corrige (o `/hotfix`) y reintenta.
+Actions:
+1. Preflight OK. Step 1: plan with 9 tasks.
+2. Step 2: `/build` fails on task 6 (a test that won't pass, unrecoverably).
+   forge **aborts before `/sync`**: it reports the failing task; it doesn't reconcile
+   docs or archive the story. The user fixes it (or `/hotfix`) and retries.
 
 ---
 
-## Output Language
+## CRITICAL: Output Language
 
-Interacción y reportes en `OUTPUT_LANGUAGE` del profile (si no está definido, en el
-idioma del usuario). Excepción: frontmatter, nombres de campos, rutas y código
-siempre en inglés. Los disparadores de la `description` incluyen las frases en
-español (y sus equivalentes en inglés).
+**Forge produces no artifacts of its own** — they come from `/plan`, `/build` and
+`/sync`, each of which already resolves `ARTIFACT_LANGUAGE` (profile, section 5).
+Don't override it from here.
+
+**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
+The consolidated report samples in this document are written in English; render them
+in the user's language when that differs. Frontmatter, field names, paths and code are
+always English.

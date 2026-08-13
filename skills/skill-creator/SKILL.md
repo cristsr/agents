@@ -1,16 +1,16 @@
 ---
 name: skill-creator
 description: >
-  Guía interactiva para crear una skill nueva de cero, siguiendo la guía oficial
-  de Anthropic para construir skills. Entrevista al usuario para definir 2–3
-  casos de uso concretos, elige la categoría y el patrón de workflow adecuados,
-  redacta el frontmatter YAML con disparadores explícitos, arma la estructura de
-  carpetas (SKILL.md + scripts/ + references/ + assets/), escribe instrucciones
-  accionables con manejo de errores, y propone la batería de tests de
-  disparo antes de cerrar. Use when the user says "/skill-creator", "crear una
-  skill", "nueva skill", "generar SKILL.md", "quiero automatizar este flujo con
-  una skill", "convertir este proceso en skill", "armar una skill para X", or
-  describes a repeatable workflow they want Claude to follow consistently.
+  Interactive guide for creating a new skill from scratch, following Anthropic's
+  official guidance for building skills. Interviews the user to define 2–3
+  concrete use cases, picks the right category and workflow pattern, drafts the
+  YAML frontmatter with explicit triggers, lays out the folder structure
+  (SKILL.md + scripts/ + references/ + assets/), writes actionable instructions
+  with error handling, and proposes the trigger test battery before closing.
+  Use when the user says "/skill-creator", "create a skill", "new skill",
+  "generate a SKILL.md", "I want to automate this flow with a skill", "turn this
+  process into a skill", "build a skill for X", or describes a repeatable
+  workflow they want Claude to follow consistently.
   Do NOT use to review or score an existing skill (use /skill-evaluator), to
   edit project artifacts of a user story (use /refine), or to define
   project-wide governing principles (use /constitution).
@@ -20,332 +20,333 @@ description: >
 
 ## Overview
 
-Una **skill** es una carpeta con instrucciones que le enseña a Claude a manejar
-una tarea o workflow repetible. Esta skill guía la creación de una skill nueva
-siguiendo la guía oficial de Anthropic.
+A **skill** is a folder of instructions that teaches Claude to handle a repeatable
+task or workflow. This skill guides the creation of a new skill following
+Anthropic's official guidance.
 
-Esta skill es **agnóstica** — sirve para crear skills de cualquier proyecto o
-dominio. No asume la estructura de este workspace.
+This skill is **agnostic** — it works for creating skills for any project or
+domain. It assumes nothing about this workspace's structure.
 
-**Announce at start:** "Vamos a crear una skill nueva. Arranco por los casos de uso."
+**Announce at start:** "Let's create a new skill. Starting with the use cases."
 
-**Output:** una carpeta `<skill-name>/` con `SKILL.md` y, si aplica,
-`references/`, `scripts/` y `assets/`.
+**Output:** a `<skill-name>/` folder with a `SKILL.md` and, where applicable,
+`references/`, `scripts/` and `assets/`.
 
-**Core principle:** el **frontmatter es lo más importante**. Es lo único que
-Claude siempre tiene cargado, y es lo que decide si la skill se activa. Una
-skill con instrucciones brillantes y una `description` vaga nunca se dispara.
-
----
-
-## PHASE 1: Casos de uso (no saltear)
-
-**No escribir nada de la skill hasta tener 2–3 casos de uso concretos.** Este es
-el gate de esta skill: sin casos de uso, la `description` sale vaga y la skill
-no dispara.
-
-Preguntar de a una:
-
-1. "¿Qué quiere lograr el usuario cuando usa esta skill?"
-2. "¿Qué frase exacta diría para pedirlo?" (esto alimenta los disparadores)
-3. "¿Qué pasos multi-etapa requiere?"
-4. "¿Qué herramientas necesita? (built-in, MCP, scripts)"
-5. "¿Qué conocimiento de dominio o buenas prácticas hay que embeber?"
-
-Registrar cada caso de uso en este formato:
-
-```
-Caso de uso: Planificación de sprint
-Disparador: el usuario dice "ayudame a planear este sprint" o "crear tareas del sprint"
-Pasos:
-  1. Traer estado actual del proyecto desde Linear (vía MCP)
-  2. Analizar velocity y capacidad del equipo
-  3. Sugerir priorización de tareas
-  4. Crear tareas en Linear con labels y estimados
-Resultado: sprint planeado con tareas creadas
-```
-
-> **Pro tip de la guía:** los creadores más efectivos iteran sobre **una sola
-> tarea difícil** hasta que Claude la resuelve bien, y recién ahí extraen el
-> enfoque ganador a una skill. Si el usuario todavía no logró la tarea ni una
-> vez a mano, sugerirle hacerlo primero — da señal mucho más rápida que diseñar
-> en abstracto.
+**Core principle:** the **frontmatter matters most**. It's the only thing Claude
+always has loaded, and it's what decides whether the skill activates. A skill with
+brilliant instructions and a vague `description` never triggers.
 
 ---
 
-## PHASE 2: Categoría y patrón
+## PHASE 1: Use cases (don't skip)
 
-### Step 1 — Elegir categoría
+**Write nothing of the skill until you have 2–3 concrete use cases.** This is this
+skill's gate: without use cases, the `description` comes out vague and the skill
+doesn't trigger.
 
-Usar `AskUserQuestion` (`header: "Categoría"`) si no es evidente:
+Ask one at a time:
 
-| Categoría | Para qué | Técnicas clave |
+1. "What does the user want to achieve when they use this skill?"
+2. "What exact phrase would they say to ask for it?" (this feeds the triggers)
+3. "What multi-stage steps does it require?"
+4. "Which tools does it need? (built-in, MCP, scripts)"
+5. "What domain knowledge or best practices need to be embedded?"
+
+Record each use case in this format:
+
+```
+Use case: Sprint planning
+Trigger: the user says "help me plan this sprint" or "create the sprint's tasks"
+Steps:
+  1. Pull the project's current state from Linear (via MCP)
+  2. Analyze the team's velocity and capacity
+  3. Suggest task prioritization
+  4. Create tasks in Linear with labels and estimates
+Result: sprint planned with the tasks created
+```
+
+> **Pro tip from the guide:** the most effective creators iterate on **one hard
+> task** until Claude solves it well, and only then extract the winning approach
+> into a skill. If the user hasn't managed the task by hand even once, suggest
+> doing that first — it gives much faster signal than designing in the abstract.
+
+---
+
+## PHASE 2: Category and pattern
+
+### Step 1 — Pick the category
+
+Use `AskUserQuestion` (`header: "Category"`) if it isn't obvious:
+
+| Category | What it's for | Key techniques |
 |---|---|---|
-| **1. Creación de documentos y assets** | Output consistente y de alta calidad: documentos, presentaciones, apps, diseños, código | Style guides embebidos, plantillas, checklists de calidad, sin herramientas externas |
-| **2. Automatización de workflow** | Procesos multi-paso que se benefician de una metodología consistente | Pasos con validation gates, plantillas, loops de refinamiento |
-| **3. Enhancement de MCP** | Guía de workflow sobre el acceso que da un servidor MCP | Coordina varias llamadas MCP en secuencia, embebe expertise, maneja errores de MCP |
+| **1. Document and asset creation** | Consistent, high-quality output: documents, presentations, apps, designs, code | Embedded style guides, templates, quality checklists, no external tools |
+| **2. Workflow automation** | Multi-step processes that benefit from a consistent methodology | Steps with validation gates, templates, refinement loops |
+| **3. MCP enhancement** | Workflow guidance layered over the access an MCP server provides | Coordinates several MCP calls in sequence, embeds expertise, handles MCP errors |
 
-### Step 2 — Elegir el framing
+### Step 2 — Pick the framing
 
-- **Problem-first:** "necesito armar un workspace de proyecto" → la skill
-  orquesta las llamadas correctas en el orden correcto. El usuario describe el
-  resultado; la skill maneja las herramientas.
-- **Tool-first:** "tengo Notion MCP conectado" → la skill le enseña a Claude los
-  workflows óptimos. El usuario ya tiene acceso; la skill aporta el expertise.
+- **Problem-first:** "I need to set up a project workspace" → the skill orchestrates
+  the right calls in the right order. The user describes the outcome; the skill
+  handles the tools.
+- **Tool-first:** "I have the Notion MCP connected" → the skill teaches Claude the
+  optimal workflows. The user already has access; the skill brings the expertise.
 
-### Step 3 — Elegir patrón
+### Step 3 — Pick the pattern
 
-Consultar `references/patterns.md` para la estructura completa de cada patrón:
+Consult `references/patterns.md` for each pattern's full structure:
 
-| Patrón | Usar cuando |
+| Pattern | Use when |
 |---|---|
-| **1. Orquestación secuencial** | El proceso tiene pasos en un orden específico con dependencias |
-| **2. Coordinación multi-MCP** | El workflow cruza varios servicios |
-| **3. Refinamiento iterativo** | La calidad del output mejora iterando |
-| **4. Selección contextual de herramienta** | Mismo resultado, distinta herramienta según contexto |
-| **5. Inteligencia de dominio** | La skill aporta conocimiento especializado más allá del acceso a herramientas |
+| **1. Sequential orchestration** | The process has steps in a specific order with dependencies |
+| **2. Multi-MCP coordination** | The workflow spans several services |
+| **3. Iterative refinement** | Output quality improves with iteration |
+| **4. Contextual tool selection** | Same outcome, different tool depending on the context |
+| **5. Domain intelligence** | The skill brings specialized knowledge beyond tool access |
 
-Una skill puede combinar patrones, pero si no encaja en ninguno, revisar si en
-realidad son dos skills.
+A skill may combine patterns, but if it fits none of them, check whether it's
+actually two skills.
 
 ---
 
-## PHASE 3: Frontmatter (la parte más importante)
+## PHASE 3: Frontmatter (the most important part)
 
-Consultar `references/frontmatter-reference.md` para todos los campos y reglas.
+Consult `references/frontmatter-reference.md` for every field and rule.
 
-### Reglas duras (bloqueantes)
+### Hard rules (blocking)
 
-| Regla | Detalle |
+| Rule | Detail |
 |---|---|
-| Nombre de carpeta | kebab-case. No espacios, no guiones bajos, no mayúsculas |
-| Archivo | Exactamente `SKILL.md` (case-sensitive). No `SKILL.MD`, no `skill.md` |
-| `name` | kebab-case, debe coincidir con el nombre de la carpeta |
-| `description` | Obligatoria. Debe incluir **QUÉ hace** y **CUÁNDO usarla**. Máx. 1024 caracteres |
-| Prohibido | Corchetes angulares XML en el frontmatter. Nombres con "claude" o "anthropic" (reservados) |
-| Prohibido | `README.md` dentro de la carpeta de la skill — la doc va en `SKILL.md` o `references/` |
+| Folder name | kebab-case. No spaces, no underscores, no uppercase |
+| File | Exactly `SKILL.md` (case-sensitive). Not `SKILL.MD`, not `skill.md` |
+| `name` | kebab-case, must match the folder name |
+| `description` | Mandatory. Must include **WHAT it does** and **WHEN to use it**. Max 1024 characters |
+| Forbidden | XML angle brackets in the frontmatter. Names containing "claude" or "anthropic" (reserved) |
+| Forbidden | A `README.md` inside the skill's folder — docs go in `SKILL.md` or `references/` |
 
-> **Por qué la restricción de XML:** el frontmatter entra en el system prompt de
-> Claude. Contenido malicioso ahí podría inyectar instrucciones.
+> **Why the XML restriction:** the frontmatter enters Claude's system prompt.
+> Malicious content there could inject instructions.
 
-### Redactar la `description`
+### Writing the `description`
 
-Fórmula: **[qué hace] + [cuándo usarla] + [capacidades clave]**
+Formula: **[what it does] + [when to use it] + [key capabilities]**
 
-Tomar las frases literales que el usuario dio en PHASE 1 (pregunta 2) y meterlas
-como disparadores. Si la skill compite con otra parecida, agregar
-**disparadores negativos** (`Do NOT use to…`) para evitar sobre-disparo.
+Take the literal phrases the user gave in PHASE 1 (question 2) and put them in as
+triggers. If the skill competes with a similar one, add **negative triggers**
+(`Do NOT use to…`) to avoid over-triggering.
 
 ```yaml
-# Bien — específica, accionable, con disparadores
-description: Analiza archivos de diseño de Figma y genera documentación de
-  handoff para desarrollo. Use when user uploads .fig files, asks for "design
-  specs", "component documentation", or "design-to-code handoff".
+# Good — specific, actionable, with triggers
+description: Analyzes Figma design files and generates handoff documentation for
+  development. Use when the user uploads .fig files, asks for "design specs",
+  "component documentation", or "design-to-code handoff".
 
-# Mal — demasiado vaga, nunca va a disparar bien
-description: Ayuda con proyectos.
+# Bad — too vague, will never trigger reliably
+description: Helps with projects.
 
-# Mal — sin disparadores, Claude no sabe cuándo cargarla
-description: Crea sistemas de documentación multi-página sofisticados.
+# Bad — no triggers, Claude doesn't know when to load it
+description: Creates sophisticated multi-page documentation systems.
 
-# Mal — técnica, sin lenguaje de usuario
-description: Implementa el modelo de entidad Project con relaciones jerárquicas.
+# Bad — technical, no user language
+description: Implements the Project entity model with hierarchical relationships.
 ```
 
-Checklist de la `description` antes de seguir:
-- [ ] Dice qué hace la skill
-- [ ] Dice cuándo usarla, con frases que el usuario realmente diría
-- [ ] Menciona tipos de archivo si son relevantes (`.fig`, `.csv`, `.pdf`)
-- [ ] Tiene disparadores negativos si hay skills vecinas
-- [ ] Menos de 1024 caracteres, sin `<` ni `>`
+`description` checklist before moving on:
+- [ ] Says what the skill does
+- [ ] Says when to use it, with phrases the user would actually say
+- [ ] Mentions file types if they're relevant (`.fig`, `.csv`, `.pdf`)
+- [ ] Has negative triggers if there are neighboring skills
+- [ ] Under 1024 characters, with no `<` or `>`
 
 ---
 
-## PHASE 4: Estructura de carpetas
+## PHASE 4: Folder structure
 
 ```
 <skill-name>/
-├── SKILL.md          # Requerido — instrucciones principales
-├── scripts/          # Opcional — código ejecutable (Python, Bash)
-├── references/       # Opcional — documentación cargada bajo demanda
-└── assets/           # Opcional — plantillas, fuentes, íconos usados en el output
+├── SKILL.md          # Required — main instructions
+├── scripts/          # Optional — executable code (Python, Bash)
+├── references/       # Optional — documentation loaded on demand
+└── assets/           # Optional — templates, fonts, icons used in the output
 ```
 
-Decidir con el usuario qué carpetas hacen falta. Regla: **empezar con solo
-`SKILL.md`** y agregar carpetas cuando haya contenido real que justifique cada
-una. Una skill con `references/` vacía es ruido.
+Decide with the user which folders are needed. Rule: **start with just `SKILL.md`**
+and add folders when there's real content justifying each one. A skill with an empty
+`references/` is noise.
 
-### Los tres niveles de progressive disclosure
+### The three levels of progressive disclosure
 
-| Nivel | Qué es | Cuándo se carga |
+| Level | What it is | When it loads |
 |---|---|---|
-| 1 | Frontmatter YAML | Siempre, en el system prompt |
-| 2 | Cuerpo de `SKILL.md` | Cuando Claude cree que la skill es relevante |
-| 3 | Archivos enlazados (`references/`) | Solo cuando Claude decide navegarlos |
+| 1 | YAML frontmatter | Always, in the system prompt |
+| 2 | `SKILL.md`'s body | When Claude believes the skill is relevant |
+| 3 | Linked files (`references/`) | Only when Claude decides to navigate them |
 
-Aprovecharlo: mantener `SKILL.md` en las instrucciones core (**bajo 5.000
-palabras**) y mover lo detallado a `references/` con enlaces explícitos.
+Exploit it: keep `SKILL.md` to the core instructions (**under 5,000 words**) and move
+the detail into `references/` with explicit links.
 
 ---
 
-## PHASE 5: Escribir las instrucciones
+## PHASE 5: Write the instructions
 
-Consultar `references/skill-template.md` para la plantilla completa.
+Consult `references/skill-template.md` for the full template.
 
-### Estructura recomendada
+### Recommended structure
 
 ```markdown
-# Nombre de la Skill
+# Skill Name
 
 ## Instructions
-### Step 1: [Primer paso mayor]
-Explicación clara de qué pasa.
+### Step 1: [First major step]
+Clear explanation of what happens.
 
 ## Examples
-Example 1: [escenario común]
+Example 1: [common scenario]
 User says: "…"
 Actions: 1. … 2. …
 Result: …
 
 ## Troubleshooting
-Error: [mensaje común]
-Cause: [por qué pasa]
-Solution: [cómo se arregla]
+Error: [common message]
+Cause: [why it happens]
+Solution: [how it's fixed]
 ```
 
-### Reglas de redacción
+### Writing rules
 
-| Regla | Bien | Mal |
+| Rule | Good | Bad |
 |---|---|---|
-| **Específica y accionable** | ``Correr `python scripts/validate.py --input {filename}` para chequear formato`` | "Validar los datos antes de seguir" |
-| **Sin ambigüedad** | "CRITICAL: antes de llamar a `create_project`, verificar: nombre no vacío, al menos un miembro asignado, fecha de inicio no pasada" | "Asegurate de validar bien las cosas" |
-| **Concisa** | Bullets y listas numeradas; lo detallado a `references/` | Párrafos largos que Claude no sigue |
-| **Instrucciones críticas arriba** | Encabezados `## Important` / `## Critical` al principio | Regla clave enterrada en el medio |
+| **Specific and actionable** | ``Run `python scripts/validate.py --input {filename}` to check the format`` | "Validate the data before continuing" |
+| **Unambiguous** | "CRITICAL: before calling `create_project`, verify: name not empty, at least one member assigned, start date not in the past" | "Make sure to validate things properly" |
+| **Concise** | Bullets and numbered lists; the detail goes to `references/` | Long paragraphs Claude won't follow |
+| **Critical instructions up top** | `## Important` / `## Critical` headings near the start | The key rule buried in the middle |
 
-### Incluir siempre
+### Always include
 
-1. **Manejo de errores** — una sección de issues comunes con causa y solución.
-2. **Ejemplos** — al menos un escenario end-to-end con lo que dice el usuario,
-   las acciones y el resultado.
-3. **Enlaces explícitos a los references** — no basta con que el archivo exista:
+1. **Error handling** — a common-issues section with cause and solution.
+2. **Examples** — at least one end-to-end scenario with what the user says, the
+   actions and the result.
+3. **Explicit links to the references** — the file existing isn't enough:
 
 ```markdown
-Antes de escribir queries, consultar `references/api-patterns.md` para:
-- Guía de rate limiting
-- Patrones de paginación
-- Códigos de error y manejo
+Before writing queries, consult `references/api-patterns.md` for:
+- Rate limiting guidance
+- Pagination patterns
+- Error codes and handling
 ```
 
-> **Técnica avanzada:** para validaciones críticas, conviene empaquetar un
-> script que las haga programáticamente en vez de confiar en instrucciones en
-> lenguaje natural. El código es determinista; la interpretación del lenguaje no.
+> **Advanced technique:** for critical validations, it's better to ship a script
+> that does them programmatically than to rely on natural-language instructions.
+> Code is deterministic; language interpretation isn't.
 
 ---
 
-## PHASE 6: Criterios de éxito y tests
+## PHASE 6: Success criteria and tests
 
-Definir con el usuario cómo se va a saber si la skill funciona. Son objetivos
-aspiracionales, no umbrales exactos.
+Define with the user how they'll know the skill works. These are aspirational
+targets, not exact thresholds.
 
-| Tipo | Métrica | Cómo se mide |
+| Type | Metric | How it's measured |
 |---|---|---|
-| Cuantitativa | Dispara en el 90% de las queries relevantes | Correr 10–20 queries de prueba; contar cuántas veces carga sola vs. requiere invocación explícita |
-| Cuantitativa | Completa el workflow en X llamadas a herramientas | Comparar la misma tarea con y sin la skill; contar llamadas y tokens |
-| Cuantitativa | 0 llamadas fallidas por workflow | Monitorear logs del MCP durante las corridas |
-| Cualitativa | El usuario no necesita indicar los siguientes pasos | Anotar cuántas veces hay que redirigir o aclarar |
-| Cualitativa | El workflow termina sin corrección del usuario | Correr el mismo pedido 3–5 veces y comparar consistencia |
+| Quantitative | Triggers on 90% of relevant queries | Run 10–20 test queries; count how often it loads on its own vs. needs explicit invocation |
+| Quantitative | Completes the workflow in X tool calls | Compare the same task with and without the skill; count calls and tokens |
+| Quantitative | 0 failed calls per workflow | Monitor the MCP logs during the runs |
+| Qualitative | The user doesn't need to prompt the next steps | Note how often you have to redirect or clarify |
+| Qualitative | The workflow finishes without user correction | Run the same request 3–5 times and compare consistency |
 
-Generar la batería de disparo (el usuario la corre después):
+Generate the trigger battery (the user runs it afterwards):
 
 ```
-Debería disparar:
-- "<frase literal del caso de uso 1>"
-- "<parafraseo del caso de uso 1>"
-- "<frase literal del caso de uso 2>"
+Should trigger:
+- "<literal phrase from use case 1>"
+- "<paraphrase of use case 1>"
+- "<literal phrase from use case 2>"
 
-NO debería disparar:
-- "<query de un dominio vecino>"
-- "<query genérica no relacionada>"
+Should NOT trigger:
+- "<query from a neighboring domain>"
+- "<generic unrelated query>"
 ```
 
 ---
 
-## PHASE 7: Validación y cierre
+## PHASE 7: Validation and close
 
-Correr la checklist antes de entregar:
+Run the checklist before delivering:
 
-- [ ] Carpeta en kebab-case
-- [ ] `SKILL.md` existe con ese nombre exacto (case-sensitive)
-- [ ] Frontmatter con delimitadores `---`
-- [ ] `name` en kebab-case, coincide con la carpeta, sin "claude"/"anthropic"
-- [ ] `description` con QUÉ y CUÁNDO, bajo 1024 caracteres
-- [ ] Sin `<` ni `>` en ninguna parte del frontmatter
-- [ ] Sin `README.md` dentro de la carpeta
-- [ ] Instrucciones claras y accionables
-- [ ] Manejo de errores incluido
-- [ ] Ejemplos incluidos
-- [ ] References enlazados explícitamente desde `SKILL.md`
-- [ ] `SKILL.md` bajo 5.000 palabras
+- [ ] Folder in kebab-case
+- [ ] `SKILL.md` exists with that exact name (case-sensitive)
+- [ ] Frontmatter with `---` delimiters
+- [ ] `name` in kebab-case, matches the folder, without "claude"/"anthropic"
+- [ ] `description` with WHAT and WHEN, under 1024 characters
+- [ ] No `<` or `>` anywhere in the frontmatter
+- [ ] No `README.md` inside the folder
+- [ ] Clear, actionable instructions
+- [ ] Error handling included
+- [ ] Examples included
+- [ ] References linked explicitly from `SKILL.md`
+- [ ] `SKILL.md` under 5,000 words
 
 ### Handoff
 
-Mostrar un resumen:
-- Ruta de la carpeta y archivos creados.
-- Los 2–3 casos de uso que cubre.
-- La batería de tests de disparo para que el usuario la corra.
+Show a summary:
+- Folder path and files created.
+- The 2–3 use cases it covers.
+- The trigger test battery for the user to run.
 
-Decir:
-> "Skill creada en `<ruta>`. Corré las queries de disparo para verificar que
-> carga cuando debe. Para una revisión completa con puntaje y riesgos de
-> sobre/sub-disparo, usá `/skill-evaluator <ruta>`."
+Say:
+> "Skill created at `<path>`. Run the trigger queries to verify it loads when it
+> should. For a full review with a score and over/under-triggering risks, use
+> `/skill-evaluator <path>`."
 
-Stop — no correr la skill nueva ni empezar a usarla.
+Stop — don't run the new skill or start using it.
 
 ---
 
 ## CRITICAL: Output Language
 
-El contenido de `SKILL.md` en el idioma del proyecto donde vive la skill (para
-este workspace: español). Excepción: identificadores técnicos, nombres de
-campos del frontmatter, rutas y código siempre en inglés. Los disparadores de
-la `description` deben estar en el **idioma en que el usuario realmente habla**
-— si el usuario pide cosas en español, los disparadores van en español (y
-conviene incluir también los equivalentes en inglés si usa ambos).
+**The `SKILL.md` is written in English** — body, headings, tables and examples.
+Technical identifiers, frontmatter field names, paths and code are English too.
+
+**The `description`'s triggers go in the language the user actually speaks.** If the
+user asks for things in English, the triggers are English; if they mix languages,
+include both variants — a trigger that never matches what the user types is dead
+weight.
+
+**Chat interaction (the interview) follows the user's language.**
 
 ---
 
 ## Common Issues
 
-| Issue | Causa | Resolución |
+| Issue | Cause | Resolution |
 |---|---|---|
-| El usuario no sabe qué casos de uso poner | Idea todavía difusa | No avanzar: pedirle que describa la última vez que hizo la tarea a mano, paso a paso |
-| La skill quiere hacer demasiado | Varios workflows sin relación mezclados | Partir en dos skills; cada una con su `description` y disparadores negativos cruzados |
-| `description` genérica ("ayuda con X") | Se saltó PHASE 1 | Volver a los casos de uso y extraer las frases literales del usuario |
-| `SKILL.md` gigante | Todo inline en vez de progressive disclosure | Mover lo detallado a `references/` y enlazarlo |
-| Choca con una skill existente | Alcances solapados | Agregar disparadores negativos en ambas (`Do NOT use to…`) |
-| Nombre inválido | Espacios, mayúsculas o guiones bajos | Convertir a kebab-case: `My Cool Skill` → `my-cool-skill` |
+| The user doesn't know which use cases to give | The idea is still fuzzy | Don't move on: ask them to describe the last time they did the task by hand, step by step |
+| The skill wants to do too much | Several unrelated workflows mixed together | Split into two skills; each with its own `description` and cross negative triggers |
+| Generic `description` ("helps with X") | PHASE 1 was skipped | Go back to the use cases and extract the user's literal phrases |
+| Enormous `SKILL.md` | Everything inline instead of progressive disclosure | Move the detail into `references/` and link it |
+| Clashes with an existing skill | Overlapping scopes | Add negative triggers to both (`Do NOT use to…`) |
+| Invalid name | Spaces, uppercase or underscores | Convert to kebab-case: `My Cool Skill` → `my-cool-skill` |
 
 ---
 
 ## Example
 
-**Input:** "Quiero una skill que me arme el reporte semanal de incidentes"
+**Input:** "I want a skill that builds my weekly incident report"
 
-**Flujo:**
-1. PHASE 1: entrevista → 2 casos de uso. Frases literales: "armá el reporte
-   semanal", "reporte de incidentes de esta semana". Herramientas: MCP de
-   monitoreo + un script de validación.
-2. PHASE 2: categoría 3 (enhancement de MCP), framing problem-first, patrón 3
-   (refinamiento iterativo — el reporte mejora con validación y re-generación).
-3. PHASE 3: `name: incident-weekly-report`; `description` con qué + cuándo +
-   las frases literales + `Do NOT use for ad-hoc incident queries`.
+**Flow:**
+1. PHASE 1: interview → 2 use cases. Literal phrases: "build the weekly report",
+   "this week's incident report". Tools: monitoring MCP + a validation script.
+2. PHASE 2: category 3 (MCP enhancement), problem-first framing, pattern 3
+   (iterative refinement — the report improves with validation and regeneration).
+3. PHASE 3: `name: incident-weekly-report`; `description` with what + when +
+   the literal phrases + `Do NOT use for ad-hoc incident queries`.
 4. PHASE 4: `SKILL.md` + `scripts/check_report.py` + `references/severity-rules.md`.
-5. PHASE 5: instrucciones con draft inicial → quality check → loop de
-   refinamiento → finalización, más troubleshooting de conexión al MCP.
-6. PHASE 6: batería de disparo (3 positivas, 2 negativas) + baseline de tokens.
+5. PHASE 5: instructions with initial draft → quality check → refinement loop →
+   finalization, plus troubleshooting for MCP connection errors.
+6. PHASE 6: trigger battery (3 positive, 2 negative) + a token baseline.
 7. PHASE 7: checklist OK → handoff.
 
-**Salida:**
-> "Skill creada en `incident-weekly-report/`. Corré las queries de disparo para
-> verificar que carga cuando debe. Para revisión completa, usá
+**Output:**
+> "Skill created at `incident-weekly-report/`. Run the trigger queries to verify it
+> loads when it should. For a full review, use
 > `/skill-evaluator incident-weekly-report/`."

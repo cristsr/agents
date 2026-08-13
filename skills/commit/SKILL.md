@@ -6,8 +6,8 @@ description: >
   `git commit`), verifying the index before each one, and drafts the PR
   title and body — never running `gh pr create` or `git push`, those stay as
   ready-to-run commands for the user. Use when the user says "/commit
-  spec-XXXX", "commiteá los cambios", "ejecutá los commits", "dejá el PR
-  redactado", or right after /sync suggests running /commit.
+  spec-XXXX", "commit the changes", "execute the commits", "leave the PR
+  drafted", or right after /sync suggests running /commit.
   Do NOT use to promote docs or archive the story workspace (use /sync first
   — /commit expects work/done/spec-<number>/ to already exist).
   Do NOT use to push or open the PR — git push and gh pr create stay as
@@ -16,24 +16,24 @@ description: >
 
 # commit
 
-## Perfil del proyecto (leer primero, siempre)
+## Project profile (read first, always)
 
-Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyecto actual): define el patrón de ID
-de historia, las rutas de artefactos, la rama base y el idioma de salida. Si no
-existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md`
-del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
+Before anything else, read `.agents/profile.md` (at the root of the current project): it defines the story ID
+pattern, the artifact paths, the base branch and the output language. If it doesn't
+exist, tell the user to create it by copying `~/.agents/sdd-profile.template.md` to the project's
+`.agents/profile.md`, and stop: without a profile you don't know this project's conventions.
 
-**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
 
-**Los literales de este documento son solo un ejemplo de resolución** (el perfil de admin-back).
-Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
+**The literals in this document are only an example resolution**.
+The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
 
-| En este documento | Clave en profile.md |
+| In this document | Key in profile.md |
 |---|---|
 | `spec-<number>` | `STORY_ID_PATTERN` |
 | `work/done/spec-<number>/` | `WORKDIR_DONE` |
 | `master` | `BASE_BRANCH` |
-| salida en español | `OUTPUT_LANGUAGE` |
+| interaction language | `OUTPUT_LANGUAGE` |
 
 ---
 
@@ -44,7 +44,7 @@ promotes documentation and archives `work/active/spec-<number>/` →
 `work/done/spec-<number>/`; `/commit` takes the resulting working tree and
 turns it into real commits on the current branch, and drafts the PR.
 
-**Announce at start:** "Preparando commits para spec-<number>."
+**Announce at start:** "Preparing commits for spec-<number>."
 
 **Output:** N commits executed on the current branch (one per logical unit,
 aligned with `plan.md`'s tasks) + PR title and body printed in the chat +
@@ -60,9 +60,9 @@ for the user to run.
 ## CRITICAL: Verify inputs
 
 1. `work/done/spec-<number>/` must exist.
-   - If only `work/active/spec-<number>/` exists instead → stop: "Corré
-     `/sync spec-<number>` primero — `/commit` trabaja sobre la historia ya
-     archivada, no sobre `work/active/`."
+   - If only `work/active/spec-<number>/` exists instead → stop: "Run
+     `/sync spec-<number>` first — `/commit` works on the already-archived story,
+     not on `work/active/`."
    - If neither exists → stop and ask for the correct story number.
 2. `git branch --show-current` — stop if it's the base branch
    (`BASE_BRANCH`) and ask the user to switch to the working branch.
@@ -152,7 +152,7 @@ final summary so the user decides what to do with them.
 **Title** — conventional commit plus the story key (in English):
 
 ```
-feat(<scope>): hu-0009 <short story title in English>
+feat(<scope>): spec-0009 <short story title in English>
 ```
 
 **Body** (markdown, always in English):
@@ -205,10 +205,10 @@ Then stop — push and opening the PR stay in the user's hands.
 
 ### Example 1: standard close after /sync
 
-User says: "/commit hu-0009"
+User says: "/commit spec-0009"
 
 Actions:
-1. Verify `work/done/hu-0009/` exists (`/sync` left it) and the current
+1. Verify `work/done/spec-0009/` exists (`/sync` left it) and the current
    branch isn't `master`.
 2. `git status --porcelain` → detects 2 files already staged from a previous
    session that don't belong to this story; warn the user and
@@ -216,7 +216,7 @@ Actions:
 3. `git add` Task 1's files, `git status --porcelain` to confirm the index,
    `git commit -m "feat(movement): add transfers between own accounts"`.
 4. Repeat for Task 2 and for the archive commit.
-5. Print the title `feat(movement): hu-0009 add transfers between own
+5. Print the title `feat(movement): spec-0009 add transfers between own
    accounts`, the PR body, and `gh pr create --base master …` without
    running it.
 
@@ -225,11 +225,11 @@ unrelated files, PR drafted and ready for the user to open.
 
 ### Example 2: automatic suggestion when /sync closes
 
-Context: `/sync hu-0010` finished promoting docs and archiving the story.
+Context: `/sync spec-0010` finished promoting docs and archiving the story.
 
 Actions:
-1. `/sync` suggests: "Corré `/commit hu-0010` para ejecutar los commits y
-   dejar el PR redactado."
+1. `/sync` suggests: "Run `/commit spec-0010` to execute the commits and leave the PR
+   drafted."
 2. If the user confirms, run the full workflow from Step 1.
 
 Result: the story's close continues without the user having to assemble git
@@ -246,3 +246,16 @@ commands by hand.
 | There are unrelated changes in the working tree | Other work in progress on the same branch | Exclude them from every `git add` and list them separately in the summary |
 | Current branch is the base branch | The user forgot to switch branches | Stop immediately, ask them to switch to the working branch |
 | User asks to run `git push` or `gh pr create` | Out of this skill's scope | Remind them those are text commands for the user to run; don't execute them even if asked within this flow — confirm explicitly outside the skill if they insist |
+
+---
+
+## CRITICAL: Output Language
+
+**Commit messages and the PR are written in English** — always, and deliberately
+independent of `ARTIFACT_LANGUAGE`: git history and the PR are the repo's shared
+record, read outside the project. The profile's section 5 states this exception
+explicitly, so it isn't a decision this skill makes on its own.
+
+**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
+The message samples in this document are written in English; render them in the
+user's language when that differs.

@@ -4,83 +4,91 @@ description: >
   Diagnoses where a story is in the SDD pipeline: which artifacts exist
   (spec.md, context.md, design.md, plan.md), how many plan tasks are done, and
   what the next step is. Also lists active and done stories. Use when the user
-  says "/status", "/status spec-XXXX", "en qué etapa está", "dónde quedamos",
-  "qué falta para avanzar", "estado de la historia", or after an interrupted
-  session to resume work. Read-only — never writes or mutates anything.
+  says "/status", "/status spec-XXXX", "what stage is it in", "where did we
+  leave off", "what's missing to move forward", "story status", or after an
+  interrupted session to resume work. Read-only — never writes or mutates anything.
 ---
 
 # status
 
 ## Overview
 
-Lee (solo lectura) la carpeta de la historia y reporta su etapa en el pipeline
-sin ejecutar nada. Útil para retomar sesiones interrumpidas y para decidir cuál
-es el siguiente comando.
+Reads (read-only) the story's folder and reports its stage in the pipeline without
+executing anything. Useful for resuming interrupted sessions and for deciding which
+command comes next.
 
-**Announce at start:** "Estado de spec-<number>: ..."
+**Announce at start:** "Status of spec-<number>: ..."
 
 ---
 
-## Perfil del proyecto (leer primero, siempre)
+## Project profile (read first, always)
 
-Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyecto actual):
-define el patrón de ID de historia y las rutas de artefactos. Si no existe, avisá
-que lo creen desde la plantilla y detené.
+Before anything else, read `.agents/profile.md` (at the root of the current project):
+it defines the story ID pattern and the artifact paths. If it doesn't exist, tell the
+user to create it from the template and stop.
 
-**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
 
 ---
 
 ## Step 1: Resolve the story
 
-- Con `spec-XXXX` → trabajar sobre esa historia.
-- Sin historia → listar TODAS las activas:
+- With `spec-XXXX` → work on that story.
+- Without a story → list ALL the active ones:
 
 ```bash
 ls -d work/active/*/ 2>/dev/null
 ```
 
-y mostrar una línea por cada una con su etapa (Step 2 aplicado a cada una, sin
-detalle).
+and show one line per story with its stage (Step 2 applied to each, without detail).
 
 ## Step 2: Build the stage report
 
-Para una historia, verificar en orden:
+For one story, check in order:
 
 ```bash
 id="<story-id>"
-# spec.md es el artefacto de entrada; hu.md es su nombre legado (ítems anteriores
-# al renombre). Cualquiera de los dos cuenta como presente.
+# spec.md is the entry artifact; hu.md is its legacy name (items predating
+# the rename). Either one counts as present.
 { [ -f "work/active/$id/spec.md" ] || [ -f "work/active/$id/hu.md" ]; } \
-  && echo "spec.md: SI" || echo "spec.md: no"
+  && echo "spec.md: YES" || echo "spec.md: no"
 for f in context.md design.md plan.md; do
-  [ -f "work/active/$id/$f" ] && echo "$f:  SI" || echo "$f:  no"
+  [ -f "work/active/$id/$f" ] && echo "$f:  YES" || echo "$f:  no"
 done
-[ -d "work/active/$id/docs" ] && echo "docs/: SI" || echo "docs/: no"
+[ -d "work/active/$id/docs" ] && echo "docs/: YES" || echo "docs/: no"
 ```
 
-> **Ítems legados.** Los que se cerraron antes del renombre usan `hu.md` y un
-> prefijo de ID antiguo (`STORY_ID_LEGACY_PREFIXES` del profile). Se leen con
-> normalidad — no se renombran ni se reportan como incompletos.
+> **Legacy items.** Those closed before the rename use `hu.md` and an old ID prefix
+> (`STORY_ID_LEGACY_PREFIXES` in the profile). They're read normally — never renamed,
+> never reported as incomplete.
 
-Etapas posibles:
+Possible stages:
 
-| Última etapa | Tiene | Falta / siguiente paso |
+| Last stage | Has | Missing / next step |
 |---|---|---|
-| `inbox` | nada | `/spec <id>` |
+| `inbox` | nothing | `/spec <id>` |
 | `spec` | spec.md | `/clarify` |
 | `context` | + context.md | `/design` |
-| `design` | + design.md (+ docs/) | `/plan` (tras aprobación del diseño) |
+| `design` | + design.md (+ docs/) | `/plan` (after the design is approved) |
 | `plan` | + plan.md | `/build` |
-| `build` | plan.md con tareas `[X]` | contar `[X]`: `rg -c '\[X\]' work/active/$id/plan.md` — si no están todas, `/build` retoma; si todas, `/sync` |
-| `done` | carpeta en `work/done/` | `/commit` |
+| `build` | plan.md with `[X]` tasks | count the `[X]`s: `rg -c '\[X\]' work/active/$id/plan.md` — if not all are done, `/build` resumes; if all are, `/sync` |
+| `done` | folder under `work/done/` | `/commit` |
 
-Si hay `[NEEDS CLARIFICATION]` en spec.md, señalarlo: `/design` no avanza hasta resolverlos.
+If there are `[NEEDS CLARIFICATION]` markers in spec.md, flag it: `/design` won't
+proceed until they're resolved.
 
-Si existe `work/done/<id>/`, la historia está cerrada → reportar y sugerir `/commit`.
+If `work/done/<id>/` exists, the story is closed → report it and suggest `/commit`.
 
 ## Step 3: Report and stop
 
-Formato conciso, una línea por artefacto + una línea "Siguiente paso". No ejecutar
-nada más — la skill es read-only. Sugerir el comando exacto del siguiente paso
-(ej. "Ejecutá `/build hu-0009` — retoma desde la tarea 4 de 7.").
+Concise format, one line per artifact + one "Next step" line. Don't execute anything
+else — the skill is read-only. Suggest the exact command for the next step
+(e.g. "Run `/build spec-0009` — it resumes from task 4 of 7.").
+
+---
+
+## CRITICAL: Output Language
+
+This skill writes no artifacts. **Chat interaction follows the user's language**
+(`OUTPUT_LANGUAGE` in the profile) — the report samples above are written in English;
+render them in the user's language when that differs.

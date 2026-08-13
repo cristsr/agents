@@ -3,16 +3,16 @@
 Every task after Task 0 must follow this exact structure:
 
 ```markdown
-### Tarea N: [Nombre del componente]
+### Task N: [Component name]
 
-**Archivos:**
-- Crear: `<component>/<exact path>/<file>.<ext>`
-- Modificar: `<component>/<exact path>/<existing>.<ext>:123-145`
+**Files:**
+- Create: `<component>/<exact path>/<file>.<ext>`
+- Modify: `<component>/<exact path>/<existing>.<ext>:123-145`
 - Test: `<component>/<exact path>/<file>.<test-suffix>`
 
-**Step 1: Escribir el test que falla**
+**Step 1: Write the failing test**
 
-En `<component>/<path>/<file>.<test-suffix>`:
+In `<component>/<path>/<file>.<test-suffix>`:
 
 ```<language>
 describe('ClassName', () => {
@@ -27,31 +27,31 @@ describe('ClassName', () => {
 });
 ```
 
-**Step 2: Ejecutar y confirmar que falla**
+**Step 2: Run it and confirm it fails**
 
-> Comando del profile: `MODULE_TEST_CMD` (sección 10) — correrlo sobre el spec puntual.
+> Command from the profile: `MODULE_TEST_CMD` (section 10) — run it against the specific spec.
 
 ```bash
 cd <component>
-<MODULE_TEST_CMD o equivalente sobre el spec>
+<MODULE_TEST_CMD or equivalent against the spec>
 cd ..
 ```
-Esperado: FAIL — "Cannot find module" o "X is not a function"
+Expected: FAIL — "Cannot find module" or "X is not a function"
 
-**Step 3: Implementar el mínimo código**
+**Step 3: Implement the minimum code**
 
-En `<component>/<path>/<file>.<ext>`:
+In `<component>/<path>/<file>.<ext>`:
 
 ```<language>
 // minimum necessary name
 ```
 
-**Step 4: Ejecutar y confirmar que pasa**
+**Step 4: Run it and confirm it passes**
 
 ```bash
-<MODULE_TEST_CMD o equivalente sobre el spec>
+<MODULE_TEST_CMD or equivalent against the spec>
 ```
-Esperado: PASS
+Expected: PASS
 ```
 
 ---
@@ -69,7 +69,7 @@ If PHASE 2 of `/plan` detected independent component groups, mark every task
 header belonging to those groups with a trailing `[P]`:
 
 ```markdown
-### Tarea 4: DTOs de request y response [P]
+### Task 4: Request and response DTOs [P]
 ```
 
 `[P]` means: this task has no dependency on tasks from a *different* `[P]`
@@ -80,3 +80,10 @@ within the same response, instead of strictly one-at-a-time. Tasks within the
 
 Do not mark tasks `[P]` if there is any chance one group's code imports or
 depends on the other's output.
+
+## Language rules
+
+- `Task N` and `Step N` are structural — `/build` parses them, always English.
+  Task titles, step descriptions and expected outputs: `ARTIFACT_LANGUAGE`
+  (profile, section 5).
+- Code, paths and commands: verbatim.

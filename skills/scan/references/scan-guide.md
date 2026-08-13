@@ -1,19 +1,19 @@
 # Scan Guide (generic — stack-agnostic)
 
-Reference for `/scan` PHASE 3 (modo CodeGraph y fallback): sirve para leer los
-archivos puntuales que el grafo devuelve (o que el subagente localiza), con
-progressive disclosure — leer solo las secciones necesarias por tipo de archivo.
+Reference for `/scan` PHASE 3 (CodeGraph mode and fallback): use it to read the
+specific files the graph returns (or the subagent locates), with progressive
+disclosure — read only the sections needed per file type.
 
-Las rutas y convenciones exactas por tipo de archivo salen del profile
-(sección 7: `MODULE_ROOT`, `ORM`, `DI_TOKENS`, `DTO_STYLE`, `TEST_FRAMEWORK`)
-y del pack de stack (`STACK_REFS` — este archivo es la versión genérica;
-el pack por stack puede especificar patrones concretos).
+The exact paths and conventions per file type come from the profile
+(section 7: `MODULE_ROOT`, `ORM`, `DI_TOKENS`, `DTO_STYLE`, `TEST_FRAMEWORK`)
+and from the stack pack (`STACK_REFS` — this file is the generic version;
+a per-stack pack may specify concrete patterns).
 
 ---
 
-## Persistencia / Entidad
+## Persistence / Entity
 
-**Path pattern:** según `MODULE_ROOT` y `ORM` del profile (p.ej. `<module>/<persistence-layer>/**/entity/model`)
+**Path pattern:** per the profile's `MODULE_ROOT` and `ORM` (e.g. `<module>/<persistence-layer>/**/entity/model`)
 
 **Read:**
 - Class/model name and its table/schema annotation
@@ -25,9 +25,9 @@ el pack por stack puede especificar patrones concretos).
 
 ---
 
-## Registro del módulo
+## Module registration
 
-**Path pattern:** según el framework (p.ej. `<module>/<module-name>.module.ts`, `__init__.py`, `app.py`)
+**Path pattern:** per the framework (e.g. `<module>/<module-name>.module.ts`, `__init__.py`, `app.py`)
 
 **Read:**
 - `providers`/registrations — list all registered tokens/services
@@ -39,9 +39,9 @@ el pack por stack puede especificar patrones concretos).
 
 ---
 
-## Caso de uso canónico
+## Canonical use case
 
-**Path pattern:** capa de aplicación (p.ej. `<module>/application/use-cases/**`)
+**Path pattern:** application layer (e.g. `<module>/application/use-cases/**`)
 
 Select the most recently modified or most complete file.
 
@@ -53,9 +53,9 @@ Select the most recently modified or most complete file.
 
 ---
 
-## DTOs existentes
+## Existing DTOs
 
-**Path pattern:** barrel/índice de entrada (p.ej. `<module>/<entry-points>/dtos/index`)
+**Path pattern:** entry-point barrel/index (e.g. `<module>/<entry-points>/dtos/index`)
 
 **Read:**
 - Exported class/type names only
@@ -64,9 +64,9 @@ Select the most recently modified or most complete file.
 
 ---
 
-## Puerto / Servicio abstracto (dominio)
+## Port / Abstract service (domain)
 
-**Path pattern:** capa de dominio (p.ej. `<module>/domain/services/**`)
+**Path pattern:** domain layer (e.g. `<module>/domain/services/**`)
 
 **Read:**
 - Abstract/interface method signatures only — name, parameters, return type
@@ -81,4 +81,4 @@ Select the most recently modified or most complete file.
 - If the module uses a different persistence than the profile's default ORM,
   there may be no entity — register as gap.
 - Layered modules follow `domain/ → application/ → infrastructure/` (hexagonal)
-  or the framework's convention — check both; `MODULE_ROOT` del profile define la base.
+  or the framework's convention — check both; the profile's `MODULE_ROOT` defines the base.

@@ -1,10 +1,10 @@
-# Mapeo de agentes agnósticos → formato nativo de cada proveedor.
+# Mapping of provider-agnostic agents → each provider's native format.
 #
-# Los agentes (agents/*.md) no nombran modelos ni herramientas: declaran un
-# `tier` y una lista de `capabilities`. Este archivo traduce ambos al vocabulario
-# de cada herramienta. Cambiar de modelo = cambiar una celda acá.
+# The agents (agents/*.md) name no models and no tools: they declare a
+# `tier` and a list of `capabilities`. This file translates both into each
+# tool's vocabulary. Changing model = changing one cell here.
 #
-# Sincronizar con:  npm run agents:sync        (preview: npm run agents:check)
+# Sync with:  npm run agents:sync        (preview: npm run agents:check)
 
 version: 1
 
@@ -15,14 +15,14 @@ targets:
     out: ~/.claude/agents/{name}.md
     format: claude-code
 
-    # tier → alias de modelo. Claude Code resuelve el alias al id concreto
-    # según el proveedor activo (Anthropic directo, Bedrock, Vertex).
+    # tier → model alias. Claude Code resolves the alias to the concrete id
+    # per the active provider (Anthropic direct, Bedrock, Vertex).
     tiers:
       reasoning: opus
       balanced: sonnet
       fast: haiku
 
-    # capability → tools nativas (allowlist: lo no declarado no se otorga)
+    # capability → native tools (allowlist: what isn't declared isn't granted)
     capabilities:
       read: [Read]
       search: [Grep, Glob]
@@ -32,10 +32,10 @@ targets:
       web: [WebFetch, WebSearch]
       agents: [Agent]
 
-    # Implementación de cada guard en este proveedor.
+    # Implementation of each guard in this provider.
     guards:
-      # Bash permitido, pero cada comando pasa por un validador que falla
-      # CERRADO: si no puede parsear el comando, lo bloquea.
+      # Bash allowed, but every command goes through a validator that fails
+      # CLOSED: if it can't parse the command, it blocks it.
       shell:readonly:
         hooks:
           PreToolUse:
@@ -50,16 +50,16 @@ targets:
     out: ~/.config/opencode/agents/{name}.md
     format: opencode
 
-    # Este OpenCode corre contra LM Studio local (ver opencode.json), no contra
-    # Anthropic — por eso los tiers resuelven a modelos completamente distintos
-    # que en claude-code. Con solo dos modelos locales, `reasoning` y `balanced`
-    # colapsan en el mismo: ajustar cuando haya un modelo local más grande.
+    # This OpenCode runs against a local LM Studio (see opencode.json), not
+    # against Anthropic — which is why the tiers resolve to completely different
+    # models than in claude-code. With only two local models, `reasoning` and
+    # `balanced` collapse into the same one: adjust when a larger local model exists.
     tiers:
       reasoning: lmstudio/qwen/qwen3.5-9b
       balanced: lmstudio/qwen/qwen2.5-coder-7b
       fast: lmstudio/qwen/qwen2.5-coder-7b
 
-    # capability → tools nativas (objeto de booleanos)
+    # capability → native tools (object of booleans)
     capabilities:
       read: { read: true }
       search: { grep: true, glob: true }
@@ -69,10 +69,10 @@ targets:
       web: { webfetch: true }
       agents: { task: true }
 
-    # Lo no declarado se emite explícitamente como false, en vez de omitirse.
-    # OpenCode habilita todo por defecto: omitir sería otorgar.
-    # Verificado con `opencode debug agent <name>`: lo que no esté acá queda
-    # habilitado por default. `invalid` y `question` los maneja OpenCode solo.
+    # What isn't declared is emitted explicitly as false, rather than omitted.
+    # OpenCode enables everything by default: omitting would be granting.
+    # Verified with `opencode debug agent <name>`: anything not listed here stays
+    # enabled by default. `invalid` and `question` are handled by OpenCode itself.
     deny_unlisted: true
     known_tools: [read, grep, glob, bash, skill, edit, write, webfetch, task, patch, todowrite]
 
@@ -80,10 +80,10 @@ targets:
       mode: subagent
 
     guards:
-      # OpenCode no tiene hooks. La mejor traducción disponible es una allowlist
-      # de patrones con deny por defecto: NO es equivalente al validador de
-      # claude-code (que inspecciona el comando entero), es una aproximación
-      # más restrictiva. Agregar patrones acá si un agente los necesita.
+      # OpenCode has no hooks. The best available translation is a pattern
+      # allowlist with deny by default: it is NOT equivalent to claude-code's
+      # validator (which inspects the whole command), it's a more restrictive
+      # approximation. Add patterns here if an agent needs them.
       shell:readonly:
         permission:
           bash:

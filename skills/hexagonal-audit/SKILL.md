@@ -7,9 +7,9 @@ description: >
   spec.md stories (work/active/<story-id>/spec.md) whose ACs derive from the HIGH
   and MEDIUM findings, ready for /clarify → /design → /plan → /build. Read-only:
   never edits code unless the user asks for the fixes to be applied. Use when
-  the user says "audita el proyecto", "revisa la arquitectura", "auditalo",
-  "detectar mejoras de arquitectura", "esto respeta hexagonal", or wants to turn
-  architecture debt into backlog stories. Do NOT use to build modules (use
+  the user says "audit the project", "review the architecture", "audit it",
+  "find architecture improvements", "does this respect hexagonal", or wants to
+  turn architecture debt into backlog stories. Do NOT use to build modules (use
   /hexagonal-architecture), to survey the codebase for an item (use /clarify),
   or for C4 diagrams of the whole system (use /architecture).
 metadata:
@@ -21,72 +21,73 @@ metadata:
 
 # Hexagonal Audit — AUDIT Mode
 
-**Announce at start:** "Voy a auditar la arquitectura contra las reglas. Arranco mapeando el terreno."
+**Announce at start:** "I'll audit the architecture against the rules. Starting by mapping the terrain."
 
 **Output:**
-- Un reporte de hallazgos rankeados (HIGH/MEDIUM/LOW), en el idioma del usuario.
-- Uno o más borradores `work/active/<story-id>/spec.md` derivados de los hallazgos,
-  para que el fix entre al pipeline SDD (ver Step 4).
+- A ranked findings report (HIGH/MEDIUM/LOW).
+- One or more draft `work/active/<story-id>/spec.md` files derived from the findings,
+  so the fix enters the SDD pipeline (see Step 4).
 - **Never edit code in AUDIT mode** unless the user asks for the fixes to be applied.
 
 ---
 
-## Perfil del proyecto (leer primero, siempre)
+## Project profile (read first, always)
 
-Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyecto actual):
-define `OUTPUT_LANGUAGE`, `STORY_ID_MODE`/`STORY_ID_PATTERN` (para los `spec.md`
-generados), `WORKDIR_ACTIVE`, el stack (sección 7) y `STACK_REFS` (templates y
-detectores por stack). Si no existe, avisá que lo creen desde la plantilla y detené.
+Before anything else, read `.agents/profile.md` (at the root of the current project):
+it defines `OUTPUT_LANGUAGE`, `ARTIFACT_LANGUAGE`, `STORY_ID_MODE`/`STORY_ID_PATTERN` (for the generated
+`spec.md` files), `WORKDIR_ACTIVE`, the stack (section 7) and `STACK_REFS` (per-stack
+templates and detectors). If it doesn't exist, tell the user to create it from the
+template and stop.
 
-**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
 
-**Los literales de este documento son solo un ejemplo de resolución.** Los valores
-reales salen del profile — si difieren, mandan los del perfil:
+**The literals in this document are only an example resolution.** The real values come
+from the profile — if they differ, the profile wins:
 
-| En este documento | Clave en profile.md |
+| In this document | Key in profile.md |
 |---|---|
-| `sm-<number>` | `STORY_ID_PATTERN` |
-| `work/active/sm-<number>/` | `WORKDIR_ACTIVE` |
-| «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) |
-| stack / convenciones | sección 7 + `<STACK_REFS>` (pack por stack) |
+| `spec-<number>` | `STORY_ID_PATTERN` |
+| `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
+| "microservice" in the prose | `COMPONENT_TERM` (section 7) |
+| stack / conventions | section 7 + `<STACK_REFS>` (per-stack pack) |
 
 ---
 
 ## Procedure
 
-Seguir `references/audit-guide.md` — el procedimiento completo (mapear el terreno,
-scorizar las 13 dimensiones, escribir findings, reglas del auditor). Resumen:
+Follow `references/audit-guide.md` — the complete procedure (map the terrain, score
+the 13 dimensions, write findings, auditor's rules). Summary:
 
-1. **Map the terrain** (read-only): inventario de módulos y capas; si el pack del
-   stack provee un detector (ej. TS/NestJS: `<STACK_REFS>/architecture/audit-scan.sh <src>`),
-   correrlo; si no, mapear con `find`/grep del lenguaje. Cada hit es un lead, no un
-   hallazgo — leer el archivo antes de reportar.
-2. **Score 0–3 por dimensión** (13 dimensiones, total /39). Todo lo que baje de 2
-   es hallazgo. Cargar las reglas desde `../hexagonal-architecture/references/rules.md`
-   (fuente única) para dimensionar contra el layout canónico.
-3. **Write findings** rankeados por severidad, cada uno con `file:line`, la regla
-   rota, el costo concreto y el fix más chico. Cerrar con el plan priorizado 3–5.
-4. **Bridge al pipeline — generar `spec.md`** (Step 4 abajo).
+1. **Map the terrain** (read-only): inventory of modules and layers; if the stack's
+   pack provides a detector (e.g. TS/NestJS: `<STACK_REFS>/architecture/audit-scan.sh <src>`),
+   run it; otherwise map with the language's `find`/grep. Every hit is a lead, not a
+   finding — read the file before reporting.
+2. **Score 0–3 per dimension** (13 dimensions, total /39). Anything below 2 is a
+   finding. Load the rules from `../hexagonal-architecture/references/rules.md`
+   (single source) to size against the canonical layout.
+3. **Write findings** ranked by severity, each with `file:line`, the rule broken, the
+   concrete cost and the smallest fix. Close with the prioritized 3–5 plan.
+4. **Bridge to the pipeline — generate `spec.md`** (Step 4 below).
 
-## Step 4: Bridge al pipeline (generar historias)
+## Step 4: Bridge to the pipeline (generate stories)
 
-Con el reporte final, convertir los hallazgos en trabajo del pipeline SDD:
+With the final report, turn the findings into SDD pipeline work:
 
-1. **Una historia por módulo auditado** (o por cluster de hallazgos si el módulo
-   tiene pocos): crear `work/active/<story-id>/spec.md` con la estructura del template
-   de `/spec` (`../spec/references/spec-template.md`).
-2. **El ID** se resuelve con `STORY_ID_MODE` del profile (sequential → siguiente
-   número libre; name → slug; tracker-code → pedir la clave).
-3. **Cada hallazgo HIGH/MEDIUM → un AC verificable**, redactado como comportamiento
-   esperado del sistema (ej. "El controller X no debe contener lógica de negocio" /
-   "El dominio no debe importar el framework"). Los LOW van como checklist de
-   higiene en el cuerpo de la historia, no como ACs.
-4. Cada `spec.md` lleva una sección `## Contexto de auditoría` con la referencia al
-   reporte completo (`docs/audits/<fecha>-<alcance>.md` — guardar el reporte ahí).
-5. Reportar y sugerir el siguiente paso: `/clarify <id>`.
+1. **One story per audited module** (or per cluster of findings if the module has
+   few): create `work/active/<story-id>/spec.md` with the structure of `/spec`'s
+   template (`../spec/references/spec-template.md`).
+2. **The ID** is resolved with the profile's `STORY_ID_MODE` (sequential → next free
+   number; name → slug; tracker-code → ask for the key).
+3. **Every HIGH/MEDIUM finding → one verifiable AC**, written as expected system
+   behavior (e.g. "Controller X must not contain business logic" / "The domain must
+   not import the framework"). LOW findings go as a hygiene checklist in the story
+   body, not as ACs.
+4. Each `spec.md` carries an `## Audit Context` section referencing the full report
+   (`docs/audits/<date>-<scope>.md` — save the report there).
+5. Report and suggest the next step: `/clarify <id>`.
 
-CRITICAL: No resolver los hallazgos en el código — el AUDIT genera historias; los
-fixes se construyen con `/plan` + `/build` como cualquier otra.
+CRITICAL: Don't resolve the findings in the code — AUDIT generates stories; the fixes
+get built with `/plan` + `/build` like any other.
 
 ---
 
@@ -94,15 +95,23 @@ fixes se construyen con `/plan` + `/build` como cualquier otra.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| El detector del pack no corre (sin bash / otro lenguaje) | Pack sin script para el stack | Mapear manualmente con find/grep del lenguaje; los detalladores por stack van en `audit-smells.md` del pack |
-| `work/active/` no existe | Pipeline nunca iniciado en el repo | Crearla (los borradores de spec.md la requieren) y confirmar `WORKDIR_ACTIVE` del profile |
-| Hallazgos demasiado numerosos | Reporte sin priorizar | Solo HIGH/MEDIUM generan ACs; LOW quedan como checklist |
-| El usuario quiere que apliques los fixes | Confusión de modo | Es trabajo de historias: generar los `spec.md` y que pasen por `/plan` + `/build` — AUDIT nunca edita código |
-| El `spec.md` generado no sigue la plantilla | Formato inconsistente | Consultar `../spec/references/spec-template.md` y el `STORY_ID_MODE` del profile |
+| The pack's detector won't run (no bash / another language) | Pack with no script for the stack | Map manually with the language's find/grep; per-stack detailers live in the pack's `audit-smells.md` |
+| `work/active/` doesn't exist | Pipeline never started in this repo | Create it (the spec.md drafts require it) and confirm the profile's `WORKDIR_ACTIVE` |
+| Too many findings | Unprioritized report | Only HIGH/MEDIUM generate ACs; LOW stay as a checklist |
+| The user wants you to apply the fixes | Mode confusion | That's story work: generate the `spec.md` files and let them go through `/plan` + `/build` — AUDIT never edits code |
+| The generated `spec.md` doesn't follow the template | Inconsistent format | Consult `../spec/references/spec-template.md` and the profile's `STORY_ID_MODE` |
 
 ---
 
 ## CRITICAL: Output Language
 
-Reportes, hallazgos y explicaciones en el idioma del usuario (`OUTPUT_LANGUAGE`).
-Código, paths, nombres de reglas y severidades en inglés.
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
+`OUTPUT_LANGUAGE` if the project doesn't declare it): the ACs of the generated
+`spec.md` drafts and the finding descriptions of the report saved under
+`docs/audits/`. Never translate them to English on your own.
+
+Section headings stay in English (the pipeline reads them by name), and so do rule
+names, severities, paths and layer names — they are identifiers
+(`IDENTIFIER_LANGUAGE`).
+
+**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).

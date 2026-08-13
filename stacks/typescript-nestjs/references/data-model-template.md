@@ -1,6 +1,6 @@
 # docs/data-model.md Template
 
-Save to `work/active/sm-<number>/docs/data-model.md` using exactly this
+Save to `work/active/spec-<number>/docs/data-model.md` using exactly this
 structure. Only generate this file if the story requires a new DB table or
 a change to an existing one — omit entirely otherwise (no empty file).
 
@@ -13,15 +13,15 @@ directly, field by field).
 ---
 
 ```markdown
-# Modelado de datos: sm-<number>
+# Data model: spec-<number>
 
-## NombreEntidad
+## EntityName
 
-### Entidad TypeORM
+### TypeORM entity
 
 \`\`\`typescript
-@Entity('nombre_tabla')
-export class NombreEntidad {
+@Entity('table_name')
+export class EntityName {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -36,10 +36,10 @@ export class NombreEntidad {
 }
 \`\`\`
 
-### Migración SQL
+### SQL migration
 
 \`\`\`sql
-CREATE TABLE nombre_tabla (
+CREATE TABLE table_name (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   field_name VARCHAR(255) NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -49,18 +49,20 @@ CREATE TABLE nombre_tabla (
 
 ---
 
-### NombreEntidad2  ← repetir si hay más de una tabla nueva
+### EntityName2  ← repeat if there is more than one new table
 
-[misma estructura]
+[same structure]
 ```
 
 ## Rules
-- One `## NombreEntidad` block per new/changed table.
+- One `## EntityName` block per new/changed table.
 - Entity field names/types must match the SQL column names/types exactly —
   `/plan`'s "Entity field consistency" check (PHASE 3.5) compares them directly.
 - Field names here should match `context.md` where the field already exists
   on a related entity (reuse, don't rename without reason).
 - If a field is also exposed in the API contract (`docs/api.yaml`), the
   naming should match unless there's a documented reason (e.g. internal
-  column vs. public field) — flag the mismatch in `## Decisiones de Diseño`
+  column vs. public field) — flag the mismatch in `## Design Decisions`
   in `design.md` if intentional.
+- Headings in English (structural); prose in `ARTIFACT_LANGUAGE` (profile,
+  section 5); table and column names verbatim from the schema.

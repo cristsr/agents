@@ -1,118 +1,146 @@
-# SDD Pipeline — catálogo central
+# SDD Pipeline — central catalog
 
-Fuente de verdad de cómo se compone el flujo SDD: orden, dependencias, y qué lee
-cada skill del profile. Los detalles operativos viven en cada `SKILL.md` — acá el
-mapa. Validá el ecosistema con `/healthcheck`.
+The source of truth for how the SDD flow is composed: order, dependencies, and what
+each skill reads from the profile. The operational detail lives in each `SKILL.md` —
+this is the map. Validate the ecosystem with `/healthcheck`.
 
-## Flujo
+## Flow
 
 ```
 /spec → /prepare → /clarify → /design → /plan → /build → /sync → /commit
-        (solo si    (RPI: releva,
-         la base     decide y
-         no está     escribe
-         fresca)     spec.md + context.md)
+        (only if    (RPI: surveys,
+         the base    decides and
+         isn't       writes
+         fresh)      spec.md + context.md)
 ```
 
-- **`/clarify`** absorbió el relevamiento: una sola pasada Research → Plan → Implement
-  produce el `spec.md` preciso **y** el `context.md`. No hay paso de scan intermedio.
-- **`/scan`** quedó como skill de **refresco**: regenera solo `context.md` cuando el
-  código cambió y los ACs no. Fuera del flujo normal.
-- **`/forge`** encadena `/plan` → `/build` → `/sync` sin pausas (requiere design aprobado).
-- **`/hotfix`** corrige defectos post-build originados en ACs ambiguos.
-- **`/refine`** ajusta artefactos existentes sin regenerar.
-- **`/status`** diagnostica en qué etapa está un ítem.
-- **`/healthcheck`** valida consistencia de skills ↔ profile ↔ packs.
+- **`/clarify`** absorbed the survey: a single Research → Plan → Implement pass
+  produces the precise `spec.md` **and** the `context.md`. There is no intermediate
+  scan step.
+- **`/scan`** remains as the **refresh** skill: it regenerates only `context.md` when
+  the code changed and the ACs didn't. Outside the normal flow.
+- **`/forge`** chains `/plan` → `/build` → `/sync` without pauses (requires an
+  approved design).
+- **`/hotfix`** fixes post-build defects originating in ambiguous ACs.
+- **`/refine`** adjusts existing artifacts without regenerating them.
+- **`/status`** diagnoses which stage an item is in.
+- **`/healthcheck`** validates skills ↔ profile ↔ packs consistency.
 
-## Skills del pipeline
+## Pipeline skills
 
-| Skill | Entrada | Salida | Siguiente |
+| Skill | Input | Output | Next |
 |---|---|---|---|
-| `/spec` | texto crudo o export del tracker (feature, bug, deuda, incidente, chore) | `spec.md` (tipado) | `/prepare` o `/clarify` |
-| `/prepare` | ítem o componentes | base fresca (`BASE_BRANCH`) | `/clarify` |
-| `/clarify` | `spec.md` | `spec.md` con ACs precisados + registro de decisiones, y `context.md` con el relevamiento | `/design` |
-| `/design` | `spec.md` + `context.md` | `design.md` + `docs/` (contrato, modelo, diagramas) | `/plan` |
-| `/plan` | artefactos de diseño | `plan.md` (tareas TDD) | `/build` |
-| `/build` | `plan.md` | código + tests verdes, tareas `[X]` | `/sync` |
-| `/sync` | historia cerrada | docs del módulo reconciliadas, `work/done/` | `/commit` |
-| `/commit` | `work/done/` | commits + PR redactado (sin push) | usuario |
+| `/spec` | raw text or a tracker export (feature, bug, debt, incident, chore) | `spec.md` (typed) | `/prepare` or `/clarify` |
+| `/prepare` | item or components | fresh base (`BASE_BRANCH`) | `/clarify` |
+| `/clarify` | `spec.md` | `spec.md` with precise ACs + a decision log, and `context.md` with the survey | `/design` |
+| `/design` | `spec.md` + `context.md` | `design.md` + `docs/` (contract, model, diagrams) | `/plan` |
+| `/plan` | design artifacts | `plan.md` (TDD tasks) | `/build` |
+| `/build` | `plan.md` | code + green tests, tasks `[X]` | `/sync` |
+| `/sync` | closed story | module docs reconciled, `work/done/` | `/commit` |
+| `/commit` | `work/done/` | commits + drafted PR (no push) | the user |
 
-## Skills de soporte
+## Support skills
 
-| Skill | Rol |
+| Skill | Role |
 |---|---|
-| `/profile` | crea/actualiza `.agents/profile.md` |
-| `/rules` | reglas no-negociables (`docs/rules.md`) |
-| `/architecture` | C4 Nivel 1/2 (`docs/architecture/`) — invocado por `/sync` |
-| `/healthcheck` | valida el ecosistema (script + checks) |
-| `/status` | diagnóstico de etapa de un ítem |
-| `/scan` | refresco de `context.md` cuando el código cambió (no es paso del flujo) |
-| `/hexagonal-architecture` | BUILD — estructura hexagonal (reglas en `references/rules.md`, sintaxis por stack en `<STACK_REFS>/architecture/`) |
-| `/hexagonal-audit` | AUDIT — 13 dimensiones, reporte rankeado + genera `spec.md` en `work/active/` (bridge al pipeline) |
+| `/profile` | creates/updates `.agents/profile.md` |
+| `/rules` | non-negotiable rules (`docs/rules.md`) |
+| `/architecture` | C4 Level 1/2 (`docs/architecture/`) — invoked by `/sync` |
+| `/healthcheck` | validates the ecosystem (script + checks) |
+| `/status` | stage diagnosis for an item |
+| `/scan` | refreshes `context.md` when the code changed (not a flow step) |
+| `/hexagonal-architecture` | BUILD — hexagonal structure (rules in `references/rules.md`, per-stack syntax in `<STACK_REFS>/architecture/`) |
+| `/hexagonal-audit` | AUDIT — 13 dimensions, ranked report + generates `spec.md` files in `work/active/` (bridge into the pipeline) |
 
-## Agentes (subagentes)
+## Agents (subagents)
 
-Los agentes viven en `agents/<name>.md` con un frontmatter **agnóstico al
-proveedor**: declaran `tier` (`reasoning`/`balanced`/`fast`) y `capabilities`
-semánticas (`read`, `search`, `shell:readonly`, `skills`, …), sin nombrar modelos
-ni herramientas concretas.
+The agents live in `agents/<name>.md` with **provider-agnostic** frontmatter: they
+declare a `tier` (`reasoning`/`balanced`/`fast`) and semantic `capabilities`
+(`read`, `search`, `shell:readonly`, `skills`, …), naming no concrete models or
+tools.
 
-`agents/targets.yaml` traduce eso al formato nativo de cada herramienta —
-alias de modelo y `tools` en Claude Code, `provider/model-id` y `permission` en
-OpenCode, que acá corre contra LM Studio local. Un modelo nuevo se cambia en una
-celda; un proveedor nuevo es un bloque.
+`agents/targets.yaml` translates that into each tool's native format — model alias
+and `tools` in Claude Code, `provider/model-id` and `permission` in OpenCode, which
+here runs against a local LM Studio. A new model is a cell change; a new provider is
+a block.
 
 ```bash
-npm run agents:check     # dry-run: qué cambiaría
-npm run agents:sync      # escribe los formatos nativos
+npm run agents:check     # dry-run: what would change
+npm run agents:sync      # writes the native formats
 npm run agents:sync -- --target=opencode --prune
 ```
 
-Los archivos instalados llevan un marcador `GENERATED by sync-agents`: el script
-nunca pisa un archivo sin ese marcador, ni escribe sobre un symlink, y `--prune`
-solo borra huérfanos que él mismo generó. **Editá siempre la fuente**, nunca el
-archivo instalado.
+The installed files carry a `GENERATED by sync-agents` marker: the script never
+overwrites a file without that marker, never writes over a symlink, and `--prune`
+only deletes orphans it generated itself. **Always edit the source**, never the
+installed file.
 
-> El `tier` es un default. Quien invoca puede pasar `model` explícito (ej.
-> `EXPLORER_MODEL` del profile del proyecto) y tiene precedencia — conviene
-> hacerlo: algunas versiones ignoran el campo del frontmatter.
+> The `tier` is a default. The caller may pass an explicit `model` (e.g. the
+> project profile's `EXPLORER_MODEL`) and it takes precedence — which is advisable:
+> some versions ignore the frontmatter field.
 
-## Claves del profile por skill
+## Profile keys per skill
 
-| Skill | Claves que lee |
+| Skill | Keys it reads |
 |---|---|
 | `spec` | `STORY_ID_MODE`, `STORY_ID_PATTERN`, `STORY_KEY_PATTERN`, `STORY_ID_LEGACY_PREFIXES`, `ITEM_TYPES`, `TRACKER`, `INTAKE_FORMATS`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE` |
 | `prepare` | `WORKING_DIRECTORY`, `BASE_BRANCH`, `REPO_TOPOLOGY`, `PREP_SKILL`, `STORY_ID_PATTERN`, `WORKDIR_ACTIVE` |
-| `clarify` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE`, `COMPONENT_TERM`, `BASE_BRANCH`, stack (7), docs (8), `STACK_REFS`, `CODEGRAPH`, `EXPLORER_SUBAGENT`/`EXPLORER_MODEL` (fallback sin grafo) |
-| `scan` (refresco) | las mismas que `clarify` salvo las de decisión — no lee la rúbrica de autoridad |
+| `clarify` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE`, `COMPONENT_TERM`, `BASE_BRANCH`, stack (7), docs (8), `STACK_REFS`, `CODEGRAPH`, `EXPLORER_SUBAGENT`/`EXPLORER_MODEL` (no-graph fallback) |
+| `scan` (refresh) | the same as `clarify` minus the decision ones — it doesn't read the authority rubric |
 | `design` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE`, `API_CONTRACT`, `DIAGRAM_FORMAT`, `DESIGN_OUTPUT_MODE`, `API_CONTRACT_MODE`, stack (7), `STACK_REFS`, `MODEL_VALIDATE_CMD`, `YAML_VALIDATE_CMD`, `API_DIFF_TOOL` |
-| `plan` | diseño completo + `TEST_FRAMEWORK`, `API_CONTRACT`, `STACK_REFS`, `MODULE_TEST_CMD` |
+| `plan` | the complete design + `TEST_FRAMEWORK`, `API_CONTRACT`, `STACK_REFS`, `MODULE_TEST_CMD` |
 | `build` | `plan.md`, `TEST_FRAMEWORK`, `STACK_REFS`, `MODULE_TEST_CMD`, `FULL_TEST_CMD`, `POSTMAN_GEN_CMD` |
 | `sync` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`/`WORKDIR_DONE`, `BASE_BRANCH`, `SYNC_MODE`, `API_CONTRACT_MODE`, `DESIGN_OUTPUT_MODE`, docs (8), `CI_GATES_CMD`, `API_DIFF_TOOL`, `MODEL_VALIDATE_CMD` |
 | `commit` | `STORY_ID_PATTERN`, `WORKDIR_DONE`, `BASE_BRANCH`, `OUTPUT_LANGUAGE` |
-| `forge` | inputs de plan/build/sync + `BASE_BRANCH` |
+| `forge` | plan/build/sync inputs + `BASE_BRANCH` |
 | `hotfix` | `plan.md`/`spec.md`, stack (7), `STACK_REFS`, `MODULE_TEST_CMD` |
-| `refine` | artefactos + `API_CONTRACT_MODE` (para `<api-artifact>`) |
+| `refine` | artifacts + `API_CONTRACT_MODE` (for `<api-artifact>`) |
 | `architecture` | `PROJECT_NAME`, `DIAGRAM_FORMAT`, `OUTPUT_LANGUAGE`, `WORKDIR_DONE`, `DOCS_ARCHITECTURE`, `PROJECT_GRAPH_CMD` |
 
-## Tooling (sección 10 del profile)
+> On top of its own row, **every skill that writes an artifact also reads
+> `ARTIFACT_LANGUAGE`** (section 5) — see "Language" below.
 
-Todas las herramientas del pipeline se declaran en el profile, con fallback por
-proyecto: `CODEGRAPH`, `MODEL_VALIDATE_CMD`, `API_DIFF_TOOL`, `POSTMAN_GEN_CMD`,
+## Language
+
+Three axes, three profile keys (section 5) — no skill decides the language on its own:
+
+| Axis | Key | Covers |
+|---|---|---|
+| Conversation | `OUTPUT_LANGUAGE` | announcements, escalation questions, closing reports |
+| Artifact prose | `ARTIFACT_LANGUAGE` | `spec.md`, `context.md`, `design.md`, `plan.md`, flow docs, architecture docs, `decisions.md`, `rules.md`, OpenAPI `summary`/`description` |
+| Identifiers | `IDENTIFIER_LANGUAGE` | paths, classes, fields, endpoints, YAML/frontmatter keys, table and column names |
+
+**Structural section headings stay in English regardless of `ARTIFACT_LANGUAGE`.**
+They are a contract between skills — `/sync` looks for `## Global Architecture Impact`
+and `## Design Decisions` in `design.md`, `/clarify` writes `## Ambiguity Resolution`
+in `spec.md`, `/build` and `/hotfix` locate `Task N` in `plan.md`. Translating a
+heading breaks the pipeline; only the text **under** it follows `ARTIFACT_LANGUAGE`.
+
+**The git surface stays in English too**: commit messages, PR title and body, and
+branch descriptions (`/commit`, `/plan` Task 0) — shared history read outside the
+project.
+
+The `SKILL.md` files themselves are written in English, and so are the message
+samples inside them; they get rendered in the user's language at runtime.
+
+## Tooling (profile section 10)
+
+Every pipeline tool is declared in the profile, with a per-project fallback:
+`CODEGRAPH`, `MODEL_VALIDATE_CMD`, `API_DIFF_TOOL`, `POSTMAN_GEN_CMD`,
 `YAML_VALIDATE_CMD`, `CI_GATES_CMD`, `MODULE_TEST_CMD`, `FULL_TEST_CMD`,
-`PROJECT_GRAPH_CMD`. Clave en `—`/`no` → la skill usa el modo manual/legado.
+`PROJECT_GRAPH_CMD`. A key at `—`/`no` → the skill uses the manual/legacy mode.
 
-## Packs por stack (`STACK_REFS`)
+## Per-stack packs (`STACK_REFS`)
 
-Templates por stack en `~/.agents/stacks/<stack>/`:
+Per-stack templates in `~/.agents/stacks/<stack>/`:
 - `references/`: `api-template`, `data-model-template`, `scan-guide`, `context-template`,
   `task-structure-template`, `openapi-to-dto-mapping`.
-- `architecture/`: concreción hexagonal por stack — `module-blueprint`, `nestjs-binding`,
-  `errors-and-logging`, `audit-scan.sh`, `audit-smells` (refs opcionales: alcanza un pack).
+- `architecture/`: the per-stack hexagonal concretion — `module-blueprint`, `nestjs-binding`,
+  `errors-and-logging`, `audit-scan.sh`, `audit-smells` (optional refs: one pack is enough).
 
-Packs actuales: `generic` (default), `typescript-nestjs`. Sin `STACK_REFS` → las
-`references/` locales de cada skill (genéricas).
+Current packs: `generic` (default), `typescript-nestjs`. Without `STACK_REFS` → each
+skill's local (generic) `references/`.
 
-## Cambios recientes
+## Recent changes
 
-Ver el historial de git de `~/.agents` (los commits del ecosistema).
+See the git history of `~/.agents` (the ecosystem's commits).

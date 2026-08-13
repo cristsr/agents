@@ -8,16 +8,16 @@ Reference for resuming an interrupted `/build` execution session.
 
 - The previous Claude session ended mid-execution (context window exhausted, user closed session, etc.)
 - Some tasks in `plan.md` are marked `[X]` and others are not
-- The user says "retomar", "continuar el build", "resumir", or "seguir desde donde quedó"
+- The user says "resume", "continue the build", "pick it back up", or "keep going from where it stopped"
 
 ---
 
 ## Step 1: Read plan.md and audit task states
 
-Read `work/active/sm-<number>/plan.md` completely.
+Read `work/active/spec-<number>/plan.md` completely.
 
 Categorize every task:
-- `[X]` at the end of `### Tarea N:` header → **completed**, do NOT re-execute
+- `[X]` at the end of the `### Task N:` header → **completed**, do NOT re-execute
 - No `[X]` → **pending**, execute in order
 
 ---
@@ -26,12 +26,12 @@ Categorize every task:
 
 Before resuming, always report:
 
-> "Encontré N tareas ya completadas:
-> - Tarea 0: Preparar rama [X]
-> - Tarea 1: Entidad TypeORM [X]
+> "I found N tasks already completed:
+> - Task 0: Prepare the branch [X]
+> - Task 1: TypeORM entity [X]
 > - ...
 >
-> Retomando desde Tarea M: [nombre de la tarea]."
+> Resuming from Task M: [task name]."
 
 ---
 
@@ -61,8 +61,8 @@ Follow the same execution rules as a fresh start:
 
 | Scenario | Action |
 |----------|--------|
-| All tasks `[X]` | Report "Plan ya completado". Run final test suite to confirm. |
-| `[X]` on task N but file missing | Warn user, offer to re-execute task N |
+| All tasks `[X]` | Report "Plan already completed". Run the final test suite to confirm. |
+| `[X]` on task N but file missing | Warn the user, offer to re-execute task N |
 | Mid-task interruption (no `[X]`) | Re-execute the whole task from Step 1 |
 | Branch changed since last run | Verify branch before continuing — stop if on main/master |
-| Tests were failing when interrupted | Re-run failing test, fix if needed, then continue |
+| Tests were failing when interrupted | Re-run the failing test, fix if needed, then continue |

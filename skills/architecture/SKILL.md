@@ -8,9 +8,9 @@ description: >
   diagram (C4 Level 3) are produced by /design and promoted by /sync
   directly to apps/<app>/docs/<module>/.
   Use when the user says "/architecture", "/architecture spec-XXXX",
-  "bootstrapear la documentación de arquitectura", "actualizar el diagrama de
-  arquitectura", or when /sync reads that a closed story's design.md flagged
-  "Sí" in its "Impacto en Arquitectura Global" section (new module/app,
+  "bootstrap the architecture documentation", "update the architecture
+  diagram", or when /sync reads that a closed story's design.md flagged
+  "Yes" in its "Global Architecture Impact" section (new module/app,
   new/removed integration, new actor) and invokes this skill with the
   concrete node/edge already specified to refresh docs/architecture/.
   Do NOT use for per-module docs (sequence diagram.md, C4 Level 3
@@ -20,25 +20,25 @@ description: >
 
 # architecture
 
-## Perfil del proyecto (leer primero, siempre)
+## Project profile (read first, always)
 
-Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyecto actual): define
-`PROJECT_NAME`, `DIAGRAM_FORMAT`, `OUTPUT_LANGUAGE` y `WORKDIR_DONE`. Si no existe, avisá al
-usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del
-proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
+Before anything else, read `.agents/profile.md` (at the root of the current project): it defines
+`PROJECT_NAME`, `DIAGRAM_FORMAT`, `OUTPUT_LANGUAGE`, `ARTIFACT_LANGUAGE` and `WORKDIR_DONE`. If it doesn't exist, tell the
+user to create it by copying `~/.agents/sdd-profile.template.md` to the project's `.agents/profile.md`,
+and stop: without a profile you don't know this project's conventions.
 
-**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
 
-**Los literales de este documento son solo un ejemplo de resolución** (el perfil de admin-back).
-Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
+**The literals in this document are only an example resolution**.
+The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
 
-| En este documento | Clave en profile.md |
+| In this document | Key in profile.md |
 |---|---|
 | `spec-<number>` | `STORY_ID_PATTERN` |
-| «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
+| "microservice" in the prose | `COMPONENT_TERM` (section 7) — read the term from the profile |
 | `work/done/spec-<number>/` | `WORKDIR_DONE` |
 | Mermaid | `DIAGRAM_FORMAT` |
-| salida en español | `OUTPUT_LANGUAGE` |
+| interaction language | `OUTPUT_LANGUAGE` |
 | `docs/architecture/` | `DOCS_ARCHITECTURE` |
 
 ---
@@ -66,14 +66,14 @@ not global architecture.
 1. **Bootstrap** — `docs/architecture/` doesn't exist or is empty. Scans the
    repo and generates initial `context.md` + `containers.md`.
 2. **Update** — invoked with `spec-<number>` (normally `/sync` invokes it
-   automatically when it reads a "Sí" in design.md's "Impacto en
-   Arquitectura Global" section). Surgically edits whichever file applies
+   automatically when it reads a "Yes" in design.md's "Global Architecture
+   Impact" section). Surgically edits whichever file applies
    (`context.md` if an actor/external integration changed, `containers.md`
    if an app/microservice/lib/internal integration changed) using the
    node/edge `design.md` already specified.
 
-**Announce at start:** "Bootstrapeando `docs/architecture/`." (Bootstrap
-mode) or "Actualizando `docs/architecture/` con spec-<number>." (Update mode).
+**Announce at start:** "Bootstrapping `docs/architecture/`." (Bootstrap
+mode) or "Updating `docs/architecture/` with spec-<number>." (Update mode).
 
 **Output:** `docs/architecture/context.md` and/or
 `docs/architecture/containers.md` created or updated.
@@ -115,7 +115,7 @@ service, or a broker). For each lib: identify which apps consume it.
 Also identify real external systems (identity provider, payment gateways,
 third-party APIs) — those go in `context.md`, not each internal app.
 
-If the repo defines `PROJECT_GRAPH_CMD` (profile, sección 10), it can be used
+If the repo defines `PROJECT_GRAPH_CMD` (profile, section 10), it can be used
 as extra reference:
 
 ```bash
@@ -133,13 +133,13 @@ with. Example shape (adapt to the profile's `DIAGRAM_FORMAT`):
 
 ```mermaid
 graph TB
-  usuario["Usuario"]
-  subgraph sistema["<PROJECT_NAME>"]
-    admin["Sistema<br/>(descripción de una línea)"]
+  user["User"]
+  subgraph system["<PROJECT_NAME>"]
+    admin["System<br/>(one-line description)"]
   end
-  externo["Sistema externo<br/>(ej. Identity Provider)"]
-  usuario -- "usa" --> admin
-  admin -- "integra con" --> externo
+  external["External system<br/>(e.g. Identity Provider)"]
+  user -- "uses" --> admin
+  admin -- "integrates with" --> external
 ```
 
 ### Step 3: Generate `containers.md` (C4 Level 2)
@@ -163,7 +163,7 @@ many apps/libs/DBs for `containers.md`.
 
 Triggers with `/architecture spec-<number>` — invoked by the user or, more
 often, by `/sync` when closing a story whose `design.md` already answered
-**Sí** in its `## Impacto en Arquitectura Global` section (`/design`
+**Yes** in its `## Global Architecture Impact` section (`/design`
 determines this at design time; `/sync` only reads and promotes it — no
 heuristic detection involved).
 
@@ -180,7 +180,7 @@ means this is running manually before the full close.)
 
 ### Step 2: Take the delta from `design.md`
 
-`design.md`'s `## Impacto en Arquitectura Global` already carries the
+`design.md`'s `## Global Architecture Impact` already carries the
 affected level (Context/Container), the type of change, and the concrete
 node/edge to add/remove — no need to re-derive it. If `/sync` invoked this
 skill, it usually already passed it along in the invocation prompt; if run
@@ -204,13 +204,13 @@ Summary: which file(s) were touched and what was added/removed from each.
 
 ## Examples
 
-### Example 1: bootstrap in admin-back
+### Example 1: bootstrap in a mono-repo
 
 User says: "/architecture"
 
 Actions:
 1. Neither `context.md` nor `containers.md` exist → Bootstrap mode.
-2. `context.md`: one actor (Usuario) + one external system (Keycloak, IdP).
+2. `context.md`: one actor (User) + one external system (Keycloak, IdP).
 3. `containers.md`: `apps/finances` (monolith, own DB, frozen) and
    `apps/ledger` (event sourcing + CQRS, own DB, active), `libs/shared`,
    each app's integration with Keycloak.
@@ -220,27 +220,27 @@ correctly split across the two levels.
 
 ### Example 2: /sync promotes a cross-cutting story already flagged by /design
 
-Context: `/sync hu-0015` closes a story that added `apps/notifications`
+Context: `/sync spec-0015` closes a story that added `apps/notifications`
 (new microservice, consumes ledger events via a new adapter). It doesn't add
 any new actor or external system. `design.md` already carries:
 
 ```markdown
-## Impacto en Arquitectura Global
+## Global Architecture Impact
 
-**¿Toca arquitectura global?** Sí.
+**Does it touch global architecture?** Yes.
 
-- **Nivel:** Container (Nivel 2)
-- **Cambio:** nuevo microservicio
-- **Nodo/arista concreto:** agregar nodo `notifications`; arista
-  `ledger -. eventos .-> notifications`.
+- **Level:** Container (Level 2)
+- **Change:** new microservice
+- **Concrete node/edge:** add node `notifications`; edge
+  `ledger -. events .-> notifications`.
 ```
 
 Actions:
-1. `/sync` reads the section — it says Sí, level Container.
-2. Invokes `/architecture hu-0015`, passing along the already-specified
+1. `/sync` reads the section — it says Yes, level Container.
+2. Invokes `/architecture spec-0015`, passing along the already-specified
    node/edge.
 3. Update mode: adds the `notifications` node and the
-   `ledger -. eventos .-> notifications` edge directly to
+   `ledger -. events .-> notifications` edge directly to
    **`containers.md`** — no need to infer anything from a diff. `context.md`
    isn't touched because `design.md` marked the level as Container, not
    Context.
@@ -258,5 +258,22 @@ untouched because the change didn't belong there.
 | Unclear whether the change is Context or Container | The design wasn't explicit about scope | Default to Container (the level that changes more often); only touch Context if there's a genuinely new actor/external system |
 | The delta isn't clear from `design.md` | The design wasn't explicit about the change's scope | Ask the user which node/edge to add/remove — don't guess |
 | Asked to "regenerate the whole diagram" | Scope confusion | Remember Update is surgical; a full rebootstrap is a different, destructive action toward manual annotations — confirm explicitly with the user first |
-| `design.md` marked "No" but it actually touched global architecture | `/design` misjudged the impact at design time | Fix the "Impacto en Arquitectura Global" section in `design.md` and run `/architecture spec-<number>` manually — there's no `/sync` heuristic to compensate |
+| `design.md` marked "No" but it actually touched global architecture | `/design` misjudged the impact at design time | Fix the "Global Architecture Impact" section in `design.md` and run `/architecture spec-<number>` manually — there's no `/sync` heuristic to compensate |
 | Asked for a design-decisions log | Out of this skill's scope | That's `docs/decisions.md` (repo root), maintained by `/sync` directly in its Step 4 — it doesn't live inside `docs/architecture/` |
+
+---
+
+## CRITICAL: Output Language
+
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
+`OUTPUT_LANGUAGE` if the project doesn't declare it): the prose of
+`docs/architecture/context.md` and `containers.md`, plus the node and edge labels of
+the diagrams. Never translate them to English on your own.
+
+The section name this skill reads in `design.md` (`## Global Architecture Impact`) is
+a structural contract with `/design` — always English, as are the node **IDs**, app
+and service names, and any other identifier (`IDENTIFIER_LANGUAGE`).
+
+**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
+The message samples in this document are written in English; render them in the
+user's language when that differs.

@@ -1,164 +1,163 @@
-# Plantilla de SKILL.md
+# SKILL.md Template
 
-Adaptar esta plantilla a la skill concreta. Reemplazar las secciones entre
-corchetes con el contenido específico. Las secciones opcionales están marcadas.
+Adapt this template to the concrete skill. Replace the bracketed sections with the
+specific content. Optional sections are marked.
 
 ---
 
-## Plantilla base
+## Base template
 
 ```markdown
 ---
 name: your-skill
-description: [qué hace] + [cuándo usarla, con frases literales del usuario] +
-  [capacidades clave]. Do NOT use to [alcance vecino excluido].
+description: [what it does] + [when to use it, with the user's literal phrases] +
+  [key capabilities]. Do NOT use to [excluded neighboring scope].
 ---
 
-# Nombre de la Skill
+# Skill Name
 
 ## Overview
 
-[Una o dos oraciones: qué resuelve la skill y para quién.]
+[One or two sentences: what the skill solves and for whom.]
 
-**Announce at start:** "[Frase corta que Claude dice al arrancar.]"
+**Announce at start:** "[Short phrase Claude says when starting.]"
 
-**Output:** [qué produce concretamente — archivo, PR, reporte, etc.]
+**Output:** [what it concretely produces — file, PR, report, etc.]
 
-**Core principle:** [la regla que gobierna las decisiones dentro de la skill.]
+**Core principle:** [the rule governing decisions inside the skill.]
 
 ---
 
 ## Instructions
 
-### Step 1: [Primer paso mayor]
+### Step 1: [First major step]
 
-Explicación clara de qué pasa.
+Clear explanation of what happens.
 
-Ejemplo:
+Example:
 ```bash
 python scripts/fetch_data.py --project-id PROJECT_ID
 ```
-Expected output: [describir cómo se ve el éxito]
+Expected output: [describe what success looks like]
 
-### Step 2: [Segundo paso mayor]
+### Step 2: [Second major step]
 
-[Agregar los pasos que hagan falta.]
+[Add as many steps as needed.]
 
 ---
 
 ## Examples
 
-### Example 1: [escenario común]
+### Example 1: [common scenario]
 
 User says: "Set up a new marketing campaign"
 
 Actions:
-1. Traer campañas existentes vía MCP
-2. Crear campaña nueva con los parámetros dados
+1. Fetch existing campaigns via MCP
+2. Create the new campaign with the given parameters
 
-Result: Campaña creada con link de confirmación
+Result: Campaign created with a confirmation link
 
-[Agregar más ejemplos según haga falta.]
+[Add more examples as needed.]
 
 ---
 
 ## Troubleshooting
 
-### Error: [mensaje de error común]
+### Error: [common error message]
 
-Cause: [por qué pasa]
-Solution: [cómo se arregla]
+Cause: [why it happens]
+Solution: [how it's fixed]
 
-[Agregar más casos de error.]
+[Add more error cases.]
 ```
 
 ---
 
-## Secciones opcionales de alto valor
+## High-value optional sections
 
-### `## Important` / `## Critical` (recomendada)
+### `## Important` / `## Critical` (recommended)
 
-Va **arriba**, justo después del Overview. Las instrucciones críticas enterradas
-en el medio no se siguen.
+Goes **near the top**, right after the Overview. Critical instructions buried in the
+middle don't get followed.
 
 ```markdown
 ## Critical
 
-CRITICAL: antes de llamar a `create_project`, verificar:
-- El nombre del proyecto no está vacío
-- Hay al menos un miembro asignado
-- La fecha de inicio no está en el pasado
+CRITICAL: before calling `create_project`, verify:
+- The project name isn't empty
+- At least one member is assigned
+- The start date isn't in the past
 ```
 
-### `## Common Issues` (recomendada)
+### `## Common Issues` (recommended)
 
-Tabla de issue / causa / resolución. Más densa que el bloque Troubleshooting y
-más fácil de escanear:
+An issue / cause / resolution table. Denser than the Troubleshooting block and
+easier to scan:
 
 ```markdown
-| Issue | Causa | Resolución |
+| Issue | Cause | Resolution |
 |---|---|---|
-| Falla la conexión al MCP | Servidor no conectado | Settings > Extensions > [Servicio] > Reconnect |
+| MCP connection fails | Server not connected | Settings > Extensions > [Service] > Reconnect |
 ```
 
-### Referencia a recursos empaquetados
+### Referencing bundled resources
 
-Enlazar explícitamente — que el archivo exista no basta:
+Link explicitly — the file existing isn't enough:
 
 ```markdown
-Antes de escribir queries, consultar `references/api-patterns.md` para:
-- Guía de rate limiting
-- Patrones de paginación
-- Códigos de error y manejo
+Before writing queries, consult `references/api-patterns.md` for:
+- Rate limiting guidance
+- Pagination patterns
+- Error codes and handling
 ```
 
-### `## Performance Notes` (usar con criterio)
+### `## Performance Notes` (use judiciously)
 
-Contra la "pereza" del modelo en tareas largas:
+A counter to model "laziness" on long tasks:
 
 ```markdown
 ## Performance Notes
-- Tomate el tiempo necesario para hacerlo a fondo
-- La calidad importa más que la velocidad
-- No saltear los pasos de validación
+- Take the time needed to do this thoroughly
+- Quality matters more than speed
+- Don't skip the validation steps
 ```
 
-> Nota de la guía: esto es **más efectivo en el prompt del usuario que en
-> SKILL.md**. Incluirlo solo si la tarea es larga y hay evidencia de que se
-> saltean pasos.
+> Note from the guide: this is **more effective in the user's prompt than in
+> SKILL.md**. Include it only if the task is long and there's evidence steps get
+> skipped.
 
 ---
 
-## Manejo de errores — plantilla
+## Error handling — template
 
 ```markdown
 ## Common Issues
 
 ### MCP Connection Failed
 
-Si aparece "Connection refused":
-1. Verificar que el servidor MCP está corriendo: Settings > Extensions
-2. Confirmar que la API key es válida
-3. Reconectar: Settings > Extensions > [Servicio] > Reconnect
+If you see "Connection refused":
+1. Verify the MCP server is running: Settings > Extensions
+2. Confirm the API key is valid
+3. Reconnect: Settings > Extensions > [Service] > Reconnect
 ```
 
 ---
 
-## Reglas de redacción
+## Writing rules
 
-| Regla | Bien | Mal |
+| Rule | Good | Bad |
 |---|---|---|
-| Específica y accionable | ``Correr `python scripts/validate.py --input {filename}` para chequear el formato. Si falla, los problemas típicos son: campos requeridos faltantes (agregarlos al CSV), formatos de fecha inválidos (usar YYYY-MM-DD)`` | "Validar los datos antes de proceder" |
-| Sin ambigüedad | "CRITICAL: verificar que el nombre no esté vacío" | "Asegurate de validar bien las cosas" |
-| Concisa | Bullets y listas numeradas | Párrafos largos |
-| Progressive disclosure | Core en `SKILL.md`, detalle en `references/` | Todo inline |
+| Specific and actionable | ``Run `python scripts/validate.py --input {filename}` to check the format. If it fails, the typical problems are: missing required fields (add them to the CSV), invalid date formats (use YYYY-MM-DD)`` | "Validate the data before proceeding" |
+| Unambiguous | "CRITICAL: verify the name isn't empty" | "Make sure to validate things properly" |
+| Concise | Bullets and numbered lists | Long paragraphs |
+| Progressive disclosure | Core in `SKILL.md`, detail in `references/` | Everything inline |
 
 ---
 
-## Límites
+## Limits
 
-- `SKILL.md` bajo **5.000 palabras**. Si se pasa, mover contenido a `references/`.
-- `description` bajo **1024 caracteres**.
-- Sin `README.md` dentro de la carpeta de la skill. (Sí conviene un README a
-  nivel repo para humanos, si se distribuye por GitHub — pero fuera de la
-  carpeta de la skill.)
+- `SKILL.md` under **5,000 words**. If it goes over, move content to `references/`.
+- `description` under **1024 characters**.
+- No `README.md` inside the skill's folder. (A repo-level README for humans is fine
+  if it's distributed via GitHub — but outside the skill's folder.)

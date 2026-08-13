@@ -3,11 +3,11 @@ name: refine
 description: >
   Refines spec.md, context.md, design.md, docs/api.yaml, docs/diagram.md, or
   docs/data-model.md for a story without re-running /spec, /clarify, or /design.
-  Use when the user says "/refine sm-XXX", "refinar hu", "refinar contexto",
-  "ajustar diseño", "corregir el context", "hay un campo mal en el design",
-  "quiero cambiar el schema", "actualizar el context", "modificar el diseño",
-  "ajustar un AC", "cambiar la historia", "corregir el api.yaml", "ajustar el
-  diagrama", "cambiar la entidad", "ajustar la migración", or has reviewed an
+  Use when the user says "/refine spec-XXXX", "refine the spec", "refine the
+  context", "adjust the design", "fix the context", "there's a wrong field in
+  the design", "I want to change the schema", "update the context", "modify the
+  design", "adjust an AC", "change the story", "fix the api.yaml", "adjust the
+  diagram", "change the entity", "adjust the migration", or has reviewed an
   artifact and wants to make targeted or guided corrections.
   Do NOT use to regenerate from scratch (use /spec, /clarify, or /design).
   Do NOT use to modify plan.md (use /plan to regenerate it).
@@ -19,24 +19,24 @@ Execute the following phases in order.
 
 ---
 
-## Perfil del proyecto (leer primero, siempre)
+## Project profile (read first, always)
 
-Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyecto actual): define el patrón de ID
-de historia, las rutas de artefactos, el idioma de salida y el stack objetivo. Si
-no existe, avisá al usuario que lo cree copiando `~/.agents/sdd-profile.template.md` a `.agents/profile.md` del proyecto, y detené: sin perfil no conocés las convenciones de este proyecto.
+Before anything else, read `.agents/profile.md` (at the root of the current project): it defines the story ID
+pattern, the artifact paths, the output language and the target stack. If it doesn't
+exist, tell the user to create it by copying `~/.agents/sdd-profile.template.md` to the project's `.agents/profile.md`, and stop: without a profile you don't know this project's conventions.
 
-**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
 
-**Los literales de este documento son solo un ejemplo de resolución** (el perfil de Smart Mobility).
-Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
+**The literals in this document are only an example resolution**.
+The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
 
-| En este documento | Clave en profile.md |
+| In this document | Key in profile.md |
 |---|---|
-| `sm-<number>` | `STORY_ID_PATTERN` |
-| `work/active/sm-<number>/` | `WORKDIR_ACTIVE` |
-| «microservicio» en la prosa | `COMPONENT_TERM` (sección 7) — leé el término del profile |
-| salida en español | `OUTPUT_LANGUAGE` |
-| entidad TypeORM · migración · `api.yaml` OpenAPI · diagrama Mermaid | sección 7 + `API_CONTRACT`/`DIAGRAM_FORMAT` |
+| `spec-<number>` | `STORY_ID_PATTERN` |
+| `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
+| "microservice" in the prose | `COMPONENT_TERM` (section 7) — read the term from the profile |
+| interaction language | `OUTPUT_LANGUAGE` |
+| TypeORM entity · migration · OpenAPI `api.yaml` · Mermaid diagram | section 7 + `API_CONTRACT`/`DIAGRAM_FORMAT` |
 
 ---
 
@@ -44,75 +44,73 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 
 ### Step 1 — Extract story number
 
-Extract `sm-<number>` from the input. If not present, ask:
-> "¿Para qué historia? (ej: sm-1933)"
+Extract `spec-<number>` from the input. If not present, ask:
+> "Which story? (e.g. spec-1933)"
 
 ### Step 2 — Determine target artifact
 
-Parse the input for an explicit type keyword: `hu`, `context`, `design`,
-`api` (or "openapi", "contrato", "yaml"), `diagrama`/`diagram`,
-`data-model`/`modelo de datos`/`entidad`/`migración`, or
-`research`/`investigación`/`alternativas`.
+Parse the input for an explicit type keyword: `spec` (alias `hu`), `context`,
+`design`, `api` (or "openapi", "contract", "yaml"), `diagram`,
+`data-model`/`entity`/`migration`, or `research`/`alternatives`.
 
 | Target | File |
 |--------|------|
-| `spec` (alias: `hu`) | `work/active/sm-<number>/spec.md` — o `hu.md` si el ítem es anterior al renombre |
-| `context` | `work/active/sm-<number>/context.md` |
-| `design` | `work/active/sm-<number>/design.md` |
-| `api` | `work/active/sm-<number>/docs/<api-artifact>` — `api.delta.yaml` si `API_CONTRACT_MODE=delta` (default), si no `api.yaml` |
-| `diagram` | `work/active/sm-<number>/docs/diagram.md` |
-| `data-model` | `work/active/sm-<number>/docs/data-model.md` |
-| `research` | `work/active/sm-<number>/docs/research.md` |
+| `spec` (alias: `hu`) | `work/active/spec-<number>/spec.md` — or `hu.md` if the item predates the rename |
+| `context` | `work/active/spec-<number>/context.md` |
+| `design` | `work/active/spec-<number>/design.md` |
+| `api` | `work/active/spec-<number>/docs/<api-artifact>` — `api.delta.yaml` if `API_CONTRACT_MODE=delta` (default), otherwise `api.yaml` |
+| `diagram` | `work/active/spec-<number>/docs/diagram.md` |
+| `data-model` | `work/active/spec-<number>/docs/data-model.md` |
+| `research` | `work/active/spec-<number>/docs/research.md` |
 
 - If explicit → skip to Step 3 with that target (verify its file exists; if not, STOP:
-  "No encontré `<file>`. Ejecutá `/design sm-<number>` primero — `api.yaml` y `diagram.md`
-  se generan junto con `design.md`." — for `data-model`, if `design.md` exists but has
-  no `## Modelado de datos` section, say instead: "Esta historia no tiene modelo de
-  datos nuevo.")
+  "I couldn't find `<file>`. Run `/design spec-<number>` first — `api.yaml` and
+  `diagram.md` are generated alongside `design.md`." — for `data-model`, if `design.md`
+  exists but has no `## Data Modeling` section, say instead: "This story has no new
+  data model.")
 - If not explicit → check existence of `spec.md`, `context.md`, `design.md`:
 
 ```bash
 for f in spec.md hu.md context.md design.md; do
-  [ -f "work/active/sm-<number>/$f" ] && echo "$f: EXISTS" || echo "$f: -"
+  [ -f "work/active/spec-<number>/$f" ] && echo "$f: EXISTS" || echo "$f: -"
 done
 ```
 
-> **Ítems legados.** `hu.md` es el nombre anterior de `spec.md`. Si aparece él,
-> es el mismo artefacto: refinarlo en su lugar, sin renombrarlo ni crear un
-> `spec.md` duplicado.
+> **Legacy items.** `hu.md` is `spec.md`'s former name. If it shows up, it's the same
+> artifact: refine it in place, without renaming it or creating a duplicate `spec.md`.
 
 | spec.md | context.md | design.md | Candidate options | Ask via |
 |-------|-----------|-----------|--------------------|---------|
-| exists | — | — | spec.md, context.md (aún no existe), design.md (aún no existe) | `AskUserQuestion` (3 opciones) |
-| exists | exists | not exists | spec.md, context.md | `AskUserQuestion` (2 opciones) |
-| exists | not exists | exists | spec.md, design.md/api.yaml/diagram.md/data-model.md (si aplica) | `AskUserQuestion` (2 opciones) |
-| exists | exists | exists | spec.md, context.md, design.md, api.yaml, diagram.md, data-model.md (si existe) | Texto plano numerado — son hasta 6 candidatos y `AskUserQuestion` admite máximo 4 opciones |
-| not exists | exists | exists | context.md, design.md/api.yaml/diagram.md/data-model.md (si aplica) | `AskUserQuestion` (2 opciones) |
-| not exists | exists | not exists | target = context | (sin pregunta, target directo) |
-| not exists | not exists | exists | design.md, api.yaml, diagram.md, data-model.md (si existe) | `AskUserQuestion` (hasta 4 opciones — si data-model.md no existe, quedan 3) |
-| none | none | none | STOP → "No encontré ningún artefacto. Ejecutá `/spec sm-<number>` primero." | — |
+| exists | — | — | spec.md, context.md (doesn't exist yet), design.md (doesn't exist yet) | `AskUserQuestion` (3 options) |
+| exists | exists | not exists | spec.md, context.md | `AskUserQuestion` (2 options) |
+| exists | not exists | exists | spec.md, design.md/api.yaml/diagram.md/data-model.md (if applicable) | `AskUserQuestion` (2 options) |
+| exists | exists | exists | spec.md, context.md, design.md, api.yaml, diagram.md, data-model.md (if it exists) | Numbered plain text — that's up to 6 candidates and `AskUserQuestion` allows at most 4 options |
+| not exists | exists | exists | context.md, design.md/api.yaml/diagram.md/data-model.md (if applicable) | `AskUserQuestion` (2 options) |
+| not exists | exists | not exists | target = context | (no question, direct target) |
+| not exists | not exists | exists | design.md, api.yaml, diagram.md, data-model.md (if it exists) | `AskUserQuestion` (up to 4 options — if data-model.md doesn't exist, 3 remain) |
+| none | none | none | STOP → "I couldn't find any artifact. Run `/spec spec-<number>` first." | — |
 
-Para las filas marcadas `AskUserQuestion`: `question: "¿Qué querés refinar?"`,
-`header: "Artefacto"`, una opción por candidato con su nombre de archivo
-como `label` y una `description` de una línea sobre qué contiene.
+For the rows marked `AskUserQuestion`: `question: "What do you want to refine?"`,
+`header: "Artifact"`, one option per candidate with its file name as the `label` and a
+one-line `description` of what it contains.
 
 `api.yaml` and `diagram.md` only ever exist alongside `design.md` (all three
 are produced together by `/design`); `data-model.md` exists alongside them
 only if the story has a new/changed table — never offer them as options if
 `design.md` doesn't exist.
 
-### Step 3 — Load spec.md for validation (if target ≠ hu)
+### Step 3 — Load spec.md for validation (if target ≠ spec)
 
-If the target is `context`, `design`, `api`, `diagram`, `data-model`, or `research`, read `work/active/sm-<number>/spec.md` and keep in working memory:
-- **Título** de la historia
-- **Criterios de aceptación (ACs)** numerados
-- **Reglas de negocio** si las hay
+If the target is `context`, `design`, `api`, `diagram`, `data-model`, or `research`, read `work/active/spec-<number>/spec.md` and keep in working memory:
+- The story **title**
+- The numbered **acceptance criteria (ACs)**
+- The **business rules**, if any
 
 If `spec.md` does not exist: skip this step (continue without AC validation).
 
 These ACs are used as validation anchors in PHASE 3A and 3B.
 
-If the target **is** `hu`: skip this step — `spec.md` is the artifact being edited, not the reference.
+If the target **is** `spec`: skip this step — `spec.md` is the artifact being edited, not the reference.
 
 ---
 
@@ -132,7 +130,7 @@ Read the full input after the command and story number.
 2. Locate the section most relevant to the described change — use the section order lists from PHASE 3B as reference, or consult `references/refine-guide.md` for the full mutability rules per section
 3. Show the **ACs from spec.md** that are relevant to this section (1–3 lines max), then show the **current content** of the section
 4. Check if the proposed change contradicts any AC (see Rule 5 in `references/refine-guide.md`). If yes, warn before asking for confirmation.
-5. Ask: "¿Es esto lo que querés cambiar? Confirmá o indicá qué ajustar exactamente."
+5. Ask: "Is this what you want to change? Confirm, or tell me exactly what to adjust."
 6. Wait for confirmation
 7. Apply the change using Edit
 8. Show a brief before/after summary
@@ -146,71 +144,71 @@ Read the full input after the command and story number.
 Read the artifact. Review **one section at a time** in this order:
 
 ### For spec.md:
-1. Historia de Usuario (Como / Quiero / Para)
-2. Criterios de Aceptación — revisar uno a uno: mostrar el texto de cada AC y preguntar si está correcto
-3. Notas Técnicas (si existe la sección)
-4. Fuera de Alcance (si existe la sección)
+1. The framing block (User Story / Defect / Technical Debt / Incident / Maintenance)
+2. Acceptance Criteria — review them one by one: show each AC's text and ask whether it's correct
+3. Technical Context (if the section exists)
+4. Out of Scope (if the section exists)
 
 > Note: when refining `spec.md`, there is no external AC reference to validate against — the ACs themselves are what's being corrected. Apply judgment: flag changes that look like scope creep vs. wording fixes.
 
 ### For context.md:
-1. Microservicios afectados
-2. Entidad TypeORM (campos)
+1. Affected microservices
+2. TypeORM entity (fields)
 3. Module providers
-4. DTOs existentes
-5. Gaps detectados
+4. Existing DTOs
+5. Detected gaps
 
 ### For design.md:
-1. Decisiones de Diseño (solo si existe)
-2. Resumen del flujo (1-2 oraciones — el diagrama completo se refina con `/refine diagram`)
-3. Tabla de endpoints por microservicio (descripción de negocio)
-4. Modelado de datos (solo el nombre de la tabla y el link — el detalle completo
-   se refina con `/refine data-model`)
+1. Design Decisions (only if present)
+2. Flow summary (1-2 sentences — the full diagram is refined with `/refine diagram`)
+3. Endpoint table per microservice (business description)
+4. Data Modeling (only the table name and the link — the full detail is refined
+   with `/refine data-model`)
 
-> Los schemas (campos, tipos, validaciones) y los códigos de respuesta ya no
-> viven en `design.md` — usar `/refine api` para esos cambios. La entidad
-> TypeORM y la migración SQL tampoco — usar `/refine data-model`.
+> Schemas (fields, types, validations) and response codes no longer live in
+> `design.md` — use `/refine api` for those changes. Neither do the TypeORM entity
+> and the SQL migration — use `/refine data-model`.
 
 ### For api.yaml (target = api):
-1. `info` (título, descripción del contrato)
-2. Por cada path: request schema (campos, tipos, `required`)
-3. Por cada path: response schemas y códigos HTTP
-4. `components.schemas` compartidos entre paths
+1. `info` (contract title, description)
+2. Per path: request schema (fields, types, `required`)
+3. Per path: response schemas and HTTP codes
+4. `components.schemas` shared between paths
 
-> Si `plan.md` ya existe y se cambia un nombre de campo o un path, advertir
-> en PHASE 4 — las DTOs generadas dejarán de coincidir.
+> If `plan.md` already exists and a field name or a path changes, warn in PHASE 4 —
+> the generated DTOs will stop matching.
 
 ### For diagram.md (target = diagram):
-1. El diagrama completo (un solo bloque Mermaid — revisar de una vez, no por sub-secciones)
+1. The whole diagram (a single Mermaid block — review it at once, not by sub-sections)
 
 ### For data-model.md (target = data-model):
-1. Por cada entidad: campos de la entidad TypeORM (nombre, tipo, decoradores)
-2. Por cada entidad: columnas de la migración SQL (deben coincidir 1:1 con los campos)
+1. Per entity: the TypeORM entity's fields (name, type, decorators)
+2. Per entity: the SQL migration's columns (they must match the fields 1:1)
 
-> Si `plan.md` ya existe y se cambia un nombre de campo, advertir en PHASE 4 —
-> la tarea de entidad/migración generada dejará de coincidir.
+> If `plan.md` already exists and a field name changes, warn in PHASE 4 —
+> the generated entity/migration task will stop matching.
 
 ### For research.md (target = research):
-1. Por cada decisión: contexto y opciones evaluadas
-2. Por cada decisión: opción elegida y razón (ligada a un AC o a la constitución)
+1. Per decision: context and options evaluated
+2. Per decision: chosen option and reason (tied to an AC or to the constitution)
 
-> Si al refinar research cambia la opción elegida y eso afecta un campo o flujo,
-> advertir en PHASE 4 que `api.yaml`/`data-model.md` deben quedar consistentes,
-> y que si `plan.md` ya existe hay que regenerarlo.
+> If refining research changes the chosen option and that affects a field or flow,
+> warn in PHASE 4 that `api.yaml`/`data-model.md` must stay consistent, and that if
+> `plan.md` already exists it has to be regenerated.
 
 ### Per section:
 1. Show the **ACs from spec.md** that justify or constrain this section (1–3 lines max, inline), then show the current content of the section
-2. Ask via `AskUserQuestion`: `question: "¿Está correcto esta sección?"`,
-   `header: "Sección"`, options `"Sí, está correcto"` / `"Necesito ajustar algo"`.
-   If the user picks "Necesito ajustar algo" (or uses "Other" to describe the
+2. Ask via `AskUserQuestion`: `question: "Is this section correct?"`,
+   `header: "Section"`, options `"Yes, it's correct"` / `"I need to adjust something"`.
+   If the user picks "I need to adjust something" (or uses "Other" to describe the
    change directly), continue the exchange in plain text to capture exactly
    what to change — `AskUserQuestion` only gates the yes/no decision, not the
    content of the edit itself.
 3. If changes: check the proposed change against ACs (Rule 5 in `references/refine-guide.md`) before applying; apply with Edit, show diff, continue to next section
 4. If correct: move to next section immediately
 5. **Maximum 5 sections per session.** If more sections exist, summarize and ask
-   via `AskUserQuestion` (`header: "Continuar"`, options `"Sí, seguir con la próxima sección"` /
-   `"No, es suficiente por ahora"`).
+   via `AskUserQuestion` (`header: "Continue"`, options `"Yes, on to the next section"` /
+   `"No, that's enough for now"`).
 
 After all sections reviewed → go to PHASE 4.
 
@@ -220,22 +218,22 @@ After all sections reviewed → go to PHASE 4.
 
 ### Before warning to re-run /plan: check if code is already built
 
-Every "ejecutá `/plan sm-<number>` de nuevo" warning below assumes `plan.md`
+Every "run `/plan spec-<number>` again" warning below assumes `plan.md`
 either doesn't exist yet or has no completed tasks. Before showing any such
 warning, check:
 
 ```bash
-grep -c '\[X\]' work/active/sm-<number>/plan.md 2>/dev/null || echo 0
+grep -c '\[X\]' work/active/spec-<number>/plan.md 2>/dev/null || echo 0
 ```
 
 If `plan.md` exists AND has at least one `[X]` task → the story is already
-built. Replace the "ejecutá `/plan` de nuevo" warning with:
-> "⚠️ Este cambio es estructural y `plan.md` ya tiene tareas completadas —
-> regenerarlo perdería ese progreso. Si el cambio corrige un defecto en código
-> ya construido por una ambigüedad de `spec.md`, usá `/hotfix sm-<number>` en
-> vez de `/plan`. Si el alcance es mayor (microservicio/endpoint/tabla nueva),
-> sí conviene regenerar el plan completo con `/plan sm-<number>` — confirmá
-> cuál es el caso."
+built. Replace the "run `/plan` again" warning with:
+> "⚠️ This change is structural and `plan.md` already has completed tasks —
+> regenerating it would lose that progress. If the change fixes a defect in
+> already-built code caused by an ambiguity in `spec.md`, use `/hotfix spec-<number>`
+> instead of `/plan`. If the scope is larger (new microservice/endpoint/table), then
+> regenerating the whole plan with `/plan spec-<number>` is the right call — confirm
+> which case this is."
 
 ### Coherence checks (always apply after any change)
 
@@ -243,33 +241,32 @@ Consult `references/refine-guide.md` for the full coherence rules. Summary:
 
 | Change made in | Check |
 |----------------|-------|
-| spec.md — AC added or removed | Warn: "Este cambio es estructural. Si ya existe context.md, ejecutá `/scan sm-<number>` para regenerarlo." |
+| spec.md — AC added or removed | Warn: "This change is structural. If context.md already exists, run `/scan spec-<number>` to regenerate it." |
 | spec.md — wording correction only | No downstream action required. |
 | context.md — field renamed | Warn if `docs/api.yaml` references the old name |
-| design.md — endpoint description changed | Warn: "Este cambio es estructural. Ejecutá `/plan sm-<number>` para actualizar el plan." |
-| api.yaml — schema field renamed/added/removed, or path added | Warn if plan.md exists: "El contrato cambió. Ejecutá `/plan sm-<number>` para regenerar las DTOs y la trazabilidad." |
-| diagram.md — flow changed | Warn if `api.yaml` doesn't reflect the new hop: "Revisá si `api.yaml` necesita un endpoint nuevo para este hop." |
-| data-model.md — entity field added/removed/renamed | Warn: "El modelado de datos cambió. Si ya existe un plan, revisá que la tarea de migración SQL esté actualizada." |
+| design.md — endpoint description changed | Warn: "This change is structural. Run `/plan spec-<number>` to update the plan." |
+| api.yaml — schema field renamed/added/removed, or path added | Warn if plan.md exists: "The contract changed. Run `/plan spec-<number>` to regenerate the DTOs and the traceability." |
+| diagram.md — flow changed | Warn if `api.yaml` doesn't reflect the new hop: "Check whether `api.yaml` needs a new endpoint for this hop." |
+| data-model.md — entity field added/removed/renamed | Warn: "The data model changed. If a plan already exists, check that the SQL migration task is up to date." |
 
 **NEVER modify plan.md from this skill.** Only warn the user.
 
 ### Handoff message
 
-> Cualquier mensaje de esta tabla que diga "ejecutá `/plan` de nuevo" debe
-> reemplazarse por el mensaje de `/hotfix` definido arriba si `plan.md` ya
-> tiene tareas `[X]`.
+> Any message in this table saying "run `/plan` again" must be replaced by the
+> `/hotfix` message defined above if `plan.md` already has `[X]` tasks.
 
 | Artifact refined | Message |
 |-----------------|---------|
-| spec.md (wording only) | "Historia actualizada en `work/active/sm-<number>/spec.md`. Los cambios son menores — los artefactos existentes siguen siendo válidos." |
-| spec.md (AC added/removed/major) | "Historia actualizada en `work/active/sm-<number>/spec.md`. Los cambios son estructurales — ejecutá `/scan sm-<number>` para regenerar el contexto." |
-| context.md | "Contexto actualizado en `work/active/sm-<number>/context.md`. Cuando estés listo ejecutá `/design sm-<number>`." |
-| design.md (minor change) | "Diseño actualizado en `work/active/sm-<number>/design.md`. Los cambios son menores — podés continuar con el plan existente y ejecutar `/build sm-<number>`." |
-| design.md (structural change) | "Diseño actualizado en `work/active/sm-<number>/design.md`. Los cambios son estructurales — ejecutá `/plan sm-<number>` para regenerar el plan antes de hacer build." |
-| api.yaml | "Contrato actualizado en `work/active/sm-<number>/docs/api.yaml`. Si ya existe `plan.md`, ejecutá `/plan sm-<number>` de nuevo para regenerar las DTOs antes de `/build`." |
-| diagram.md | "Diagrama actualizado en `work/active/sm-<number>/docs/diagram.md`. Verificá que `api.yaml` siga reflejando el mismo flujo." |
-| data-model.md | "Modelado de datos actualizado en `work/active/sm-<number>/docs/data-model.md`. Si ya existe `plan.md`, ejecutá `/plan sm-<number>` de nuevo para regenerar la tarea de entidad/migración." |
-| research.md | "Investigación actualizada en `work/active/sm-<number>/docs/research.md`. Si cambió una decisión elegida, verificá que `api.yaml`/`data-model.md` sigan consistentes y regenerá el plan si ya existía." |
+| spec.md (wording only) | "Story updated at `work/active/spec-<number>/spec.md`. The changes are minor — the existing artifacts are still valid." |
+| spec.md (AC added/removed/major) | "Story updated at `work/active/spec-<number>/spec.md`. The changes are structural — run `/scan spec-<number>` to regenerate the context." |
+| context.md | "Context updated at `work/active/spec-<number>/context.md`. When you're ready, run `/design spec-<number>`." |
+| design.md (minor change) | "Design updated at `work/active/spec-<number>/design.md`. The changes are minor — you can continue with the existing plan and run `/build spec-<number>`." |
+| design.md (structural change) | "Design updated at `work/active/spec-<number>/design.md`. The changes are structural — run `/plan spec-<number>` to regenerate the plan before building." |
+| api.yaml | "Contract updated at `work/active/spec-<number>/docs/api.yaml`. If `plan.md` already exists, run `/plan spec-<number>` again to regenerate the DTOs before `/build`." |
+| diagram.md | "Diagram updated at `work/active/spec-<number>/docs/diagram.md`. Check that `api.yaml` still reflects the same flow." |
+| data-model.md | "Data model updated at `work/active/spec-<number>/docs/data-model.md`. If `plan.md` already exists, run `/plan spec-<number>` again to regenerate the entity/migration task." |
+| research.md | "Research updated at `work/active/spec-<number>/docs/research.md`. If a chosen decision changed, verify `api.yaml`/`data-model.md` are still consistent and regenerate the plan if one already existed." |
 
 Stop — do not start planning or building.
 
@@ -279,77 +276,93 @@ Stop — do not start planning or building.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| spec.md no existe y se pide refinar hu | /spec no ejecutado | STOP: "Ejecutá `/spec sm-<number>` primero para crear la historia." |
-| context.md y design.md no existen | /scan no ejecutado | Ofrecer refinar spec.md si existe, o STOP: "Ejecutá `/spec` y `/clarify` primero." |
-| design.md no existe pero sí context.md | /design no ejecutado | Ofrecer refinar context.md o spec.md solamente. |
-| Cambio en spec.md contradice ACs existentes | Scope creep o corrección real | Mostrar el AC afectado, pedir confirmación explícita antes de aplicar. |
-| plan.md ya existe (sin tareas `[X]`) y hay cambio estructural en hu/design | Artefacto refinado después de planear, pero antes de construir | Advertir: "plan.md puede quedar desactualizado. Ejecutá `/plan sm-<number>` para regenerarlo." |
-| plan.md ya existe CON tareas `[X]` y hay cambio estructural | Defecto post-build por gap de clarificación | Redirigir a `/hotfix sm-<number>` — no regenerar el plan, ver nota en PHASE 4. |
-| Usuario pide refinar plan.md | Fuera del scope de esta skill | Redirigir: "Para modificar el plan ejecutá `/plan sm-<number>` de nuevo o editá plan.md manualmente." |
-| Sección no encontrada en el artefacto | Artifact incompleto o con formato diferente | Mostrar el artifact completo y preguntar qué sección aplica. |
+| spec.md doesn't exist and a spec refine is requested | /spec never ran | STOP: "Run `/spec spec-<number>` first to create the story." |
+| context.md and design.md don't exist | /clarify never ran | Offer to refine spec.md if it exists, or STOP: "Run `/spec` and `/clarify` first." |
+| design.md doesn't exist but context.md does | /design never ran | Offer to refine context.md or spec.md only. |
+| A change in spec.md contradicts existing ACs | Scope creep or a real correction | Show the affected AC, ask for explicit confirmation before applying. |
+| plan.md already exists (no `[X]` tasks) and there's a structural change in spec/design | Artifact refined after planning, but before building | Warn: "plan.md may be out of date. Run `/plan spec-<number>` to regenerate it." |
+| plan.md already exists WITH `[X]` tasks and there's a structural change | Post-build defect from a clarification gap | Redirect to `/hotfix spec-<number>` — don't regenerate the plan, see the note in PHASE 4. |
+| User asks to refine plan.md | Out of this skill's scope | Redirect: "To modify the plan, run `/plan spec-<number>` again or edit plan.md manually." |
+| Section not found in the artifact | Incomplete artifact or different format | Show the whole artifact and ask which section applies. |
 
 ---
 
 ## Example
 
-### Direct Mode — refinando design.md
+### Direct Mode — refining design.md
 
 **Input:**
-> `/refine design sm-1933` — el campo en el DTO debería ser `serviceTypeId` en vez de `type`
+> `/refine design spec-1933` — the DTO field should be `serviceTypeId` instead of `type`
 
-**Flujo:**
-1. Target = design (explícito). Lee `work/active/sm-1933/spec.md` → extrae ACs: AC-2 "el campo se llama serviceTypeId en el contrato"
-2. Modo = Directo (cambio descripto)
-3. Lee design.md → localiza sección DTOs → muestra los ACs relevantes y el contenido actual:
-   > **ACs relevantes:** AC-2 — "el campo se llama serviceTypeId en el contrato"
+**Flow:**
+1. Target = design (explicit). Reads `work/active/spec-1933/spec.md` → extracts ACs: AC-2 "the field is called serviceTypeId in the contract"
+2. Mode = Direct (change described)
+3. Reads design.md → locates the DTOs section → shows the relevant ACs and the current content:
+   > **Relevant ACs:** AC-2 — "the field is called serviceTypeId in the contract"
    ```typescript
    export class FilterZonesRequestDto {
      @IsNotEmpty()
      type: string;
    }
    ```
-4. Confirma: "¿Querés renombrar `type` a `serviceTypeId`?" (sin contradicción de ACs → procede)
-5. Aplica cambio
-6. Coherencia: plan.md existe → advierte
-7. Handoff: "Diseño actualizado. Cambio menor — podés continuar con el build."
+4. Confirms: "Do you want to rename `type` to `serviceTypeId`?" (no AC contradiction → proceeds)
+5. Applies the change
+6. Coherence: plan.md exists → warns
+7. Handoff: "Design updated. Minor change — you can continue with the build."
 
 ---
 
-### Direct Mode — refinando spec.md
+### Direct Mode — refining spec.md
 
 **Input:**
-> `/refine hu sm-1933` — el AC-2 debería decir "retorna lista vacía con código 200" en vez de solo "retorna lista vacía"
+> `/refine spec spec-1933` — AC-2 should say "returns an empty list with status 200" instead of just "returns an empty list"
 
-**Flujo:**
-1. Target = hu (explícito). No se carga referencia externa — el spec.md es el artefacto a editar.
-2. Modo = Directo (cambio descripto)
-3. Lee `work/active/sm-1933/spec.md` → localiza AC-2:
+**Flow:**
+1. Target = spec (explicit). No external reference is loaded — spec.md is the artifact being edited.
+2. Mode = Direct (change described)
+3. Reads `work/active/spec-1933/spec.md` → locates AC-2:
    ```
-   ### AC-2: Sin resultados retorna lista vacía
-   Si no hay resultados, retorna lista vacía.
+   ### AC-2: No results returns an empty list
+   If there are no results, it returns an empty list.
    ```
-4. Confirma: "¿Querés actualizar AC-2 para incluir el código 200?"
-5. Aplica cambio (wording correction, no AC agregado/eliminado)
-6. Coherencia: cambio menor → no requiere re-scan
-7. Handoff: "Historia actualizada. Los cambios son menores — los artefactos existentes siguen siendo válidos."
+4. Confirms: "Do you want to update AC-2 to include status 200?"
+5. Applies the change (wording correction, no AC added/removed)
+6. Coherence: minor change → no re-scan required
+7. Handoff: "Story updated. The changes are minor — the existing artifacts are still valid."
 
 ---
 
-### Guided Mode — refinando context.md
+### Guided Mode — refining context.md
 
 **Input:**
-> `/refine context sm-1933`
+> `/refine context spec-1933`
 
-**Flujo:**
-1. Target = context (explícito). Lee `work/active/sm-1933/spec.md` → extrae ACs en memoria
-2. Modo = Guiado (sin cambio descripto)
-3. Muestra sección "Microservicios afectados" con ACs relacionados:
-   > **ACs relevantes:** AC-1 — "el sistema registra zonas en el servicio de capacidades"
+**Flow:**
+1. Target = context (explicit). Reads `work/active/spec-1933/spec.md` → keeps the ACs in memory
+2. Mode = Guided (no change described)
+3. Shows the "Affected microservices" section with the related ACs:
+   > **Relevant ACs:** AC-1 — "the system registers zones in the capabilities service"
    ```
-   - sm-capabilities-ms
+   - catalog-ms
    ```
-   → "¿Está correcto?"
-4. Usuario: "sí"
-5. Muestra sección "Entidad TypeORM" con ACs relacionados → usuario: "falta el campo `deletedAt`"
-6. Aplica cambio, continúa
-7. Al finalizar: "Contexto actualizado. Cuando estés listo ejecutá `/design sm-1933`."
+   → "Is this correct?"
+4. User: "yes"
+5. Shows the "TypeORM entity" section with the related ACs → user: "the `deletedAt` field is missing"
+6. Applies the change, continues
+7. On finishing: "Context updated. When you're ready, run `/design spec-1933`."
+
+---
+
+## CRITICAL: Output Language
+
+**Every artifact this skill edits keeps the language it was produced in** by `/spec`,
+`/clarify` and `/design` — i.e. `ARTIFACT_LANGUAGE` (profile, section 5; falls back to
+`OUTPUT_LANGUAGE`). A refinement never switches an artifact's language: write the
+correction in the language the surrounding text is already in.
+
+Section headings are structural and stay in English, as do paths, classes and any
+other identifier (`IDENTIFIER_LANGUAGE`).
+
+**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
+The message samples in this document are written in English; render them in the
+user's language when that differs.

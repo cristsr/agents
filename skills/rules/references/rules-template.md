@@ -13,99 +13,99 @@ ratified: <YYYY-MM-DD>
 last_amended: <YYYY-MM-DD>
 ---
 
-# Constitución del Proyecto — <nombre del proyecto>
+# Project Constitution — <project name>
 
-## Propósito
+## Purpose
 
-Este documento define los principios **no-negociables** que gobiernan el
-diseño, la implementación y la revisión de código de este proyecto. Es
-**normativo** (usa DEBE / NUNCA), no descriptivo. Ante conflicto entre este
-documento y cualquier otra guía (`docs/`, comentarios, costumbre), **prevalece
-la constitución**.
+This document defines the **non-negotiable** principles governing this project's
+design, implementation and code review. It is **normative** (it uses MUST / NEVER),
+not descriptive. When this document and any other guide (`docs/`, comments, habit)
+conflict, **the constitution prevails**.
 
-Las skills del flujo lo consumen así:
-- `/design` valida los **Quality Gates** antes de aprobar un contrato.
-- `/plan` respeta los artículos al generar tareas.
-- La revisión de código (humana o `conventions-reviewer`) chequea cumplimiento.
+The pipeline's skills consume it like this:
+- `/design` validates the **Quality Gates** before approving a contract.
+- `/plan` respects the articles when generating tasks.
+- Code review (human or `conventions-reviewer`) checks compliance.
 
 ---
 
-## Principios (Artículos)
+## Principles (Articles)
 
-### Artículo 1: <Nombre corto del principio>
+### Article 1: <Short principle name>
 
-**Principio:** <regla en forma MUST/SHALL, testable — un revisor puede
-responder sí/no si un cambio la cumple>.
+**Principle:** <rule in MUST/SHALL form, testable — a reviewer can answer yes/no
+on whether a change complies>.
 
-**Razón:** <por qué es no-negociable, 1 oración>.
+**Reason:** <why it's non-negotiable, 1 sentence>.
 
-**Cómo se verifica:** <en qué gate/fase se chequea: review · `/design` ·
+**How it's verified:** <which gate/phase checks it: review · `/design` ·
 `/plan` · CI · test>.
 
-<!-- Repeat "### Artículo N" for each principle. Aim for 6–10 total. -->
+<!-- Repeat "### Article N" for each principle. Aim for 6–10 total. -->
 
 ---
 
-## Quality Gates obligatorios
+## Mandatory Quality Gates
 
-Checklist binaria que `/design` (y donde aplique `/plan`) debe pasar antes de
-aprobar. Cada gate se cumple o se documenta explícitamente por qué no aplica.
+A binary checklist `/design` (and `/plan` where applicable) must pass before
+approving. Each gate is either met or explicitly documented as not applicable.
 
-- [ ] **Simplicity Gate** — <criterio: no agregar capas/proyectos/abstracciones
-  sin un caso de uso presente que lo justifique>.
-- [ ] **Anti-Abstraction Gate** — <criterio: usar el framework/librería directo
-  antes de envolverlo en una abstracción propia>.
-- [ ] **Integration-First Gate** — <criterio: contrato (OpenAPI/schema) y
-  contract tests definidos antes de implementar el endpoint>.
-- [ ] **Test-First Gate** — <criterio: el test se escribe y falla antes del
-  código de producción>.
+- [ ] **Simplicity Gate** — <criterion: don't add layers/projects/abstractions
+  without a present use case justifying them>.
+- [ ] **Anti-Abstraction Gate** — <criterion: use the framework/library directly
+  before wrapping it in your own abstraction>.
+- [ ] **Integration-First Gate** — <criterion: contract (OpenAPI/schema) and
+  contract tests defined before implementing the endpoint>.
+- [ ] **Test-First Gate** — <criterion: the test is written and fails before the
+  production code>.
 
 <!-- Add project-specific gates (e.g. Accessibility Gate) or remove any that
      do not apply. Keep only the ones actually enforced. -->
 
 ---
 
-## Restricciones de flujo de trabajo
+## Workflow constraints
 
 <!-- OPTIONAL: constraints on branching, commits, releases, environments that
-     are non-negotiable but don't fit as an "Artículo". Remove if empty. -->
+     are non-negotiable but don't fit as an "Article". Remove if empty. -->
 
-- <ej: Nunca ejecutar `/build` sobre `main`/`master`.>
-- <ej: Conventional commits obligatorios: `tipo(SM-XXXX): descripción`.>
+- <e.g. Never run `/build` on `main`/`master`.>
+- <e.g. Conventional commits mandatory: `type(SPEC-XXXX): description`.>
 
 ---
 
-## Gobernanza
+## Governance
 
-**Enmiendas:** cualquier cambio a este documento se hace vía `/constitution`
-(modo enmendar), con versión actualizada y fecha en `last_amended`.
+**Amendments:** any change to this document goes through `/constitution`
+(amend mode), with an updated version and the date in `last_amended`.
 
-**Versionado semántico del documento:**
-- **MAJOR** — se elimina o redefine un principio de forma incompatible.
-- **MINOR** — se agrega un principio, gate o sección nueva.
-- **PATCH** — aclaración de redacción sin cambiar el alcance.
+**Semantic versioning of the document:**
+- **MAJOR** — a principle is removed or redefined incompatibly.
+- **MINOR** — a new principle, gate or section is added.
+- **PATCH** — wording clarification without changing scope.
 
-**Precedencia:** ante conflicto, esta constitución prevalece sobre `docs/` y
-sobre cualquier convención tácita. Si una historia necesita violar un
-principio, eso es una excepción explícita que debe justificarse y aprobarse,
-no una decisión silenciosa de implementación.
+**Precedence:** on conflict, this constitution prevails over `docs/` and over any
+tacit convention. If a story needs to violate a principle, that's an explicit
+exception that must be justified and approved, not a silent implementation
+decision.
 ```
 
 ---
 
 ## Rules for each section
 
-**Front-matter:** `version` en formato semver. `ratified` es la fecha de la
-primera versión y no cambia en enmiendas; `last_amended` se actualiza siempre.
+**Front-matter:** `version` in semver format. `ratified` is the first version's date
+and doesn't change on amendments; `last_amended` is always updated.
 
-**Artículos:** cada uno debe ser testable. Si no se puede escribir "Cómo se
-verifica" de forma concreta, el principio es demasiado vago — reformularlo o
-descartarlo. Preferir pocos artículos fuertes a muchos débiles.
+**Articles:** each must be testable. If you can't write "How it's verified"
+concretely, the principle is too vague — reformulate or discard it. Prefer a few
+strong articles to many weak ones.
 
-**Quality Gates:** son binarios y los aplica `/design`. No mezclar un gate
-(chequeo puntual antes de aprobar) con un artículo (principio permanente).
+**Quality Gates:** they are binary and `/design` applies them. Don't conflate a gate
+(a point-in-time check before approving) with an article (a permanent principle).
 
-**Restricciones de flujo:** solo lo no-negociable. Lo "preferible" va en `docs/`.
+**Workflow constraints:** only the non-negotiable. The "preferable" goes in `docs/`.
 
-**Idioma:** el cuerpo en el idioma de la documentación del proyecto; los nombres
-de gates pueden quedar en inglés; identificadores y rutas siempre en inglés.
+**Language:** articles, reasons and verification notes in `ARTIFACT_LANGUAGE`
+(profile, section 5 — falls back to `OUTPUT_LANGUAGE`). Gate names stay in English
+(terms of art); identifiers and paths always English.

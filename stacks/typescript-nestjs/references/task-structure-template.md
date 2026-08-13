@@ -3,16 +3,16 @@
 Every task after Task 0 must follow this exact structure:
 
 ```markdown
-### Tarea N: [Nombre del componente]
+### Task N: [Component name]
 
-**Archivos:**
-- Crear: `sm-<micro>/src/exact/path/to/file.ts`
-- Modificar: `sm-<micro>/src/exact/path/to/existing.ts:123-145`
-- Test: `sm-<micro>/src/exact/path/to/file.spec.ts`
+**Files:**
+- Create: `<component>/src/exact/path/to/file.ts`
+- Modify: `<component>/src/exact/path/to/existing.ts:123-145`
+- Test: `<component>/src/exact/path/to/file.spec.ts`
 
-**Step 1: Escribir el test que falla**
+**Step 1: Write the failing test**
 
-En `sm-<micro>/src/path/to/file.spec.ts`:
+In `<component>/src/path/to/file.spec.ts`:
 
 ```typescript
 describe('ClassName', () => {
@@ -27,32 +27,32 @@ describe('ClassName', () => {
 });
 ```
 
-**Step 2: Ejecutar y confirmar que falla**
+**Step 2: Run it and confirm it fails**
 
-> Comando del profile: `MODULE_TEST_CMD` (sección 10 — default `npx jest
-> src/modules/<module>/ --no-coverage`); acá se corre sobre el spec puntual.
+> Command from the profile: `MODULE_TEST_CMD` (section 10 — default `npx jest
+> src/modules/<module>/ --no-coverage`); here it runs against the specific spec.
 
 ```bash
-cd sm-<micro>
+cd <component>
 npx jest src/path/to/file.spec.ts --no-coverage
 cd ..
 ```
-Esperado: FAIL — "Cannot find module" o "X is not a function"
+Expected: FAIL — "Cannot find module" or "X is not a function"
 
-**Step 3: Implementar el mínimo código**
+**Step 3: Implement the minimum code**
 
-En `sm-<micro>/src/path/to/file.ts`:
+In `<component>/src/path/to/file.ts`:
 
 ```typescript
 // minimum necessary name
 ```
 
-**Step 4: Ejecutar y confirmar que pasa**
+**Step 4: Run it and confirm it passes**
 
 ```bash
 npx jest src/path/to/file.spec.ts --no-coverage
 ```
-Esperado: PASS
+Expected: PASS
 ---
 
 ## Notes on task design
@@ -68,7 +68,7 @@ If PHASE 2 of `/plan` detected independent microservice groups, mark every task
 header belonging to those groups with a trailing `[P]`:
 
 ```markdown
-### Tarea 4: DTOs de request y response [P]
+### Task 4: Request and response DTOs [P]
 ```
 
 `[P]` means: this task has no dependency on tasks from a *different* `[P]`
@@ -79,3 +79,10 @@ within the same response, instead of strictly one-at-a-time. Tasks within the
 
 Do not mark tasks `[P]` if there is any chance one group's code imports or
 depends on the other's output.
+
+## Language rules
+
+- `Task N` and `Step N` are structural — `/build` parses them, always English.
+  Task titles, step descriptions and expected outputs: `ARTIFACT_LANGUAGE`
+  (profile, section 5).
+- Code, paths and commands: verbatim.

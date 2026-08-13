@@ -1,8 +1,8 @@
 # Scan Guide — Reading Key Files
 
-Reference for `/scan` PHASE 3 (modo CodeGraph y fallback): sirve para leer los
-archivos puntuales que el grafo devuelve (o que el subagente localiza), con
-progressive disclosure — leer solo las secciones necesarias por tipo de archivo.
+Reference for `/scan` PHASE 3 (CodeGraph mode and fallback): use it to read the
+specific files the graph returns (or the subagent locates), with progressive
+disclosure — read only the sections needed per file type.
 
 ---
 

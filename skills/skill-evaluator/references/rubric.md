@@ -1,287 +1,285 @@
-# Rúbrica de evaluación de skills
+# Skill evaluation rubric
 
-Rúbrica completa con severidades. Los IDs se usan en el reporte de
-`skill-evaluator`.
+The full rubric with severities. The IDs are used in `skill-evaluator`'s report.
 
 ---
 
-## Escala de severidad
+## Severity scale
 
-| Severidad | Significado | Criterio |
+| Severity | Meaning | Criterion |
 |---|---|---|
-| **BLOQUEANTE** | La skill no instala, no carga o está mal formada | Viola una regla dura de la guía |
-| **IMPORTANTE** | La skill funciona pero dispara mal o no se sigue | Cambia el comportamiento real |
-| **MENOR** | Pulido, mantenibilidad, consistencia | No cambia el comportamiento |
+| **BLOCKING** | The skill won't install, won't load, or is malformed | Violates a hard rule of the guidance |
+| **IMPORTANT** | The skill works but triggers wrongly or isn't followed | Changes real behavior |
+| **MINOR** | Polish, maintainability, consistency | Doesn't change behavior |
 
-Regla de priorización: **primero lo que impide cargar, después lo que impide
-disparar, al final la redacción.** Una skill con instrucciones brillantes y una
-`description` vaga nunca se ejecuta; el orden inverso al menos funciona cuando
-se la invoca a mano.
-
----
-
-## Grupo B — Reglas duras (BLOQUEANTE)
-
-| ID | Regla | Falla típica | Corrección |
-|---|---|---|---|
-| B1 | Archivo llamado exactamente `SKILL.md` | `SKILL.MD`, `skill.md`, `Skill.md` | Renombrar. Verificar con `ls -la` |
-| B2 | Frontmatter con `---` de apertura y cierre | Faltan delimitadores | Agregarlos |
-| B3 | YAML válido | Comilla sin cerrar, indentación rota | Corregir el YAML |
-| B4 | `name` en kebab-case | `My Cool Skill`, `my_cool_skill`, `MyCoolSkill` | `my-cool-skill` |
-| B5 | `name` coincide con la carpeta | Carpeta `report-builder`, `name: reports` | Alinear ambos |
-| B6 | `name` sin "claude"/"anthropic" | `claude-helper` | Renombrar — son reservados |
-| B7 | `description` presente | Campo ausente | Escribirla (grupo D) |
-| B8 | `description` < 1024 caracteres | Description larguísima | Recortar al núcleo qué+cuándo |
-| B9 | Sin `<` ni `>` en el frontmatter | Ejemplo con tags XML en la description | Quitarlos — el frontmatter va al system prompt y es superficie de inyección |
-| B10 | Sin `README.md` en la carpeta de la skill | README arrastrado del repo | Borrarlo o moverlo fuera. La doc va en `SKILL.md` o `references/`. Un README a nivel repo (fuera de la carpeta) sí es correcto para humanos |
+Prioritization rule: **first what prevents loading, then what prevents triggering,
+wording last.** A skill with brilliant instructions and a vague `description` never
+runs; the reverse at least works when invoked by hand.
 
 ---
 
-## Grupo D — Description (IMPORTANTE)
+## Group B — Hard rules (BLOCKING)
 
-| ID | Chequeo | Falla típica | Corrección |
+| ID | Rule | Typical failure | Fix |
 |---|---|---|---|
-| D1 | Dice **qué hace** | Solo condiciones de uso | Agregar la capacidad concreta |
-| D2 | Dice **cuándo usarla** con frases de usuario | Sin disparadores | Agregar frases literales que el usuario diría |
-| D3 | Las frases son las que el usuario **realmente** tipea | Jerga interna | Reemplazar por lenguaje de usuario |
-| D4 | Menciona tipos de archivo relevantes | Maneja `.csv` y no lo dice | Nombrarlos |
-| D5 | Disparadores negativos si hay skills vecinas | Alcance solapado | `Do NOT use to… (use X skill instead)` |
-| D6 | No es genérica | "Ayuda con proyectos" | Reescribir con la fórmula qué + cuándo + capacidades |
+| B1 | File named exactly `SKILL.md` | `SKILL.MD`, `skill.md`, `Skill.md` | Rename. Verify with `ls -la` |
+| B2 | Frontmatter with opening and closing `---` | Delimiters missing | Add them |
+| B3 | Valid YAML | Unclosed quote, broken indentation | Fix the YAML |
+| B4 | `name` in kebab-case | `My Cool Skill`, `my_cool_skill`, `MyCoolSkill` | `my-cool-skill` |
+| B5 | `name` matches the folder | Folder `report-builder`, `name: reports` | Align both |
+| B6 | `name` without "claude"/"anthropic" | `claude-helper` | Rename — they're reserved |
+| B7 | `description` present | Field absent | Write it (group D) |
+| B8 | `description` < 1024 characters | Enormous description | Trim to the what+when core |
+| B9 | No `<` or `>` in the frontmatter | An example with XML tags in the description | Remove them — the frontmatter goes into the system prompt and is injection surface |
+| B10 | No `README.md` in the skill's folder | A README dragged in from the repo | Delete it or move it out. Docs go in `SKILL.md` or `references/`. A repo-level README (outside the folder) is fine for humans |
 
-### Fórmula
+---
 
-`[qué hace] + [cuándo usarla] + [capacidades clave]`
+## Group D — Description (IMPORTANT)
 
-### Contraste
+| ID | Check | Typical failure | Fix |
+|---|---|---|---|
+| D1 | Says **what it does** | Only usage conditions | Add the concrete capability |
+| D2 | Says **when to use it** with user phrases | No triggers | Add literal phrases the user would say |
+| D3 | The phrases are what the user **actually** types | Internal jargon | Replace with user language |
+| D4 | Mentions relevant file types | Handles `.csv` and never says so | Name them |
+| D5 | Negative triggers if there are neighboring skills | Overlapping scope | `Do NOT use to… (use the X skill instead)` |
+| D6 | Isn't generic | "Helps with projects" | Rewrite with the what + when + capabilities formula |
+
+### Formula
+
+`[what it does] + [when to use it] + [key capabilities]`
+
+### Contrast
 
 ```yaml
-# Bien — específica y accionable
-description: Analiza archivos de diseño de Figma y genera documentación de
-  handoff. Use when user uploads .fig files, asks for "design specs",
+# Good — specific and actionable
+description: Analyzes Figma design files and generates handoff documentation.
+  Use when the user uploads .fig files, asks for "design specs",
   "component documentation", or "design-to-code handoff".
 
-# Mal — vaga
-description: Ayuda con proyectos.
+# Bad — vague
+description: Helps with projects.
 
-# Mal — sin disparadores
-description: Crea sistemas de documentación multi-página sofisticados.
+# Bad — no triggers
+description: Creates sophisticated multi-page documentation systems.
 
-# Mal — técnica, sin lenguaje de usuario
-description: Implementa el modelo de entidad Project con relaciones jerárquicas.
+# Bad — technical, no user language
+description: Implements the Project entity model with hierarchical relationships.
 ```
 
 ---
 
-## Diagnóstico de disparo
+## Trigger diagnosis
 
-### Sub-disparo
+### Under-triggering
 
-**Señales:**
-- La skill no carga cuando debería.
-- El usuario la habilita manualmente.
-- Preguntas de soporte sobre cuándo usarla.
+**Signals:**
+- The skill doesn't load when it should.
+- The user enables it manually.
+- Support questions about when to use it.
 
-**Corrección:** agregar detalle y matices a la `description` — sobre todo
-keywords, en particular términos técnicos.
+**Fix:** add detail and nuance to the `description` — above all keywords, in
+particular technical terms.
 
-### Sobre-disparo
+### Over-triggering
 
-**Señales:**
-- La skill carga en queries irrelevantes.
-- El usuario la desactiva.
-- Confusión sobre el propósito.
+**Signals:**
+- The skill loads on irrelevant queries.
+- The user disables it.
+- Confusion about its purpose.
 
-**Correcciones, en orden:**
+**Fixes, in order:**
 
-1. Agregar disparadores negativos:
+1. Add negative triggers:
 ```yaml
-description: Análisis avanzado de datos para archivos CSV. Use for statistical
+description: Advanced data analysis for CSV files. Use for statistical
   modeling, regression, clustering. Do NOT use for simple data exploration
-  (use data-viz skill instead).
+  (use the data-viz skill instead).
 ```
 
-2. Ser más específico:
+2. Be more specific:
 ```yaml
-# Demasiado amplia
-description: Procesa documentos.
-# Más específica
-description: Procesa documentos legales en PDF para revisión de contratos.
+# Too broad
+description: Processes documents.
+# More specific
+description: Processes legal PDF documents for contract review.
 ```
 
-3. Aclarar el alcance:
+3. Clarify the scope:
 ```yaml
 description: PayFlow payment processing for e-commerce. Use specifically for
   online payment workflows, not for general financial queries.
 ```
 
-### Técnica de debug
+### Debug technique
 
-Preguntarle a Claude: "¿Cuándo usarías la skill `<nombre>`?". Va a citar la
-`description` de vuelta. Ajustar según lo que falte en esa respuesta.
+Ask Claude: "When would you use the `<name>` skill?". It will quote the
+`description` back. Adjust based on what's missing from that answer.
 
 ---
 
-## Grupo E — Estructura (IMPORTANTE / MENOR)
+## Group E — Structure (IMPORTANT / MINOR)
 
-| ID | Chequeo | Severidad | Corrección |
+| ID | Check | Severity | Fix |
 |---|---|---|---|
-| E1 | Carpeta en kebab-case | IMPORTANTE | Renombrar |
-| E2 | `SKILL.md` < 5.000 palabras | IMPORTANTE | Mover detalle a `references/` y enlazar |
-| E3 | `references/` enlazados desde `SKILL.md` | IMPORTANTE | Agregar el enlace explícito — sin enlace, nunca se carga |
-| E4 | Sin carpetas vacías | MENOR | Borrar el andamiaje sin contenido |
-| E5 | Detalle pesado en `references/`, no inline | MENOR | Aplicar progressive disclosure |
-| E6 | Los `scripts/` referenciados existen | IMPORTANTE | Corregir rutas o agregar el script |
+| E1 | Folder in kebab-case | IMPORTANT | Rename |
+| E2 | `SKILL.md` < 5,000 words | IMPORTANT | Move detail to `references/` and link it |
+| E3 | `references/` linked from `SKILL.md` | IMPORTANT | Add the explicit link — without one, it never loads |
+| E4 | No empty folders | MINOR | Delete the contentless scaffolding |
+| E5 | Heavy detail in `references/`, not inline | MINOR | Apply progressive disclosure |
+| E6 | The referenced `scripts/` exist | IMPORTANT | Fix the paths or add the script |
 
-### Estructura esperada
+### Expected structure
 
 ```
 <skill-name>/
-├── SKILL.md          # Requerido
-├── scripts/          # Opcional — código ejecutable
-├── references/       # Opcional — doc cargada bajo demanda
-└── assets/           # Opcional — plantillas, fuentes, íconos
+├── SKILL.md          # Required
+├── scripts/          # Optional — executable code
+├── references/       # Optional — docs loaded on demand
+└── assets/           # Optional — templates, fonts, icons
 ```
 
-### Los tres niveles
+### The three levels
 
-| Nivel | Qué | Cuándo se carga |
+| Level | What | When it loads |
 |---|---|---|
-| 1 | Frontmatter | Siempre, en el system prompt |
-| 2 | Cuerpo de `SKILL.md` | Cuando Claude cree que es relevante |
-| 3 | Archivos enlazados | Solo cuando Claude los navega |
+| 1 | Frontmatter | Always, in the system prompt |
+| 2 | `SKILL.md`'s body | When Claude believes it's relevant |
+| 3 | Linked files | Only when Claude navigates them |
 
-### Síntoma de contexto grande
+### Large-context symptom
 
-Si la skill se siente lenta o las respuestas se degradan:
-- Contenido de la skill demasiado grande → mover a `references/`.
-- Demasiadas skills habilitadas a la vez → evaluar si hay más de 20–50 activas;
-  recomendar habilitación selectiva o "packs" de skills relacionadas.
-- Todo cargado en vez de progressive disclosure → enlazar en vez de inline.
+If the skill feels slow or the responses degrade:
+- Skill content too large → move it to `references/`.
+- Too many skills enabled at once → check whether more than 20–50 are active;
+  recommend selective enabling or "packs" of related skills.
+- Everything loaded instead of progressive disclosure → link instead of inlining.
 
 ---
 
-## Grupo I — Instrucciones (IMPORTANTE / MENOR)
+## Group I — Instructions (IMPORTANT / MINOR)
 
-Síntoma: la skill carga pero Claude no sigue las instrucciones.
+Symptom: the skill loads but Claude doesn't follow the instructions.
 
-| ID | Causa | Severidad | Corrección |
+| ID | Cause | Severity | Fix |
 |---|---|---|---|
-| I1 | Instrucciones demasiado verbosas | IMPORTANTE | Bullets y listas numeradas; detalle a archivos aparte |
-| I2 | Instrucciones críticas enterradas | IMPORTANTE | Ponerlas arriba; usar `## Important` / `## Critical`; repetir lo clave si hace falta |
-| I3 | Lenguaje ambiguo | IMPORTANTE | Criterios verificables |
-| I4 | Sin manejo de errores | IMPORTANTE | Agregar sección de issues comunes |
-| I5 | Sin ejemplos | MENOR | Agregar user says / actions / result |
-| I6 | No accionable | IMPORTANTE | Comandos literales y copiables |
+| I1 | Instructions too verbose | IMPORTANT | Bullets and numbered lists; detail into separate files |
+| I2 | Critical instructions buried | IMPORTANT | Put them up top; use `## Important` / `## Critical`; repeat the key part if needed |
+| I3 | Ambiguous language | IMPORTANT | Verifiable criteria |
+| I4 | No error handling | IMPORTANT | Add a common-issues section |
+| I5 | No examples | MINOR | Add user says / actions / result |
+| I6 | Not actionable | IMPORTANT | Literal, copy-pasteable commands |
 
-### Contraste de ambigüedad
+### Ambiguity contrast
 
 ```
-# Mal
+# Bad
 Make sure to validate things properly
 
-# Bien
+# Good
 CRITICAL: Before calling create_project, verify:
 - Project name is non-empty
 - At least one team member assigned
 - Start date is not in the past
 ```
 
-### Contraste de accionabilidad
+### Actionability contrast
 
 ```
-# Mal
+# Bad
 Validate the data before proceeding.
 
-# Bien
+# Good
 Run `python scripts/validate.py --input {filename}` to check data format.
 If validation fails, common issues include:
 - Missing required fields (add them to the CSV)
 - Invalid date formats (use YYYY-MM-DD)
 ```
 
-### Oportunidad: validación por script
+### Opportunity: script-based validation
 
-Si una validación crítica depende de que el modelo interprete texto, marcarlo
-como oportunidad de mejora: bundlear un script que la haga programáticamente.
-El código es determinista; la interpretación del lenguaje no.
+If a critical validation depends on the model interpreting text, flag it as an
+improvement opportunity: bundle a script that does it programmatically. Code is
+deterministic; language interpretation isn't.
 
-### Nota sobre "pereza" del modelo
+### Note on model "laziness"
 
-Si la skill tiene un bloque tipo:
+If the skill has a block like:
 ```
 ## Performance Notes
 - Take your time to do this thoroughly
 - Quality is more important than speed
 - Do not skip validation steps
 ```
-No es un error, pero vale señalar que **es más efectivo en el prompt del usuario
-que dentro de `SKILL.md`**.
+It isn't an error, but it's worth noting that **it's more effective in the user's
+prompt than inside `SKILL.md`**.
 
 ---
 
-## Criterios de éxito (para recomendar medición)
+## Success criteria (for recommending measurement)
 
-Son objetivos aspiracionales — benchmarks aproximados, no umbrales precisos.
-Hay un componente de evaluación por criterio propio.
+These are aspirational targets — rough benchmarks, not precise thresholds. There's a
+judgment component to each criterion.
 
-### Cuantitativos
+### Quantitative
 
-| Métrica | Cómo se mide |
+| Metric | How it's measured |
 |---|---|
-| Dispara en el 90% de queries relevantes | Correr 10–20 queries de prueba; contar cargas automáticas vs. invocación explícita |
-| Completa el workflow en X llamadas | Comparar la misma tarea con y sin la skill; contar llamadas y tokens |
-| 0 llamadas fallidas por workflow | Monitorear logs del MCP; trackear reintentos y códigos de error |
+| Triggers on 90% of relevant queries | Run 10–20 test queries; count automatic loads vs. explicit invocation |
+| Completes the workflow in X calls | Compare the same task with and without the skill; count calls and tokens |
+| 0 failed calls per workflow | Monitor the MCP logs; track retries and error codes |
 
-### Cualitativos
+### Qualitative
 
-| Métrica | Cómo se evalúa |
+| Metric | How it's assessed |
 |---|---|
-| El usuario no necesita indicar próximos pasos | Anotar cuántas veces hay que redirigir o aclarar |
-| El workflow completa sin corrección | Correr el mismo pedido 3–5 veces; comparar consistencia estructural y de calidad |
-| Resultados consistentes entre sesiones | ¿Un usuario nuevo logra la tarea al primer intento con guía mínima? |
+| The user doesn't need to prompt next steps | Note how often you have to redirect or clarify |
+| The workflow completes without correction | Run the same request 3–5 times; compare structural and quality consistency |
+| Consistent results across sessions | Does a new user complete the task on the first try with minimal guidance? |
 
-### Comparación contra baseline
+### Baseline comparison
 
 ```
-Sin skill:
-- El usuario da instrucciones cada vez
-- 15 mensajes de ida y vuelta
-- 3 llamadas fallidas con reintento
-- 12.000 tokens consumidos
+Without the skill:
+- The user gives instructions every time
+- 15 back-and-forth messages
+- 3 failed calls with retries
+- 12,000 tokens consumed
 
-Con skill:
-- Ejecución automática del workflow
-- 2 preguntas aclaratorias solamente
-- 0 llamadas fallidas
-- 6.000 tokens consumidos
+With the skill:
+- Automatic workflow execution
+- 2 clarifying questions only
+- 0 failed calls
+- 6,000 tokens consumed
 ```
 
 ---
 
-## Checklist rápida
+## Quick checklist
 
-### Durante el desarrollo
-- [ ] Carpeta en kebab-case
-- [ ] `SKILL.md` existe (spelling exacto)
-- [ ] Frontmatter con delimitadores `---`
-- [ ] `name`: kebab-case, sin espacios, sin mayúsculas
-- [ ] `description` incluye QUÉ y CUÁNDO
-- [ ] Sin tags XML (`<` `>`) en ninguna parte
-- [ ] Instrucciones claras y accionables
-- [ ] Manejo de errores incluido
-- [ ] Ejemplos provistos
-- [ ] References claramente enlazados
+### During development
+- [ ] Folder in kebab-case
+- [ ] `SKILL.md` exists (exact spelling)
+- [ ] Frontmatter with `---` delimiters
+- [ ] `name`: kebab-case, no spaces, no uppercase
+- [ ] `description` includes WHAT and WHEN
+- [ ] No XML tags (`<` `>`) anywhere
+- [ ] Clear, actionable instructions
+- [ ] Error handling included
+- [ ] Examples provided
+- [ ] References clearly linked
 
-### Antes de subir
-- [ ] Probado el disparo en tareas obvias
-- [ ] Probado el disparo con pedidos parafraseados
-- [ ] Verificado que NO dispara en temas no relacionados
-- [ ] Tests funcionales pasan
-- [ ] La integración con herramientas funciona (si aplica)
+### Before shipping
+- [ ] Triggering tested on obvious tasks
+- [ ] Triggering tested with paraphrased requests
+- [ ] Verified it does NOT trigger on unrelated topics
+- [ ] Functional tests pass
+- [ ] Tool integration works (if applicable)
 
-### Después de subir
-- [ ] Probar en conversaciones reales
-- [ ] Monitorear sub/sobre-disparo
-- [ ] Recolectar feedback
-- [ ] Iterar sobre description e instrucciones
-- [ ] Actualizar la versión en `metadata`
+### After shipping
+- [ ] Test in real conversations
+- [ ] Monitor under/over-triggering
+- [ ] Collect feedback
+- [ ] Iterate on description and instructions
+- [ ] Update the version in `metadata`

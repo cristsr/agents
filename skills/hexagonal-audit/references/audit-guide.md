@@ -3,7 +3,7 @@
 Reference for `/hexagonal-audit`. Output is a **findings report**, not a refactor.
 Do not change code unless the user explicitly asks for the fixes to be applied.
 The concrete syntax per stack (detectors, examples) lives in the stack pack
-(`<STACK_REFS>/architecture/audit-smells.md`, `audit-scan.sh` para TS/NestJS).
+(`<STACK_REFS>/architecture/audit-smells.md`, `audit-scan.sh` for TS/NestJS).
 
 ---
 
@@ -16,10 +16,10 @@ Run these before forming any opinion. They are cheap and they anchor every later
 find <src> -maxdepth 2 -type d -not -path "*/node_modules/*" | sort
 
 # 2. Every source file, to detect naming and placement drift
-find <src> -type f <extensiones del lenguaje> -not -path "*/node_modules/*" | sort
+find <src> -type f <language file extensions> -not -path "*/node_modules/*" | sort
 
 # 3. Compiler/alias setup — check BOTH the app and the test config
-cat <config de aliases del stack>
+cat <the stack's alias config>
 ```
 
 Then run the boundary scan if the stack pack provides a detector:
@@ -30,7 +30,7 @@ bash <STACK_REFS>/architecture/audit-scan.sh <src>     # TS/NestJS pack
 
 If no detector exists for the stack, map manually with the language's equivalents.
 It prints one section per detector, grouped HIGH / MEDIUM / LOW / WIRING, and maps
-directly onto the smell catalog (`audit-smells.md` del pack).
+directly onto the smell catalog (the pack's `audit-smells.md`).
 
 Four of its sections read the **shape** of the tree rather than the contents of
 files — loose files at a layer root, files at a module root, the role folders each
@@ -107,9 +107,10 @@ syntax examples, framework traps — lives in `<STACK_REFS>/architecture/audit-s
 
 ## Report template
 
-Write the report in the **user's language** (see the Output Language rule in
-`SKILL.md`). The template below is English scaffolding — translate the headings and
-prose; keep file paths, rule names, severities and code in English.
+Write the report's prose in **`ARTIFACT_LANGUAGE`** (profile, section 5 — falls back
+to `OUTPUT_LANGUAGE`; see the Output Language rule in `SKILL.md`). The template below
+is English scaffolding: keep the headings, and keep file paths, rule names, severities
+and code in English.
 
 ```markdown
 # Architecture Audit — <project>

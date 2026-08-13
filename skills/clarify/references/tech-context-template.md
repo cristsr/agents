@@ -1,62 +1,63 @@
 # Template: Technical Context Section
 
-Sección `## Technical Context` de `spec.md`. Lleva **exclusivamente lo que el
-desarrollador declaró** en R5 — lo que no está escrito en ningún archivo ni es
-deducible del código.
+The `## Technical Context` section of `spec.md`. It carries **exclusively what the
+developer declared** in R5 — what is written in no file and cannot be deduced from the
+code.
 
-Todo lo relevado del repositorio (módulo, entidades, providers, DTOs, puertos, gaps)
-va a **`context.md`**, no acá. Desde que `/clarify` produce los dos artefactos en la
-misma pasada, no hay razón para duplicar el inventario en `spec.md`.
+Everything surveyed from the repository (module, entities, providers, DTOs, ports,
+gaps) goes to **`context.md`**, not here. Since `/clarify` produces both artifacts in
+the same pass, there is no reason to duplicate the inventory in `spec.md`.
 
-**Si el desarrollador no declaró nada, omitir la sección entera.** Una sección vacía
-o rellenada con inferencias es peor que su ausencia: invita a `/design` a tratar una
-suposición como un requisito.
+**If the developer declared nothing, omit the whole section.** An empty section, or
+one padded with inferences, is worse than its absence: it invites `/design` to treat
+an assumption as a requirement.
 
 ---
 
 ```markdown
 ## Technical Context
 
-### Restricciones técnicas
-- <lo que NO debe hacerse o limitación conocida>
-[Un bullet por restricción]
+### Technical Constraints
+- <what must NOT be done, or a known limitation>
+[One bullet per constraint]
 
-### Deuda técnica relevante
-- <módulo o área + descripción del problema conocido>
-[Un bullet por ítem de deuda]
+### Relevant Technical Debt
+- <module or area + description of the known problem>
+[One bullet per debt item]
 
-### Integraciones planeadas
-- <protocolo + destino + endpoint/topic que todavía NO existe en el código>
-  Ejemplo: HTTP GET a capabilities-ms: `/zones/{id}` (aún no implementado)
-[Un bullet por integración; omitir si todas ya están en el código — esas las
- releva context.md]
+### Planned Integrations
+- <protocol + target + endpoint/topic that does NOT exist in the code yet>
+  Example: HTTP GET to capabilities-ms: `/zones/{id}` (not implemented yet)
+[One bullet per integration; omit if they all already exist in the code — those are
+ surveyed by context.md]
 ```
 
 ---
 
-## Qué va acá y qué no
+## What belongs here and what doesn't
 
-| Información | Dónde vive | Por qué |
+| Information | Where it lives | Why |
 |---|---|---|
-| «No toques la tabla `X` directamente» | **Aquí** | Solo el desarrollador lo sabe |
-| «El módulo `Y` tiene un bug conocido con Z» | **Aquí** | No está escrito en ningún lado |
-| «Vamos a integrar con `capabilities-ms`, todavía no existe» | **Aquí** | No hay código que relevar |
-| Módulo afectado, entidades, campos | `context.md` | Se releva del código |
-| Artefactos a reutilizar, firmas de puertos | `context.md` | Se releva del código |
-| Patrones obligatorios del proyecto | `docs/rules.md` | Es transversal, no por ítem |
-| Gaps de documentación | `context.md` | Salen del relevamiento |
+| "Don't touch table `X` directly" | **Here** | Only the developer knows it |
+| "Module `Y` has a known bug with Z" | **Here** | It isn't written down anywhere |
+| "We're going to integrate with `capabilities-ms`, it doesn't exist yet" | **Here** | There's no code to survey |
+| Affected module, entities, fields | `context.md` | Surveyed from the code |
+| Artifacts to reuse, port signatures | `context.md` | Surveyed from the code |
+| Mandatory project patterns | `docs/rules.md` | Cross-cutting, not per item |
+| Documentation gaps | `context.md` | They come out of the survey |
 
-## Reglas
+## Rules
 
-- **Nunca inferir contenido para esta sección.** Si el desarrollador respondió `-` en
-  R5, la sección no existe. No hay marca `(inferido)` porque no hay nada inferido acá.
-- **Nunca se pisa al re-ejecutar.** Lo declarado es fuente de verdad: una corrida
-  posterior de `/clarify` puede agregar ítems, nunca reemplazar ni degradar los
-  existentes.
-- Omitir cualquier subsección sin contenido.
+- **Never infer content for this section.** If the developer answered `-` in R5, the
+  section doesn't exist. There's no `(inferred)` marker because nothing here is
+  inferred.
+- **Never overwritten on re-run.** What was declared is the source of truth: a later
+  `/clarify` run may add items, never replace or degrade existing ones.
+- Omit any subsection with no content.
 
 ## Language rules
 
-- Encabezados de sección: español
-- Nombres de componentes, clases, rutas, identificadores, endpoints: inglés
-- Texto descriptivo de los bullets: español
+- Section headings: English (they are structural — other skills read them by name)
+- Component names, classes, paths, identifiers, endpoints: `IDENTIFIER_LANGUAGE`
+- Descriptive bullet text: `ARTIFACT_LANGUAGE` (profile, section 5 — falls back to
+  `OUTPUT_LANGUAGE`)

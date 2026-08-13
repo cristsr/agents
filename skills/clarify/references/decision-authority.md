@@ -1,140 +1,137 @@
-# Decision authority — cuándo resolver solo y cuándo escalar
+# Decision authority — when to resolve alone and when to escalate
 
-Rúbrica que usa la **fase P (Plan)** para decidir, por cada unknown, si lo resuelve
-autónomamente o lo escala al desarrollador.
+The rubric **phase P (Plan)** uses to decide, for each unknown, whether it resolves it
+autonomously or escalates it to the developer.
 
-> **Leerla una vez, al inicio de la fase R** — no por unknown. La evidencia se
-> recolecta en R; acá se define cómo se interpreta esa evidencia en P.
+> **Read it once, at the start of phase R** — not per unknown. Evidence is collected
+> in R; here you define how that evidence is interpreted in P.
 
-La pregunta que separa ambos caminos **no es «técnico vs. negocio»**. Es:
+The question separating the two paths **is not "technical vs. business"**. It is:
 
-> ¿Existe una fuente de autoridad que **determine** la respuesta, o estoy
-> eligiendo entre alternativas legítimas donde la preferencia le pertenece al
-> dueño del producto?
+> Is there an authority source that **determines** the answer, or am I choosing among
+> legitimate alternatives where the preference belongs to the product owner?
 
 ---
 
-## 1. Jerarquía de fuentes de autoridad
+## 1. Authority source hierarchy
 
-Consultar en orden. La primera que **determina** la respuesta gana y se cita como
-`fuente` en el registro. «Determina» significa que la respuesta se deduce de
-ella, no que sea meramente compatible.
+Consult in order. The first one that **determines** the answer wins and gets cited as
+`source` in the log. "Determines" means the answer follows from it, not that it's
+merely compatible with it.
 
-| # | Fuente | Qué es | Cómo se cita |
+| # | Source | What it is | How it's cited |
 |---|---|---|---|
-| 1 | **Reglas del proyecto** | `docs/rules.md` — principios no negociables | `rules.md §<sección>` |
-| 2 | **Configuración del proyecto** | `CLAUDE.md`, `.agents/profile.md` — stack, convenciones, fase del proyecto | `CLAUDE.md` / `profile.md §<n>` |
-| 3 | **Precedente en el código** | Una decisión equivalente ya tomada en el repo | `<path>:<símbolo>` |
-| 4 | **Estándar formal** | RFC, spec HTTP, convención del framework declarado en el profile | `RFC <n>` / `<framework> <convención>` |
-| 5 | **Invariantes de el propio ítem** | Otro AC o regla de negocio del `spec.md` que ya fija la respuesta | `AC-<n>` / `Regla <n>` |
+| 1 | **Project rules** | `docs/rules.md` — non-negotiable principles | `rules.md §<section>` |
+| 2 | **Project configuration** | `CLAUDE.md`, `.agents/profile.md` — stack, conventions, project phase | `CLAUDE.md` / `profile.md §<n>` |
+| 3 | **Code precedent** | An equivalent decision already made in the repo | `<path>:<symbol>` |
+| 4 | **Formal standard** | RFC, HTTP spec, convention of the framework declared in the profile | `RFC <n>` / `<framework> <convention>` |
+| 5 | **The item's own invariants** | Another AC or business rule in `spec.md` that already pins the answer | `AC-<n>` / `Rule <n>` |
 
-Si **ninguna** determina la respuesta → pasar al test de escalamiento (§3).
+If **none** determines the answer → move to the escalation test (§3).
 
-### Reglas de la jerarquía
+### Hierarchy rules
 
-- **Un nivel superior gana sobre uno inferior.** Si `rules.md` contradice un
-  precedente del código, manda `rules.md` — y el conflicto se anota como
-  observación en el registro.
-- **Un precedente aislado no es autoridad.** Si el repo resolvió lo mismo de dos
-  maneras distintas, no hay precedente: hay inconsistencia. Bajar al nivel 4, y
-  si tampoco resuelve, escalar como decisión de alcance.
-- **«Compatible con» no es «determinado por».** Que un estándar admita la opción
-  elegida no basta si admite igual de bien la alternativa.
+- **A higher level beats a lower one.** If `rules.md` contradicts a code precedent,
+  `rules.md` wins — and the conflict is noted as an observation in the log.
+- **An isolated precedent is not authority.** If the repo solved the same thing two
+  different ways, there is no precedent: there's an inconsistency. Drop to level 4,
+  and if that doesn't resolve it either, escalate as a scope decision.
+- **"Compatible with" is not "determined by".** That a standard permits the chosen
+  option isn't enough if it permits the alternative just as well.
 
 ---
 
-## 2. Sondeo del código (nivel 3) — ocurre en R3, no acá
+## 2. Code probing (level 3) — happens in R3, not here
 
-La evidencia del nivel 3 se recolecta **entera en la fase R3**, en una sola tanda
-de consultas paralelas con techo de 5. Esta rúbrica solo dice cómo **interpretar**
-lo que R3 trajo:
+Level-3 evidence is collected **entirely in phase R3**, in a single batch of parallel
+queries capped at 5. This rubric only says how to **interpret** what R3 brought back:
 
-| Resultado de R3 | Veredicto |
+| R3 result | Verdict |
 |---|---|
-| Un caso análogo claro, con fuente verbatim | **Precedente** — nivel 3, confianza media |
-| Varios casos análogos coincidentes | **Precedente fuerte** — nivel 3, confianza media-alta |
-| Varios casos que se contradicen | **No hay precedente, hay inconsistencia** — bajar al nivel 4 y registrarla |
-| Sin resultados relevantes | **Sin precedente** — bajar al nivel 4 y registrarlo como señal para `/scan` |
+| One clear analogous case, with verbatim source | **Precedent** — level 3, medium confidence |
+| Several matching analogous cases | **Strong precedent** — level 3, medium-high confidence |
+| Several cases that contradict each other | **No precedent, an inconsistency** — drop to level 4 and record it |
+| No relevant results | **No precedent** — drop to level 4 and record it as a signal for `/scan` |
 
-Si `CODEGRAPH` es `no` en el profile, R3 no corre y el nivel 3 simplemente no
-existe para esa corrida.
-
----
-
-## 3. Escalamiento obligatorio
-
-Cuando ninguna fuente determina la respuesta, escalar **solo** si el unknown cae
-en alguna de estas cuatro categorías. Fuera de ellas, decidir con la mejor
-alternativa disponible y marcarla como confianza baja.
-
-| Categoría | Señal | Ejemplo |
-|---|---|---|
-| **Alcance** | Una de las salidas agranda materialmente el ítem (módulo nuevo, superficie transversal, trabajo que el usuario no pidió) | «¿`dryRun` en todos los commands o solo donde el caso es claro?» |
-| **Intención de negocio** | Dos lecturas del dominio igualmente válidas y ninguna regla desempata | «¿El saldo se recalcula o se congela al cerrar el periodo?» |
-| **Irreversibilidad** | Contrato público, semántica de un evento ya emitido, esquema que otros consumen, algo caro de deshacer | «¿Este campo del evento cambia de significado?» |
-| **Conflicto de reglas** | La única salida viable viola `docs/rules.md` | «Cumplir el AC exige romper el principio X» |
-
-### Contraejemplos — esto NO se escala
-
-- **Convenciones técnicas con estándar claro:** código HTTP, forma del payload,
-  paginación, formato de fecha, códigos de error del motor, exit codes de CLI.
-- **Precisión de redacción y testabilidad:** reescribir un AC vago, aplicar EARS.
-  No cambia comportamiento; no hay nada que preguntar.
-- **Edge cases ya fijados** por un patrón del repo o por `rules.md`.
-- **Elección entre alternativas donde una es claramente superior** por una razón
-  articulable en una oración. Si podés escribir el fundamento, no necesitás la
-  pregunta.
-
-### Presupuesto de escalamiento
-
-Máximo **3 preguntas por corrida**, seleccionadas en P3 sobre la lista **completa**
-de candidatos — nunca sobre los primeros que aparecieron. El tope obliga a
-jerarquizar en serio en lugar de escalar por comodidad.
-
-Si más de 3 califican, es una **señal sobre el ítem**, no solo un recorte: significa
-que hay demasiada decisión de producto abierta y quizás el ítem no está listo para
-clarificarse. Escalar los 3 de mayor impacto, resolver el resto con confianza baja,
-y advertirlo explícitamente en el cierre.
-
-Si un unknown califica para escalar, la pregunta se formula con
-`AskUserQuestion` manteniendo el formato actual: opción recomendada primero con
-`" (Recomendado)"` y el fundamento en su `description`.
+If `CODEGRAPH` is `no` in the profile, R3 doesn't run and level 3 simply doesn't exist
+for that run.
 
 ---
 
-## 4. Niveles de confianza
+## 3. Mandatory escalation
 
-Cada decisión autónoma se registra con un nivel. Determina el orden del bloque
-de revisión final (las bajas primero, para que el ojo caiga ahí).
+When no source determines the answer, escalate **only** if the unknown falls into one
+of these four categories. Outside them, decide with the best available alternative and
+mark it low confidence.
 
-| Nivel | Cuándo | Ejemplo |
+| Category | Signal | Example |
 |---|---|---|
-| **alta** | Fuente de nivel 1-2, o un estándar formal con verificación objetiva | JCS RFC 8785 (tiene vectores de prueba oficiales) |
-| **media** | Precedente único y claro en el repo, o convención del framework sin ambigüedad | `varchar(255)` por consistencia con un campo análogo |
-| **baja** | Ninguna fuente determinó; se eligió la mejor alternativa por razonamiento, o el unknown calificaba para escalar pero excedió el presupuesto | Política operacional elegida por criterio |
+| **Scope** | One of the outcomes materially grows the item (new module, cross-cutting surface, work the user didn't ask for) | "`dryRun` on every command or only where the case is clear?" |
+| **Business intent** | Two equally valid readings of the domain and no rule breaks the tie | "Is the balance recomputed or frozen when the period closes?" |
+| **Irreversibility** | Public contract, semantics of an already-emitted event, schema others consume, anything expensive to undo | "Does this event field change meaning?" |
+| **Rule conflict** | The only viable outcome violates `docs/rules.md` | "Meeting the AC requires breaking principle X" |
 
-Toda decisión de confianza **baja** se lista de forma destacada en el cierre.
+### Counterexamples — these are NOT escalated
+
+- **Technical conventions with a clear standard:** HTTP code, payload shape,
+  pagination, date format, engine error codes, CLI exit codes.
+- **Wording precision and testability:** rewriting a vague AC, applying EARS. It
+  doesn't change behavior; there's nothing to ask.
+- **Edge cases already pinned** by a repo pattern or by `rules.md`.
+- **Choosing among alternatives where one is clearly superior** for a reason you can
+  articulate in one sentence. If you can write the rationale, you don't need the
+  question.
+
+### Escalation budget
+
+At most **3 questions per run**, selected in P3 over the **complete** candidate list —
+never over whichever showed up first. The cap forces real prioritization instead of
+escalating out of convenience.
+
+If more than 3 qualify, that's a **signal about the item**, not just a cut: it means
+too much product decision is still open and the item may not be ready to be clarified.
+Escalate the 3 with the highest impact, resolve the rest at low confidence, and warn
+about it explicitly in the wrap-up.
+
+If an unknown qualifies for escalation, the question is posed with `AskUserQuestion`
+keeping the current format: recommended option first with `" (Recommended)"` and the
+rationale in its `description`.
 
 ---
 
-## 5. Casos calibrados (historias reales de este proyecto)
+## 4. Confidence levels
 
-La frontera, con decisiones ya tomadas en `work/done/`:
+Every autonomous decision is recorded with a level. It determines the order of the
+final review block (low ones first, so the eye lands there).
 
-| Caso | Resolución | Veredicto |
+| Level | When | Example |
 |---|---|---|
-| hu-0009 · ¿qué valor de `NODE_ENV` es «producción»? | `NODE_ENV === 'production'` | **Autónoma, alta** — estándar universal del ecosistema (nivel 4) |
-| hu-0001 · largo máximo de `Payee` | `255` | **Autónoma, media** — precedente: campo `merchant` en `apps/finances` (nivel 3) |
-| hu-0024 · algoritmo de canonicalización | JCS (RFC 8785) | **Autónoma, alta** — RFC con vectores oficiales; la corrección es verificable (nivel 4) |
-| hu-0024 · ¿`NOT NULL` desde el día uno? | Sí, reescribiendo la migración | **Autónoma, alta** — `CLAUDE.md` habilita reescribir migraciones sobre base limpia (nivel 2) |
-| hu-0024 · ¿se detiene en la primera ruptura o reporta todas? | Recorre todo, exit `1` si hubo alguna | **Autónoma, alta** — convención CLI/CI (nivel 4) |
-| hu-0024 · definir el input del hash por exclusión | Payload completo + envelope, menos `recorded_at` y `global_position` | **Autónoma, media** — se deduce de la invariante del AC: un campo nuevo no puede quedar fuera del hash sin que nadie lo note (nivel 5) |
-| hu-0002 · `append` con lote vacío | No-op silencioso | **Autónoma, media** — se deduce de las invariantes del ítem (nivel 5) |
-| hu-0005 · reintento con `external_ref` distinto | Excepción `LEDGER_ALREADY_INITIALIZED` | **Autónoma, media** — patrón de errores tipados ya establecido (nivel 3) |
-| hu-0025 · códigos de PostgreSQL transitorios | Solo `40P01` y `40001` | **Autónoma, alta** — son los canónicos del motor (nivel 4) |
-| hu-0025 · `dryRun` ¿body o query param? | Campo del body con `class-validator` | **Autónoma, alta** — `DTO_STYLE` del profile (nivel 2) |
-| hu-0025 · **¿`dryRun` en todos los commands de escritura?** | En todos, sin excepciones | **ESCALAR** — categoría *alcance*: define la superficie transversal del ítem |
-| hu-0025 · **¿cuántos reintentos y con qué backoff?** | 3 intentos, exponencial con jitter | **ESCALAR** — política operacional con trade-off latencia/resiliencia que ninguna fuente determina |
+| **high** | Level 1-2 source, or a formal standard with objective verification | JCS RFC 8785 (it ships official test vectors) |
+| **medium** | A single clear precedent in the repo, or an unambiguous framework convention | `varchar(255)` for consistency with an analogous field |
+| **low** | No source determined it; the best alternative was chosen by reasoning, or the unknown qualified for escalation but exceeded the budget | Operational policy chosen by judgment |
 
-> Lectura de la tabla: de 12 decisiones reales, 10 tenían fuente de autoridad
-> disponible. Las 2 que no, caen limpiamente en las categorías de §3.
+Every **low**-confidence decision is listed prominently in the wrap-up.
+
+---
+
+## 5. Calibrated cases (real stories from this project)
+
+The boundary, using decisions already made in `work/done/`:
+
+| Case | Resolution | Verdict |
+|---|---|---|
+| spec-0009 · which `NODE_ENV` value means "production"? | `NODE_ENV === 'production'` | **Autonomous, high** — universal ecosystem standard (level 4) |
+| spec-0001 · max length of `Payee` | `255` | **Autonomous, medium** — precedent: `merchant` field in `apps/finances` (level 3) |
+| spec-0024 · canonicalization algorithm | JCS (RFC 8785) | **Autonomous, high** — RFC with official vectors; correctness is verifiable (level 4) |
+| spec-0024 · `NOT NULL` from day one? | Yes, rewriting the migration | **Autonomous, high** — `CLAUDE.md` allows rewriting migrations on a clean base (level 2) |
+| spec-0024 · stop at the first break or report them all? | Walks everything, exit `1` if any occurred | **Autonomous, high** — CLI/CI convention (level 4) |
+| spec-0024 · define the hash input by exclusion | Full payload + envelope, minus `recorded_at` and `global_position` | **Autonomous, medium** — follows from the AC's invariant: a new field can't fall outside the hash unnoticed (level 5) |
+| spec-0002 · `append` with an empty batch | Silent no-op | **Autonomous, medium** — follows from the item's invariants (level 5) |
+| spec-0005 · retry with a different `external_ref` | `LEDGER_ALREADY_INITIALIZED` exception | **Autonomous, medium** — typed-error pattern already established (level 3) |
+| spec-0025 · transient PostgreSQL codes | Only `40P01` and `40001` | **Autonomous, high** — they're the engine's canonical ones (level 4) |
+| spec-0025 · `dryRun` in the body or as a query param? | Body field with `class-validator` | **Autonomous, high** — profile's `DTO_STYLE` (level 2) |
+| spec-0025 · **`dryRun` on every write command?** | On all of them, no exceptions | **ESCALATE** — *scope* category: it defines the item's cross-cutting surface |
+| spec-0025 · **how many retries and with what backoff?** | 3 attempts, exponential with jitter | **ESCALATE** — operational policy with a latency/resilience trade-off no source determines |
+
+> How to read the table: of 12 real decisions, 10 had an authority source available.
+> The 2 that didn't fall cleanly into the categories in §3.

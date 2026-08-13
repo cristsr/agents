@@ -1,10 +1,10 @@
 # design.md Template
 
-Save to `work/active/sm-<number>/design.md` using exactly this structure.
+Save to `work/active/spec-<number>/design.md` using exactly this structure.
 Remove sections marked as conditional if they do not apply.
 
 `design.md` is the narrative summary — full machine-readable contracts live
-in `work/active/sm-<number>/docs/` (see `<STACK_REFS>/references/api-template.md` for the
+in `work/active/spec-<number>/docs/` (see `<STACK_REFS>/references/api-template.md` for the
 API contract and `<STACK_REFS>/references/data-model-template.md` for `docs/data-model.md`).
 Never embed the full diagram, DTO/schema definitions, or the
 entity/migration SQL inline here — reference the files in `docs/`
@@ -13,84 +13,92 @@ instead.
 ---
 
 ```markdown
-# design: sm-<number>
+# design: spec-<number>
 
-## Decisiones de Diseño
+## Design Decisions
 
 <!-- OPTIONAL: Include only if PHASE 3 resolved at least one unknown via
      questions. Omit this section entirely if design.md was produced with
      zero ambiguities (everything was already defined in spec.md/context.md). -->
 
-- **<unknown resuelto>:** <opción elegida> — <razón breve>
+- **<unknown resolved>:** <chosen option> — <brief reason>
 
-## Flujo entre microservicios
+## Cross-Service Flow
 
-<resumen de 1-2 oraciones de qué hace el flujo — el diagrama completo está en `docs/diagram.md`>
+<1-2 sentence summary of what the flow does — the full diagram is in `docs/diagram.md`>
 
-## Componentes del módulo
+## Module Components
 
-<1 oración: qué componente(s) nuevo(s)/modificado(s) introduce esta historia
-(caso de uso, agregado, puerto, adapter) — el diagrama completo (C4 Nivel 3,
-todo el módulo, no solo el delta) está en `docs/component.md`>.
+<1 sentence: which new/modified component(s) this story introduces
+(use case, aggregate, port, adapter) — the full diagram (C4 Level 3,
+the whole module, not just the delta) is in `docs/component.md`>.
 
-## Impacto en Arquitectura Global
+## Global Architecture Impact
 
-<!-- SIEMPRE presente, nunca condicional — es lo que permite que /sync
-     promueva sin tener que re-detectar nada desde un git diff. -->
+<!-- ALWAYS present, never conditional — it's what lets /sync promote
+     without having to re-detect anything from a git diff. -->
 
-**¿Toca arquitectura global?** Sí / No.
+**Does it touch global architecture?** Yes / No.
 
-<!-- Si Sí: nombrar exactamente qué cambia y en qué nivel C4, con el
-     nodo/arista concreto a agregar o quitar — /sync y /architecture lo
-     aplican tal cual, no lo vuelven a inferir.
-     Si No: una oración confirmando que el alcance es interno al módulo. -->
+<!-- If Yes: name exactly what changes and at which C4 level, with the
+     concrete node/edge to add or remove — /sync and /architecture apply it
+     verbatim, they don't re-infer it.
+     If No: one sentence confirming the scope is internal to the module. -->
 
-- **Nivel:** Context (Nivel 1) / Container (Nivel 2) / N/A
-- **Cambio:** <nuevo app/microservicio | nuevo módulo | nueva integración
-  externa | integración eliminada | actor nuevo | ninguno>
-- **Nodo/arista concreto:** <lo que /architecture debe agregar/quitar, o
-  "N/A" si la respuesta fue No>
+- **Level:** Context (Level 1) / Container (Level 2) / N/A
+- **Change:** <new app/microservice | new module | new external
+  integration | removed integration | new actor | none>
+- **Concrete node/edge:** <what /architecture must add/remove, or
+  "N/A" if the answer was No>
 
-## Contratos por microservicio
+## Contracts per Service
 
-### sm-<microservice-1>
+### <component-1>
 
-| Método | Ruta | Descripción de negocio |
-|--------|------|-------------------------|
-| POST | /recurso/search | <qué resuelve, no solo el verbo HTTP> |
+| Method | Path | Business description |
+|--------|------|----------------------|
+| POST | /resource/search | <what it solves, not just the HTTP verb> |
 
-> Schemas de request/response, validaciones y códigos de respuesta completos: `docs/api.yaml` (tag `<microservice-1>`).
-
----
-
-### sm-<microservice-2>  ← repetir si hay más de uno
-
-[misma estructura]
+> Full request/response schemas, validations and response codes: `docs/api.yaml` (tag `<microservice-1>`).
 
 ---
 
-## Modelado de datos  ← omitir si no hay tabla nueva
+### <component-2>  ← repeat if there is more than one
 
-Entidad(es) nueva(s): `nombre_tabla`.
+[same structure]
 
-> Entidad/schema y migración SQL completas: `docs/data-model.md`.
+---
 
-## Validación de Quality Gates
+## Data Modeling  ← omit if there is no new table
 
-<!-- Siempre presente. Si hay constitución cargada, valida sus gates; si no,
-     aplica los cuatro gates built-in por default. -->
+New entity(ies): `table_name`.
 
-| Gate | Resultado | Justificación |
-|------|-----------|---------------|
-| Simplicity | ✅/⚠️ | <justificación en una línea> |
-| Anti-Abstraction | ✅/⚠️ | <justificación en una línea> |
-| Integration-First | ✅/⚠️ | <justificación en una línea> |
-| Test-First | ✅/⚠️ | <justificación en una línea> |
+> Full entity/schema and SQL migration: `docs/data-model.md`.
 
-## Excepciones a la constitución  ← omitir si todos los gates pasaron (✅)
+## Quality Gates Validation
 
-<!-- OPTIONAL: solo si un gate falla (⚠️) y se decide seguir igual con
-     justificación aprobada por el usuario en PHASE 5. -->
+<!-- Always present. If a constitution is loaded, validate its gates; if not,
+     apply the four built-in gates by default. -->
 
-- **<Gate/Artículo violado>:** <por qué se hace la excepción> — aprobado por el usuario.
+| Gate | Result | Justification |
+|------|--------|---------------|
+| Simplicity | ✅/⚠️ | <one-line justification> |
+| Anti-Abstraction | ✅/⚠️ | <one-line justification> |
+| Integration-First | ✅/⚠️ | <one-line justification> |
+| Test-First | ✅/⚠️ | <one-line justification> |
+
+## Constitution Exceptions  ← omit if every gate passed (✅)
+
+<!-- OPTIONAL: only if a gate fails (⚠️) and the decision is to proceed anyway
+     with a justification approved by the user in PHASE 5. -->
+
+- **<Gate/Article violated>:** <why the exception is made> — approved by the user.
 ```
+
+## Language rules
+
+- Section headings: English. They are structural — `/sync` reads
+  `## Global Architecture Impact` and `## Design Decisions` by name.
+- Prose, justifications, business descriptions: `ARTIFACT_LANGUAGE` (profile,
+  section 5 — falls back to `OUTPUT_LANGUAGE`).
+- Class names, paths, endpoints, table names: verbatim from the code.

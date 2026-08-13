@@ -3,27 +3,27 @@
 Every plan MUST start with this exact header structure:
 
 ```markdown
-# sm-<numero>: [Feature Name] — Plan de Implementación
+# spec-<number>: [Feature Name] — Implementation Plan
 
-**Historia:** `work/active/sm-<numero>/`
-**Microservicio(s):** `<nombre-del-micro>`
-**Objetivo:** [Una oración describiendo qué construye esto]
-**Arquitectura:** [2-3 oraciones sobre el enfoque y patrones usados]
-**Stack:** <lenguaje> · <framework> · <ORM> · <DB> · <test framework>  ← del profile sección 7
-**Grupos de implementación:** [Solo incluir esta línea si PHASE 2 detectó grupos
-independientes. Ej: "Grupo A: sm-capabilities-ms, sm-graphql-fb-ms (secuencial) ∥
-Grupo B: sm-users-ms (paralelo, sin dependencia con Grupo A)". Omitir la línea
-completa si solo hay un grupo.]
+**Story:** `work/active/spec-<number>/`
+**Microservice(s):** `<service-name>`
+**Goal:** [One sentence describing what this builds]
+**Architecture:** [2-3 sentences about the approach and the patterns used]
+**Stack:** <language> · <framework> · <ORM> · <DB> · <test framework>  ← from profile section 7
+**Implementation groups:** [Only include this line if PHASE 2 detected independent
+groups. E.g. "Group A: catalog-ms, gateway-ms (sequential) ∥
+Group B: users-ms (parallel, no dependency on Group A)". Omit the whole line
+if there is only one group.]
 
-### Trazabilidad AC → Tareas
+### AC → Task traceability
 
-| AC | Cubierto por |
-|----|-------------|
-| AC-1 | Tarea N |
-| AC-2 | Tarea N, Tarea M |
+| AC | Covered by |
+|----|-----------|
+| AC-1 | Task N |
+| AC-2 | Task N, Task M |
 
-> Toda AC de `spec.md` debe aparecer al menos una vez en esta tabla. Si falta alguna,
-> agregar la tarea correspondiente antes de guardar el plan (ver PHASE 3.5).
+> Every AC in `spec.md` must appear at least once in this table. If any is missing,
+> add the corresponding task before saving the plan (see PHASE 3.5).
 
 ---
 ```
@@ -33,29 +33,39 @@ completa si solo hay un grupo.]
 ## Task 0 — Always the first task after the header
 
 ```markdown
-### Tarea 0: Preparar rama de trabajo
+### Task 0: Prepare the working branch
 
-> Al ejecutar este plan, solicitar al usuario el nombre de la rama antes de continuar.
+> When executing this plan, ask the user for the branch name before continuing.
 
-**Preguntar:** "¿Cuál es el nombre de la rama? (ej: feat/SM-<numero>-descripcion o fix/SM-<numero>-descripcion)"
+**Ask:** "What's the branch name? (e.g. feat/<story-key>-description or fix/<story-key>-description,
+where `<story-key>` follows `STORY_KEY_PATTERN` from the profile)"
 
 **Steps:**
 
-**Step 1: Verificar que la base esté fresca (read-only)**
+**Step 1: Verify the base is fresh (read-only)**
 
 ```bash
-git -C <microservice> branch --show-current   # esperado: develop
-git -C <microservice> status --porcelain      # esperado: vacío (working tree limpio)
+git -C <microservice> branch --show-current   # expected: develop
+git -C <microservice> status --porcelain      # expected: empty (clean working tree)
 ```
-Esperado: en `develop`, actualizada y sin cambios sin commitear. Preparar la base
-(`checkout develop` + `pull`) es trabajo de `/sync`, no de este plan. Si no está en
-`develop` actualizado o el working tree está sucio → detener y recomendar
-`/sync <microservice>` antes de crear la rama.
+Expected: on `develop`, up to date and with no uncommitted changes. Preparing the base
+(`checkout develop` + `pull`) is `/prepare`'s job, not this plan's. If it isn't on an
+up-to-date `develop` or the working tree is dirty → stop and recommend
+`/prepare <microservice>` before creating the branch.
 
-**Step 2: Crear rama de trabajo**
+**Step 2: Create the working branch**
 
 ```bash
-git -C <microservice> checkout -b <nombre-de-rama-dado-por-usuario>
+git -C <microservice> checkout -b <branch-name-given-by-the-user>
 ```
-Esperado: rama nueva creada y activa, partiendo de `develop` actualizado.
+Expected: new branch created and active, starting from an up-to-date `develop`.
 ```
+
+## Language rules
+
+- `Task 0` and the task numbering are structural — `/build` and `/hotfix` locate tasks
+  by that name, always English.
+- Task titles and prose: `ARTIFACT_LANGUAGE` (profile, section 5 — falls back to
+  `OUTPUT_LANGUAGE`).
+- Branch names, paths and commands: verbatim. The branch description stays English —
+  it ends up in git history.

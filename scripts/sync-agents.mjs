@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * sync-agents — genera la definición nativa de cada agente para cada proveedor.
+ * sync-agents — generates each agent's native definition for each provider.
  *
- * Fuente:  ~/.agents/agents/<name>.md   (frontmatter agnóstico: tier + capabilities)
- * Mapeo:   ~/.agents/agents/targets.yaml
- * Salida:  la ruta `out` de cada target
+ * Source:  ~/.agents/agents/<name>.md   (agnostic frontmatter: tier + capabilities)
+ * Mapping: ~/.agents/agents/targets.yaml
+ * Output:  each target's `out` path
  *
  *   node scripts/sync-agents.mjs [--dry-run] [--target=<t>] [--agent=<a>] [--prune]
  */
@@ -34,17 +34,17 @@ const die = (msg) => {
 };
 
 /**
- * Separa frontmatter YAML del cuerpo.
+ * Splits the YAML frontmatter from the body.
  *
- * Los comentarios HTML del cuerpo se eliminan: son notas para quien mantiene el
- * agente (cómo se genera, de dónde sale el modelo) y no cambian su comportamiento
- * — dejarlas dentro sería pagar contexto en cada invocación por documentación que
- * el agente no usa.
+ * HTML comments in the body are stripped: they are notes for whoever maintains the
+ * agent (how it's generated, where the model comes from) and don't change its
+ * behavior — leaving them in would mean paying context on every invocation for
+ * documentation the agent never uses.
  */
 function parseAgent(file) {
   const raw = readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
   const m = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!m) die(`${file} no tiene frontmatter YAML válido.`);
+  if (!m) die(`${file} has no valid YAML frontmatter.`);
   const body = m[2]
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/\n{3,}/g, '\n\n')
@@ -53,8 +53,8 @@ function parseAgent(file) {
 }
 
 /**
- * Resuelve capabilities al vocabulario del target.
- * Una capability puede traer guard: "shell:readonly" → base "shell" + guard.
+ * Resolves capabilities into the target's vocabulary.
+ * A capability may carry a guard: "shell:readonly" → base "shell" + guard.
  */
 function resolveCapabilities(caps, target, agentName) {
   const tools = [];
@@ -63,13 +63,13 @@ function resolveCapabilities(caps, target, agentName) {
     const [base, guard] = String(cap).split(':');
     const mapped = target.capabilities?.[base];
     if (mapped === undefined) {
-      die(`agente "${agentName}": la capability "${base}" no está mapeada en el target "${target._name}".`);
+      die(`agent "${agentName}": capability "${base}" is not mapped in target "${target._name}".`);
     }
     tools.push(mapped);
     if (guard) {
       const g = target.guards?.[`${base}:${guard}`];
       if (g === undefined) {
-        die(`agente "${agentName}": el guard "${base}:${guard}" no está implementado en el target "${target._name}".`);
+        die(`agent "${agentName}": guard "${base}:${guard}" is not implemented in target "${target._name}".`);
       }
       guards.push(g);
     }
@@ -79,11 +79,11 @@ function resolveCapabilities(caps, target, agentName) {
 
 function resolveModel(tier, target, agentName) {
   const model = target.tiers?.[tier];
-  if (!model) die(`agente "${agentName}": el tier "${tier}" no está definido en el target "${target._name}".`);
+  if (!model) die(`agent "${agentName}": tier "${tier}" is not defined in target "${target._name}".`);
   return model;
 }
 
-/** Fusión profunda — usada por los guards y por el escape hatch `native`. */
+/** Deep merge — used by the guards and by the `native` escape hatch. */
 function merge(base, extra) {
   for (const [k, v] of Object.entries(extra ?? {})) {
     if (v && typeof v === 'object' && !Array.isArray(v) && base[k] && typeof base[k] === 'object' && !Array.isArray(base[k])) {
@@ -95,7 +95,7 @@ function merge(base, extra) {
   return base;
 }
 
-// ── Emisores por formato ────────────────────────────────────────────────────
+// ── Per-format emitters ────────────────────────────────────────────────────
 
 const emitters = {
   'claude-code'(meta, target, name) {
@@ -129,14 +129,14 @@ const emitters = {
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
-if (!existsSync(join(AGENTS_DIR, 'targets.yaml'))) die(`no encontré ${join(AGENTS_DIR, 'targets.yaml')}`);
+if (!existsSync(join(AGENTS_DIR, 'targets.yaml'))) die(`could not find ${join(AGENTS_DIR, 'targets.yaml')}`);
 const config = yaml.load(readFileSync(join(AGENTS_DIR, 'targets.yaml'), 'utf8'));
 
 const agentFiles = readdirSync(AGENTS_DIR)
   .filter((f) => f.endsWith('.md'))
   .filter((f) => !ONLY_AGENT || f === `${ONLY_AGENT}.md`);
 
-if (agentFiles.length === 0) die('no hay agentes que sincronizar.');
+if (agentFiles.length === 0) die('no agents to sync.');
 
 const stats = { created: 0, updated: 0, unchanged: 0, pruned: 0 };
 const written = new Map(); // target → Set<path>
@@ -147,7 +147,7 @@ for (const [targetName, targetRaw] of Object.entries(config.targets ?? {})) {
 
   const target = { ...targetRaw, _name: targetName };
   const emit = emitters[target.format];
-  if (!emit) die(`el target "${targetName}" declara un format desconocido: "${target.format}".`);
+  if (!emit) die(`target "${targetName}" declares an unknown format: "${target.format}".`);
 
   written.set(targetName, new Set());
   console.log(`\n▸ ${targetName}  (${target.format})`);
@@ -162,7 +162,7 @@ for (const [targetName, targetRaw] of Object.entries(config.targets ?? {})) {
     const out = expand(target.out.replace('{name}', name));
     const content =
       `---\n${yaml.dump(fm, { lineWidth: 100, quotingType: '"' })}---\n\n` +
-      `<!-- ${MARKER} desde ~/.agents/agents/${file} — no editar a mano -->\n\n` +
+      `<!-- ${MARKER} from ~/.agents/agents/${file} — do not edit by hand -->\n\n` +
       body;
 
     written.get(targetName).add(out);
@@ -174,13 +174,13 @@ for (const [targetName, targetRaw] of Object.entries(config.targets ?? {})) {
       continue;
     }
 
-    // Nunca escribir sobre un symlink: apuntaría a la fuente y la destruiría.
+    // Never write over a symlink: it would point at the source and destroy it.
     if (existsSync(out) && lstatSync(out).isSymbolicLink()) {
-      die(`${out} es un symlink. Borralo antes de sincronizar (el generador escribiría sobre la fuente).`);
+      die(`${out} is a symlink. Delete it before syncing (the generator would write over the source).`);
     }
-    // Nunca pisar un archivo que no generamos nosotros.
+    // Never overwrite a file we didn't generate ourselves.
     if (prev !== null && !prev.includes(MARKER)) {
-      die(`${out} existe y no fue generado por sync-agents. Movelo o borralo antes de continuar.`);
+      die(`${out} exists and was not generated by sync-agents. Move or delete it before continuing.`);
     }
 
     console.log(`  ${prev === null ? '+' : '~'}  ${name}  →  ${out}`);
@@ -198,8 +198,8 @@ for (const [targetName, targetRaw] of Object.entries(config.targets ?? {})) {
         const p = join(dir, f);
         if (written.get(targetName).has(p)) continue;
         if (lstatSync(p).isSymbolicLink()) continue;
-        if (!readFileSync(p, 'utf8').includes(MARKER)) continue; // solo lo nuestro
-        console.log(`  -  ${f}  (huérfano)`);
+        if (!readFileSync(p, 'utf8').includes(MARKER)) continue; // only our own
+        console.log(`  -  ${f}  (orphan)`);
         if (!DRY) unlinkSync(p);
         stats.pruned++;
       }
@@ -207,6 +207,6 @@ for (const [targetName, targetRaw] of Object.entries(config.targets ?? {})) {
   }
 }
 
-const s = `${stats.created} creados · ${stats.updated} actualizados · ${stats.unchanged} sin cambios` +
+const s = `${stats.created} created · ${stats.updated} updated · ${stats.unchanged} unchanged` +
   (PRUNE ? ` · ${stats.pruned} eliminados` : '');
 console.log(`\n${DRY ? '[dry-run] ' : ''}${s}\n`);

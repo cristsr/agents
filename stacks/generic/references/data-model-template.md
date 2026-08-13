@@ -1,6 +1,6 @@
 # data-model-template.md (generic — stack-agnostic)
 
-Save to `work/active/sm-<number>/docs/data-model.md` using exactly this
+Save to `work/active/spec-<number>/docs/data-model.md` using exactly this
 structure. Only generate this file if the story requires a new DB table or
 a change to an existing one — omit entirely otherwise (no empty file).
 
@@ -13,26 +13,26 @@ directly, field by field).
 ---
 
 ```markdown
-# Modelado de datos: sm-<number>
+# Data model: spec-<number>
 
-## NombreEntidad
+## EntityName
 
-### Definición de esquema (según ORM del proyecto)
+### Schema definition (per the project's ORM)
 
-\`\`\`<language del ORM — p.ej. typescript, python>
-@Entity / Model / Table('nombre_tabla')
-export class NombreEntidad {
-  id: <tipo PK, p.ej. uuid>;
-  fieldName: <tipo>;
-  createdAt: <tipo timestamp>;
-  updatedAt: <tipo timestamp>;
+\`\`\`<ORM language — e.g. typescript, python>
+@Entity / Model / Table('table_name')
+export class EntityName {
+  id: <PK type, e.g. uuid>;
+  fieldName: <type>;
+  createdAt: <timestamp type>;
+  updatedAt: <timestamp type>;
 }
 \`\`\`
 
-### Migración SQL
+### SQL migration
 
 \`\`\`sql
-CREATE TABLE nombre_tabla (
+CREATE TABLE table_name (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   field_name VARCHAR(255) NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -42,21 +42,23 @@ CREATE TABLE nombre_tabla (
 
 ---
 
-### NombreEntidad2  ← repetir si hay más de una tabla nueva
+### EntityName2  ← repeat if there is more than one new table
 
-[misma estructura]
+[same structure]
 ```
 
 ## Rules
-- One `## NombreEntidad` block per new/changed table.
+- One `## EntityName` block per new/changed table.
 - Schema field names/types must match the SQL column names/types exactly —
   `/plan`'s "Entity field consistency" check (PHASE 3.5) compares them directly.
 - Field names here should match `context.md` where the field already exists
   on a related entity (reuse, don't rename without reason).
 - If a field is also exposed in the API contract, the
   naming should match unless there's a documented reason (e.g. internal
-  column vs. public field) — flag the mismatch in `## Decisiones de Diseño`
+  column vs. public field) — flag the mismatch in `## Design Decisions`
   in `design.md` if intentional.
-- El estilo del bloque «Definición de esquema» (decoradores, nomenclatura de
-  columnas) sale del stack del proyecto (`STACK_REFS` / profile sección 7:
-  `ORM`, `DTO_STYLE`, `IDENTIFIER_LANGUAGE`).
+- The style of the "Schema definition" block (decorators, column naming) comes from
+  the project's stack (`STACK_REFS` / profile section 7: `ORM`, `DTO_STYLE`,
+  `IDENTIFIER_LANGUAGE`).
+- Headings in English (structural); prose in `ARTIFACT_LANGUAGE` (profile,
+  section 5); table and column names verbatim from the schema.

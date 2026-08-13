@@ -1,102 +1,102 @@
 ---
 name: skill-evaluator
 description: >
-  Revisa una skill existente contra la guía oficial de Anthropic y produce un
-  reporte con hallazgos priorizados por severidad, una batería de tests de
-  disparo y las correcciones concretas a aplicar. Valida las reglas duras del
-  frontmatter, evalúa la calidad de la description, detecta riesgos de
-  sobre-disparo y sub-disparo, revisa la estructura y el uso de progressive
-  disclosure, y chequea que las instrucciones sean accionables.
-  Use when the user says "/skill-evaluator", "revisar esta
-  skill", "evaluar skill", "por qué mi skill no dispara", "la skill dispara de
-  más", "auditar SKILL.md", "mejorar esta skill", "revisá mis skills", or points
+  Reviews an existing skill against Anthropic's official guidance and produces a
+  report with findings prioritized by severity, a trigger test battery and the
+  concrete fixes to apply. Validates the frontmatter's hard rules, assesses the
+  description's quality, detects over-triggering and under-triggering risks,
+  reviews the structure and the use of progressive disclosure, and checks that
+  the instructions are actionable.
+  Use when the user says "/skill-evaluator", "review this skill",
+  "evaluate a skill", "why doesn't my skill trigger", "the skill over-triggers",
+  "audit a SKILL.md", "improve this skill", "review my skills", or points
   at a skill folder or SKILL.md and asks for feedback.
   Do NOT use to create a skill from scratch (use /skill-creator), to review
-  application code (use /code-review), or to run automated test suites — esta
-  skill diagnostica y propone tests, no los ejecuta.
+  application code (use /code-review), or to run automated test suites — this
+  skill diagnoses and proposes tests, it doesn't execute them.
 ---
 
 # skill-evaluator
 
 ## Overview
 
-Revisa una o varias skills contra la guía oficial de Anthropic y devuelve un
-diagnóstico accionable: qué está roto (bloqueante), qué la hace no disparar, y
-qué correcciones concretas aplicar.
+Reviews one or more skills against Anthropic's official guidance and returns an
+actionable diagnosis: what's broken (blocking), what stops it from triggering, and
+which concrete fixes to apply.
 
-Esta skill es **agnóstica** — evalúa skills de cualquier proyecto o dominio.
+This skill is **agnostic** — it evaluates skills from any project or domain.
 
-**Announce at start:** "Voy a evaluar la skill contra la guía. Arranco leyendo la carpeta."
+**Announce at start:** "I'll evaluate the skill against the guidance. Starting by reading the folder."
 
-**Output:** un reporte en el chat con hallazgos priorizados, batería de tests de
-disparo, y — solo si el usuario lo aprueba — las ediciones aplicadas.
+**Output:** a report in the chat with prioritized findings, a trigger test battery,
+and — only if the user approves — the edits applied.
 
-**Core principle:** la mayoría de las skills fallan por la `description`, no por
-las instrucciones. Priorizar los hallazgos por lo que realmente cambia el
-comportamiento: primero lo que impide que la skill cargue o se instale, después
-lo que la hace disparar mal, y al final el pulido de redacción.
+**Core principle:** most skills fail because of the `description`, not the
+instructions. Prioritize findings by what actually changes behavior: first what
+prevents the skill from loading or installing, then what makes it trigger wrongly,
+and finally wording polish.
 
-**CRITICAL: esta skill diagnostica; no reescribe sin permiso.** Mostrar el
-reporte primero y pedir confirmación antes de editar archivos.
+**CRITICAL: this skill diagnoses; it doesn't rewrite without permission.** Show the
+report first and ask for confirmation before editing files.
 
 ---
 
-## PHASE 1: Ubicar y cargar la skill
+## PHASE 1: Locate and load the skill
 
-### Step 1 — Resolver el objetivo
+### Step 1 — Resolve the target
 
-Orden de preferencia:
-1. El usuario pasó una ruta explícita (carpeta o `SKILL.md`) → usarla.
-2. El usuario nombró una skill (ej. "revisá `commit`") → buscarla:
+Order of preference:
+1. The user passed an explicit path (folder or `SKILL.md`) → use it.
+2. The user named a skill (e.g. "review `commit`") → find it:
 
 ```bash
 find ~/.claude/skills ~/.agents/skills .claude/skills -maxdepth 2 -iname "SKILL.md" 2>/dev/null
 ```
 
-3. El usuario dijo "revisá mis skills" sin especificar → listar las encontradas
-   y preguntar con `AskUserQuestion` (`header: "Skill"`) cuál evaluar. Si son
-   pocas y lo pide explícitamente, evaluar todas y reportar por skill.
+3. The user said "review my skills" without specifying → list the ones found and
+   ask with `AskUserQuestion` (`header: "Skill"`) which to evaluate. If there are
+   few and they explicitly ask, evaluate them all and report per skill.
 
-### Step 2 — Inventariar la carpeta
+### Step 2 — Inventory the folder
 
 ```bash
-SKILL_DIR=<ruta resuelta>
+SKILL_DIR=<resolved path>
 ls -la "$SKILL_DIR"
 find "$SKILL_DIR" -type f | sort
 wc -w "$SKILL_DIR/SKILL.md"
 ```
 
-Registrar: nombre exacto del archivo principal, subcarpetas presentes,
-existencia de `README.md`, cantidad de palabras de `SKILL.md`.
+Record: the main file's exact name, which subfolders exist, whether a `README.md`
+is present, and `SKILL.md`'s word count.
 
-### Step 3 — Leer
+### Step 3 — Read
 
-Leer `SKILL.md` completo. Leer también los archivos de `references/` **solo si**
-`SKILL.md` los enlaza — si no los enlaza, eso ya es un hallazgo (ver D3).
+Read `SKILL.md` in full. Also read the `references/` files **only if** `SKILL.md`
+links them — if it doesn't link them, that's already a finding (see D3).
 
 ---
 
-## PHASE 2: Reglas duras (bloqueantes)
+## PHASE 2: Hard rules (blocking)
 
-Consultar `references/rubric.md` para la rúbrica completa con severidades.
+Consult `references/rubric.md` for the full rubric with severities.
 
-Estas son binarias: se cumplen o la skill está rota. Cualquier fallo acá es
-severidad **BLOQUEANTE** y va primero en el reporte.
+These are binary: either they hold or the skill is broken. Any failure here is
+**BLOCKING** severity and goes first in the report.
 
-| ID | Regla | Cómo se verifica |
+| ID | Rule | How it's verified |
 |---|---|---|
-| B1 | El archivo se llama exactamente `SKILL.md` (case-sensitive) | `ls` — no `SKILL.MD`, no `skill.md` |
-| B2 | Frontmatter con delimitadores `---` de apertura y cierre | Leer las primeras líneas |
-| B3 | YAML válido (comillas cerradas, indentación consistente) | Parsear mentalmente; buscar comillas sin cerrar |
-| B4 | `name` presente y en kebab-case | Sin espacios, mayúsculas ni guiones bajos |
-| B5 | `name` coincide con el nombre de la carpeta | Comparar |
-| B6 | `name` no contiene "claude" ni "anthropic" | Reservados |
-| B7 | `description` presente | — |
-| B8 | `description` bajo 1024 caracteres | Contar |
-| B9 | Sin corchetes angulares (`<` `>`) en el frontmatter | Buscar en el bloque completo |
-| B10 | Sin `README.md` dentro de la carpeta de la skill | `ls` |
+| B1 | The file is named exactly `SKILL.md` (case-sensitive) | `ls` — not `SKILL.MD`, not `skill.md` |
+| B2 | Frontmatter with opening and closing `---` delimiters | Read the first lines |
+| B3 | Valid YAML (closed quotes, consistent indentation) | Parse it mentally; look for unclosed quotes |
+| B4 | `name` present and in kebab-case | No spaces, uppercase or underscores |
+| B5 | `name` matches the folder name | Compare |
+| B6 | `name` doesn't contain "claude" or "anthropic" | Reserved |
+| B7 | `description` present | — |
+| B8 | `description` under 1024 characters | Count |
+| B9 | No angle brackets (`<` `>`) in the frontmatter | Search the whole block |
+| B10 | No `README.md` inside the skill's folder | `ls` |
 
-Para contar caracteres de la `description` sin estimar a ojo:
+To count the `description`'s characters without eyeballing it:
 
 ```bash
 python -c "import sys,re,io; t=io.open(sys.argv[1],encoding='utf-8').read(); m=re.search(r'^---\n(.*?)\n---', t, re.S); d=re.search(r'^description:\s*(.*?)(?=^\w+:|\Z)', m.group(1), re.S|re.M); print(len(' '.join(d.group(1).split())))" "$SKILL_DIR/SKILL.md"
@@ -104,188 +104,189 @@ python -c "import sys,re,io; t=io.open(sys.argv[1],encoding='utf-8').read(); m=r
 
 ---
 
-## PHASE 3: Calidad de la `description`
+## PHASE 3: `description` quality
 
-Es el análisis de mayor impacto. La `description` es lo único siempre cargado y
-es lo que decide el disparo.
+This is the highest-impact analysis. The `description` is the only thing always
+loaded and it's what decides triggering.
 
-### Chequeos
+### Checks
 
-| ID | Chequeo | Falla si… |
+| ID | Check | Fails if… |
 |---|---|---|
-| D1 | Dice **qué hace** la skill | Solo dice cuándo, o es puro nombre de dominio |
-| D2 | Dice **cuándo usarla** con frases de usuario reales | No hay frases disparadoras, solo descripción técnica |
-| D3 | Las frases son las que un usuario **realmente diría** | Usa jerga interna que el usuario nunca tipearía |
-| D4 | Menciona tipos de archivo si son relevantes | Maneja `.csv`/`.fig`/`.pdf` y no los nombra |
-| D5 | Tiene disparadores negativos si hay skills vecinas | Alcance solapado sin `Do NOT use…` |
-| D6 | No es genérica | "Ayuda con proyectos", "Procesa documentos" |
+| D1 | It says **what the skill does** | It only says when, or it's just a domain name |
+| D2 | It says **when to use it** with real user phrases | There are no trigger phrases, just a technical description |
+| D3 | The phrases are ones a user **would actually say** | It uses internal jargon the user would never type |
+| D4 | It mentions file types if they're relevant | It handles `.csv`/`.fig`/`.pdf` and never names them |
+| D5 | It has negative triggers if there are neighboring skills | Overlapping scope with no `Do NOT use…` |
+| D6 | It isn't generic | "Helps with projects", "Processes documents" |
 
-### Diagnóstico de disparo
+### Trigger diagnosis
 
-Clasificar el riesgo en una de tres:
+Classify the risk as one of three:
 
-| Riesgo | Señales | Corrección |
+| Risk | Signals | Fix |
 |---|---|---|
-| **Sub-disparo** | Description genérica; sin frases disparadoras; el usuario tiene que invocarla a mano | Agregar detalle y matices a la description — sobre todo keywords y términos técnicos que el usuario usa |
-| **Sobre-disparo** | Description demasiado amplia; carga en queries no relacionadas; el usuario la desactiva | Agregar disparadores negativos, ser más específico, acotar el alcance |
-| **OK** | Frases concretas, alcance acotado, exclusiones donde hace falta | — |
+| **Under-triggering** | Generic description; no trigger phrases; the user has to invoke it by hand | Add detail and nuance to the description — above all keywords and technical terms the user uses |
+| **Over-triggering** | Description too broad; loads on unrelated queries; the user disables it | Add negative triggers, be more specific, narrow the scope |
+| **OK** | Concrete phrases, bounded scope, exclusions where needed | — |
 
-### Técnica de debug (recomendarla al usuario)
+### Debug technique (recommend it to the user)
 
-> Preguntale a Claude en una sesión limpia: "¿Cuándo usarías la skill
-> `<nombre>`?". Claude va a citar la description de vuelta. Lo que falte en esa
-> respuesta es exactamente lo que falta en la description.
+> Ask Claude in a clean session: "When would you use the `<name>` skill?". Claude
+> will quote the description back. Whatever's missing from that answer is exactly
+> what's missing from the description.
 
 ---
 
-## PHASE 4: Estructura y progressive disclosure
+## PHASE 4: Structure and progressive disclosure
 
-| ID | Chequeo | Umbral |
+| ID | Check | Threshold |
 |---|---|---|
-| E1 | Carpeta en kebab-case | Sin espacios, guiones bajos ni mayúsculas |
-| E2 | `SKILL.md` bajo 5.000 palabras | Si se pasa → mover detalle a `references/` |
-| E3 | Los `references/` están enlazados explícitamente desde `SKILL.md` | Un archivo que nadie enlaza no se carga nunca |
-| E4 | No hay carpetas vacías (`scripts/`, `assets/`, `references/`) | Andamiaje sin contenido = ruido |
-| E5 | El detalle pesado vive en `references/`, no inline | Nivel 3 de progressive disclosure |
-| E6 | Los `scripts/` referenciados existen y el comando es correcto | Verificar rutas |
+| E1 | Folder in kebab-case | No spaces, underscores or uppercase |
+| E2 | `SKILL.md` under 5,000 words | If it exceeds → move detail to `references/` |
+| E3 | The `references/` are explicitly linked from `SKILL.md` | A file nobody links never loads |
+| E4 | No empty folders (`scripts/`, `assets/`, `references/`) | Scaffolding with no content = noise |
+| E5 | Heavy detail lives in `references/`, not inline | Progressive disclosure level 3 |
+| E6 | The referenced `scripts/` exist and the command is correct | Verify the paths |
 
-Recordar los tres niveles: frontmatter (siempre cargado) → cuerpo de `SKILL.md`
-(cuando Claude cree que es relevante) → archivos enlazados (solo cuando navega).
+Remember the three levels: frontmatter (always loaded) → `SKILL.md`'s body
+(when Claude believes it's relevant) → linked files (only when it navigates them).
 
 ---
 
-## PHASE 5: Calidad de las instrucciones
+## PHASE 5: Instruction quality
 
-Síntoma que ataca esta fase: *la skill carga pero Claude no sigue las
-instrucciones*.
+The symptom this phase attacks: *the skill loads but Claude doesn't follow the
+instructions*.
 
-| ID | Causa común | Chequeo | Corrección |
+| ID | Common cause | Check | Fix |
 |---|---|---|---|
-| I1 | Instrucciones demasiado verbosas | ¿Párrafos largos donde iría una lista? | Bullets y listas numeradas; detalle a `references/` |
-| I2 | Instrucciones enterradas | ¿Lo crítico está al principio? | Mover arriba; usar encabezados `## Important` / `## Critical` |
-| I3 | Lenguaje ambiguo | ¿Dice "validar bien" en vez de qué validar? | Reemplazar por criterios verificables |
-| I4 | Sin manejo de errores | ¿Hay sección de issues comunes con causa y solución? | Agregarla |
-| I5 | Sin ejemplos | ¿Hay al menos un escenario end-to-end? | Agregar user says / actions / result |
-| I6 | No accionable | ¿Los comandos son literales y copiables? | ``Correr `python scripts/validate.py --input {file}` `` |
+| I1 | Instructions too verbose | Long paragraphs where a list belongs? | Bullets and numbered lists; detail into `references/` |
+| I2 | Buried instructions | Is the critical part near the start? | Move it up; use `## Important` / `## Critical` headings |
+| I3 | Ambiguous language | Does it say "validate properly" instead of what to validate? | Replace with verifiable criteria |
+| I4 | No error handling | Is there a common-issues section with cause and solution? | Add it |
+| I5 | No examples | Is there at least one end-to-end scenario? | Add user says / actions / result |
+| I6 | Not actionable | Are the commands literal and copy-pasteable? | ``Run `python scripts/validate.py --input {file}` `` |
 
-Ejemplo del contraste que hay que buscar:
+The contrast to look for:
 
 ```
-# Mal
+# Bad
 Make sure to validate things properly
 
-# Bien
+# Good
 CRITICAL: Before calling create_project, verify:
 - Project name is non-empty
 - At least one team member assigned
 - Start date is not in the past
 ```
 
-**Señal avanzada:** si una validación crítica depende de que el modelo
-interprete texto, marcarlo como oportunidad — recomendar un script que la haga
-programáticamente. El código es determinista; la interpretación del lenguaje no.
+**Advanced signal:** if a critical validation depends on the model interpreting
+text, flag it as an opportunity — recommend a script that does it programmatically.
+Code is deterministic; language interpretation isn't.
 
 ---
 
-## PHASE 6: Generar la batería de tests de disparo
+## PHASE 6: Generate the trigger test battery
 
-Derivar los casos de prueba de la `description` y de los ejemplos de la skill —
-no inventar de la nada.
+Derive the test cases from the `description` and the skill's examples — don't
+invent them from nothing.
 
 ```
-Debería disparar:
-- "<frase literal de la description>"
-- "<parafraseo natural de esa frase>"
-- "<caso de uso descrito en los Examples de la skill>"
+Should trigger:
+- "<literal phrase from the description>"
+- "<natural paraphrase of that phrase>"
+- "<use case described in the skill's Examples>"
 
-NO debería disparar:
-- "<query del dominio vecino que la description excluye>"
-- "<query genérica no relacionada>"
-- "<query que otra skill del sistema debería tomar>"
+Should NOT trigger:
+- "<query from the neighboring domain the description excludes>"
+- "<generic unrelated query>"
+- "<query another skill in the system should take>"
 ```
 
-Apuntar a 10–20 queries si el usuario quiere medir en serio: la meta de la guía
-es que dispare en el **90% de las queries relevantes**. Se mide corriéndolas y
-contando cuántas veces carga sola vs. requiere invocación explícita.
+Aim for 10–20 queries if the user wants to measure seriously: the guidance's target
+is triggering on **90% of relevant queries**. It's measured by running them and
+counting how often it loads on its own vs. needs explicit invocation.
 
-Si hay otras skills instaladas con alcance vecino, nombrarlas explícitamente en
-el reporte como riesgo de colisión.
+If there are other installed skills with neighboring scope, name them explicitly in
+the report as a collision risk.
 
 ---
 
-## PHASE 7: Reporte y cierre
+## PHASE 7: Report and close
 
-### Formato del reporte
+### Report format
 
 ```markdown
-## Evaluación: <nombre-skill>
+## Evaluation: <skill-name>
 
-**Veredicto:** <Lista para usar | Necesita ajustes | Rota>
-**Riesgo de disparo:** <Sub-disparo | Sobre-disparo | OK>
+**Verdict:** <Ready to use | Needs adjustments | Broken>
+**Trigger risk:** <Under-triggering | Over-triggering | OK>
 
-### Bloqueantes (N)
-| ID | Hallazgo | Corrección |
+### Blocking (N)
+| ID | Finding | Fix |
 |---|---|---|
 
-### Importantes (N)
-| ID | Hallazgo | Corrección |
+### Important (N)
+| ID | Finding | Fix |
 |---|---|---|
 
-### Menores (N)
-| ID | Hallazgo | Corrección |
+### Minor (N)
+| ID | Finding | Fix |
 |---|---|---|
 
-### Tests de disparo sugeridos
-Debería disparar: …
-NO debería disparar: …
+### Suggested trigger tests
+Should trigger: …
+Should NOT trigger: …
 
-### Qué haría primero
-1. <la corrección de mayor impacto>
+### What I'd do first
+1. <the highest-impact fix>
 2. …
 ```
 
-Reglas del reporte:
-- **Ordenar por severidad**, no por orden de aparición en el archivo.
-- Cada hallazgo trae la corrección concreta, no solo el diagnóstico.
-- Si no hay hallazgos en una categoría, decirlo en una línea — no inflar.
-- No reportar como problema lo que la guía deja a criterio del autor.
+Report rules:
+- **Order by severity**, not by order of appearance in the file.
+- Every finding carries the concrete fix, not just the diagnosis.
+- If a category has no findings, say so in one line — don't pad.
+- Don't report as a problem what the guidance leaves to the author's judgment.
 
 ### Handoff
 
-Preguntar con `AskUserQuestion` (`header: "Correcciones"`):
-- `"Aplicar los bloqueantes e importantes"` / `"Aplicar todo"` /
-  `"Solo el reporte, no toques nada"`.
+Ask with `AskUserQuestion` (`header: "Fixes"`):
+- `"Apply the blocking and important ones"` / `"Apply everything"` /
+  `"Report only, don't touch anything"`.
 
-Si el usuario aprueba, aplicar las ediciones y mostrar qué cambió. Si no, parar.
+If the user approves, apply the edits and show what changed. If not, stop.
 
-Decir:
-> "Evaluación lista. Corré las queries de disparo en una sesión limpia para
-> verificar el comportamiento real — el reporte predice el disparo, no lo mide."
+Say:
+> "Evaluation ready. Run the trigger queries in a clean session to verify the real
+> behavior — the report predicts triggering, it doesn't measure it."
 
 ---
 
 ## CRITICAL: Output Language
 
-El reporte en el idioma del usuario (para este workspace: español). Los IDs de
-hallazgo (B1, D3, E2, I4), los nombres de campos del frontmatter, rutas y código
-siempre en inglés.
+**The skills reviewed and any edit applied are written in English.** Finding IDs
+(B1, D3, E2, I4), frontmatter field names, paths and code are always English.
 
-Al proponer correcciones de una `description`, respetar el idioma en que está
-escrita la skill y en el que el usuario realmente habla — los disparadores solo
-sirven si coinciden con lo que el usuario tipea.
+When proposing `description` fixes, keep the triggers in the language the user
+actually types — a trigger that never matches what the user writes is dead weight,
+whatever language the rest of the file is in.
+
+**Chat interaction (the report) follows the user's language.**
 
 ---
 
 ## Common Issues
 
-| Issue | Causa | Resolución |
+| Issue | Cause | Resolution |
 |---|---|---|
-| No se encuentra la skill | Ruta mal escrita o skill en otro scope | Correr el `find` de PHASE 1 Step 1 sobre los tres scopes (proyecto, `~/.claude`, `~/.agents`) |
-| `SKILL.md` es un symlink | Skills globales enlazadas desde `~/.claude/skills` | Resolver el destino real antes de editar: `readlink -f`; editar el original, no el link |
-| La skill parece bien pero no dispara | Description técnicamente correcta pero sin lenguaje de usuario | Aplicar la técnica de debug de PHASE 3 y comparar con lo que el usuario realmente tipea |
-| Dos skills evaluadas se pisan | Alcances solapados | Reportar la colisión y proponer disparadores negativos cruzados en ambas |
-| Usuario pide "arreglala y ya" | Quiere saltear el reporte | Mostrar igual el resumen de bloqueantes antes de editar — es el único momento de decidir alcance |
-| Skill enorme pero coherente | Progressive disclosure sin usar | No pedir recortar contenido: pedir **mover** a `references/` y enlazar |
+| The skill can't be found | Misspelled path or skill in another scope | Run PHASE 1 Step 1's `find` over all three scopes (project, `~/.claude`, `~/.agents`) |
+| `SKILL.md` is a symlink | Global skills linked from `~/.claude/skills` | Resolve the real target before editing: `readlink -f`; edit the original, not the link |
+| The skill looks fine but doesn't trigger | Description technically correct but with no user language | Apply PHASE 3's debug technique and compare with what the user actually types |
+| Two evaluated skills overlap | Overlapping scopes | Report the collision and propose cross negative triggers in both |
+| The user says "just fix it" | They want to skip the report | Show the blocking summary anyway before editing — it's the only moment to decide scope |
+| Huge but coherent skill | Progressive disclosure unused | Don't ask to cut content: ask to **move** it to `references/` and link it |
 
 ---
 
@@ -293,20 +294,20 @@ sirven si coinciden con lo que el usuario tipea.
 
 **Input:** `/skill-evaluator ~/.claude/skills/report-builder`
 
-**Flujo:**
-1. PHASE 1: resuelve el symlink a `~/.agents/skills/report-builder`. Encuentra
-   `SKILL.md` (6.200 palabras), `references/` (2 archivos), `README.md`.
-2. PHASE 2: B10 falla → hay `README.md` dentro de la carpeta. B1–B9 OK.
-3. PHASE 3: D2 y D6 fallan → `description: Genera reportes.` Sin frases
-   disparadoras. Diagnóstico: **sub-disparo**.
-4. PHASE 4: E2 falla (6.200 > 5.000 palabras). E3 falla → uno de los
-   `references/` no está enlazado desde `SKILL.md`.
-5. PHASE 5: I4 falla → sin sección de manejo de errores.
-6. PHASE 6: genera 3 queries positivas y 3 negativas a partir de los Examples.
-7. PHASE 7: reporte — 1 bloqueante, 3 importantes, 1 menor. Prioridad 1:
-   reescribir la description con las frases del usuario.
+**Flow:**
+1. PHASE 1: resolves the symlink to `~/.agents/skills/report-builder`. Finds
+   `SKILL.md` (6,200 words), `references/` (2 files), `README.md`.
+2. PHASE 2: B10 fails → there's a `README.md` inside the folder. B1–B9 OK.
+3. PHASE 3: D2 and D6 fail → `description: Generates reports.` No trigger phrases.
+   Diagnosis: **under-triggering**.
+4. PHASE 4: E2 fails (6,200 > 5,000 words). E3 fails → one of the `references/`
+   isn't linked from `SKILL.md`.
+5. PHASE 5: I4 fails → no error-handling section.
+6. PHASE 6: generates 3 positive and 3 negative queries from the Examples.
+7. PHASE 7: report — 1 blocking, 3 important, 1 minor. Priority 1: rewrite the
+   description with the user's phrases.
 
-**Salida:**
-> "Evaluación lista: 1 bloqueante (`README.md` dentro de la carpeta), riesgo de
-> **sub-disparo** por description genérica. Lo de mayor impacto es reescribir la
-> description. ¿Aplico las correcciones?"
+**Output:**
+> "Evaluation ready: 1 blocking issue (`README.md` inside the folder), risk of
+> **under-triggering** from a generic description. The highest-impact fix is
+> rewriting the description. Should I apply the fixes?"

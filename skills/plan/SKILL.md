@@ -2,9 +2,9 @@
 name: plan
 description: >
   Generates a detailed TDD implementation plan from the approved design artifacts
-  (spec.md, context.md, design.md) and saves it to work/active/sm-<number>/plan.md.
-  Use when the user says "/plan sm-XXX", "generar plan", "crear plan de implementación",
-  "planear historia", or has completed /design and wants TDD tasks.
+  (spec.md, context.md, design.md) and saves it to work/active/spec-<number>/plan.md.
+  Use when the user says "/plan spec-XXXX", "generate the plan", "create the
+  implementation plan", "plan the story", or has completed /design and wants TDD tasks.
   Do NOT use before /design is complete and approved.
   Do NOT use for executing tasks (use /build).
 ---
@@ -16,31 +16,33 @@ description: >
 Read the three approved artifacts, determine implementation order from the
 sequence diagram, and produce a complete TDD plan organized by microservice.
 
-**Announce at start:** "Generando plan de implementación para sm-<number>."
+**Announce at start:** "Generating the implementation plan for spec-<number>."
 
-**Output:** `work/active/sm-<number>/plan.md`
+**Output:** `work/active/spec-<number>/plan.md`
 
 ---
 
-## Perfil del proyecto (leer primero, siempre)
+## Project profile (read first, always)
 
-Antes de cualquier otra cosa, leé `.agents/profile.md` (en la raíz del proyecto actual): define las rutas de
-artefactos, el idioma de salida, el **stack objetivo** (framework, ORM, estilo de
-DTOs) y el **framework de tests** que ancla el ciclo TDD. Si no existe, avisá que
-lo creen desde la plantilla y detené.
+Before anything else, read `.agents/profile.md` (at the root of the current project): it defines the artifact
+paths, the output language, the **target stack** (framework, ORM, DTO style) and the
+**test framework** that anchors the TDD cycle. If it doesn't exist, tell the user to
+create it from the template and stop.
 
-**CRITICAL — Directorio de trabajo:** antes de ejecutar cualquier cosa, verificá que estás en el directorio de trabajo del proyecto (`WORKING_DIRECTORY` del profile — ruta absoluta). Si `pwd` no coincide con `WORKING_DIRECTORY`, `cd` a ese directorio antes de continuar.
+**CRITICAL — Working directory:** before running anything, verify you are in the project's working directory (`WORKING_DIRECTORY` from the profile — absolute path). If `pwd` doesn't match `WORKING_DIRECTORY`, `cd` there before continuing.
 
-**Los literales de este documento son solo un ejemplo de resolución** (el perfil de Smart Mobility).
-Los valores reales salen del `profile.md` del proyecto en el que estés trabajando — si difieren, mandan los del perfil:
+**The literals in this document are only an example resolution**.
+The real values come from the `profile.md` of the project you're working on — if they differ, the profile wins:
 
-| En este documento | Clave en profile.md |
+| In this document | Key in profile.md |
 |---|---|
-| `sm-<number>` | `STORY_ID_PATTERN` |
-| `work/active/sm-<number>/` | `WORKDIR_ACTIVE` |
-| microservicio | `COMPONENT_TERM` |
+| `spec-<number>` | `STORY_ID_PATTERN` |
+| `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
+| microservice | `COMPONENT_TERM` |
+| `develop` | `BASE_BRANCH` |
+| `feat/<story-key>-…` | `STORY_KEY_PATTERN` |
 | Jest / `*.spec.ts` | `TEST_FRAMEWORK` |
-| NestJS · DTOs · OpenAPI→DTO | sección 7 «Stack y arquitectura» + `API_CONTRACT` + `<STACK_REFS>` |
+| NestJS · DTOs · OpenAPI→DTO | section 7 "Stack and architecture" + `API_CONTRACT` + `<STACK_REFS>` |
 
 ---
 
@@ -48,71 +50,71 @@ Los valores reales salen del `profile.md` del proyecto en el que estés trabajan
 
 Extract the story number from user input. Then verify:
 
-`<api-artifact>` = `docs/api.delta.yaml` si `API_CONTRACT_MODE = delta` (default
-en profile, sección 8), si no `docs/api.yaml`.
+`<api-artifact>` = `docs/api.delta.yaml` if `API_CONTRACT_MODE = delta` (the profile
+default, section 8), otherwise `docs/api.yaml`.
 
 ```bash
-[ -f work/active/sm-<number>/spec.md ]          || echo "MISSING: spec.md"
-[ -f work/active/sm-<number>/context.md ]      || echo "MISSING: context.md"
-[ -f work/active/sm-<number>/design.md ]       || echo "MISSING: design.md"
-[ -f work/active/sm-<number>/docs/diagram.md ] || echo "MISSING: docs/diagram.md"
-[ -f work/active/sm-<number>/docs/<api-artifact> ] || echo "MISSING: docs/<api-artifact>"
+[ -f work/active/spec-<number>/spec.md ]          || echo "MISSING: spec.md"
+[ -f work/active/spec-<number>/context.md ]      || echo "MISSING: context.md"
+[ -f work/active/spec-<number>/design.md ]       || echo "MISSING: design.md"
+[ -f work/active/spec-<number>/docs/diagram.md ] || echo "MISSING: docs/diagram.md"
+[ -f work/active/spec-<number>/docs/<api-artifact> ] || echo "MISSING: docs/<api-artifact>"
 ```
 
 - If `spec.md` missing → stop:
-  "No encontré `work/active/sm-<number>/spec.md`.
-  Ejecutá `/spec sm-<number>` primero."
+  "I couldn't find `work/active/spec-<number>/spec.md`.
+  Run `/spec spec-<number>` first."
 
 - If `context.md` missing → stop:
-  "No encontré `work/active/sm-<number>/context.md`.
-  Ejecutá `/clarify sm-<number>` primero."
+  "I couldn't find `work/active/spec-<number>/context.md`.
+  Run `/clarify spec-<number>` first."
 
 - If `design.md`, `docs/diagram.md` or `<api-artifact>` are missing → stop:
-  "No encontré los artefactos de diseño completos para sm-<number>.
-  Ejecutá `/design sm-<number>` primero."
+  "I couldn't find the complete design artifacts for spec-<number>.
+  Run `/design spec-<number>` first."
 
-- If `design.md` contains a `## Modelado de datos` section but
+- If `design.md` contains a `## Data Modeling` section but
   `docs/data-model.md` does not exist → stop:
-  "`design.md` indica un modelo de datos nuevo pero no encontré
-  `docs/data-model.md`. Ejecutá `/design sm-<number>` de nuevo."
+  "`design.md` states there's a new data model but I couldn't find
+  `docs/data-model.md`. Run `/design spec-<number>` again."
 
 ---
 
 ## PHASE 1: Load artifacts
 
-1. Read `work/active/sm-<number>/spec.md` — extract:
+1. Read `work/active/spec-<number>/spec.md` — extract:
    - All acceptance criteria — these drive the test cases
    - Business rules and edge cases
 
-2. Read `work/active/sm-<number>/context.md` — extract:
+2. Read `work/active/spec-<number>/context.md` — extract:
    - Affected microservices
    - Existing module paths per microservice
    - Injection patterns (how use cases are registered)
    - Existing DTOs available for reuse
    - Current providers in each module.ts
 
-3. Read `work/active/sm-<number>/design.md` — extract:
+3. Read `work/active/spec-<number>/design.md` — extract:
    - Endpoint table per microservice (business description)
-   - Whether `## Modelado de datos` is present (signals a new/changed table
+   - Whether `## Data Modeling` is present (signals a new/changed table
      exists — the actual entity/SQL lives in `docs/data-model.md`)
 
-4. Read `work/active/sm-<number>/docs/diagram.md` — the sequence diagram
+4. Read `work/active/spec-<number>/docs/diagram.md` — the sequence diagram
    determines microservice implementation order (PHASE 2).
 
-5. Read `work/active/sm-<number>/docs/<api-artifact>` (resuelto por
-   `API_CONTRACT_MODE`: `api.delta.yaml` si `delta`, `api.yaml` si `full`) —
+5. Read `work/active/spec-<number>/docs/<api-artifact>` (resolved by
+   `API_CONTRACT_MODE`: `api.delta.yaml` if `delta`, `api.yaml` if `full`) —
    this is the **source of truth** for DTOs, never `design.md`:
    - Every path + operation → the endpoint a controller task must expose
    - Every schema in `components.schemas` → one DTO class, field-by-field
    - Every response code + description → the HTTP response cases a task must test
 
 6. If `design.md` has a data model section, read
-   `work/active/sm-<number>/docs/data-model.md` — this is the **source of
+   `work/active/spec-<number>/docs/data-model.md` — this is the **source of
    truth** for the entity/migration task, never `design.md`:
    - Every entity field + type → the `@Column` definition and SQL column
    - Every SQL column → must match the entity field name/type exactly
 
-6b. If `work/active/sm-<number>/docs/research.md` exists, read it — the chosen
+6b. If `work/active/spec-<number>/docs/research.md` exists, read it — the chosen
     options and their rationale constrain how tasks should implement each
     decision (do not re-litigate a decision already recorded there).
 
@@ -127,11 +129,11 @@ en profile, sección 8), si no `docs/api.yaml`.
 7. Read `docs/architecture/testing.md` — apply TDD task format and test commands throughout.
 8. Read `docs/architecture/conventions.md` — apply naming conventions throughout.
 9. Consult `references/plan-header-template.md` — required header format.
-10. Consult `<STACK_REFS>/references/task-structure-template.md` (default si `STACK_REFS`
-    no está definido: `references/task-structure-template.md` local — genérica)
+10. Consult `<STACK_REFS>/references/task-structure-template.md` (default if `STACK_REFS`
+    isn't defined: the local `references/task-structure-template.md` — generic)
     — required task format.
-11. Consult `<STACK_REFS>/references/openapi-to-dto-mapping.md` (default:
-    `references/openapi-to-dto-mapping.md` local — genérica) — exact mapping from
+11. Consult `<STACK_REFS>/references/openapi-to-dto-mapping.md` (default: the local
+    `references/openapi-to-dto-mapping.md` — generic) — exact mapping from
     the API contract schema fields to the project's DTO style for the DTO task(s).
 
 ---
@@ -157,8 +159,8 @@ Record the ordered list of microservices before writing any tasks.
 If 3+ microservices are affected, check whether any of them have **no call
 relationship** with each other in the sequence diagram (neither calls the
 other, directly or transitively). Group those into independent groups —
-e.g. "Grupo A: sm-capabilities-ms → sm-graphql-fb-ms" and "Grupo B:
-sm-users-ms" when sm-users-ms doesn't interact with the other two.
+e.g. "Group A: catalog-ms → gateway-ms" and "Group B:
+users-ms" when users-ms doesn't interact with the other two.
 
 If only 1-2 microservices are affected, or all of them are connected in a
 single call chain, skip this — there is nothing to parallelize.
@@ -176,13 +178,14 @@ Consult `references/plan-header-template.md` for the exact header structure.
 
 Consult `references/plan-header-template.md` for the exact header structure.
 
-### Tarea 0 — Preparar ramas (always first)
+### Task 0 — Prepare branches (always first)
 
 Create git branch preparation for ALL affected microservices.
 Ask the user for the branch name before continuing:
 
-> "¿Cuál es el nombre de la rama? Usá inglés para la descripción.
-> (ej: feat/SM-<number>-short-english-description o fix/SM-<number>-short-english-description)"
+> "What's the branch name? Use English for the description.
+> (e.g. feat/<story-key>-short-english-description or fix/<story-key>-short-english-description,
+> where `<story-key>` follows `STORY_KEY_PATTERN` from the profile)"
 
 Include steps for each affected microservice:
 ```bash
@@ -190,7 +193,7 @@ git -C <microservice> checkout -b <branch-name>
 ```
 
 Note: preparing the base branch (`git checkout develop` + `git pull`) is done by
-the dedicated `/prepare` skill, not by `/scan`. Tarea 0 assumes each affected
+the dedicated `/prepare` skill, not by `/scan`. Task 0 assumes each affected
 microservice is already on an up-to-date `develop` — if the developer skipped
 `/prepare`, the branch is created off whatever is currently checked out. Do not add
 checkout/pull-of-develop steps here; if the base looks stale, recommend `/prepare`.
@@ -201,33 +204,33 @@ For EACH microservice, in the order determined in PHASE 2,
 generate tasks following this order when applicable:
 
 ```
-Tarea N   — Entidad TypeORM + migración SQL
-            (only if design.md has data model section — use the exact
-            entity/SQL from docs/data-model.md, never invent fields)
+Task N   — TypeORM entity + SQL migration
+           (only if design.md has a data model section — use the exact
+           entity/SQL from docs/data-model.md, never invent fields)
 
-Tarea N+1 — DTOs de request y response
-            (use exact field names and types from design.md)
+Task N+1 — Request and response DTOs
+           (use exact field names and types from design.md)
 
-Tarea N+2 — Puerto de dominio (abstract class)
-            (add new method signatures to existing abstract service)
+Task N+2 — Domain port (abstract class)
+           (add new method signatures to the existing abstract service)
 
-Tarea N+3 — Caso de uso
-            (new use case class with execute() method)
+Task N+3 — Use case
+           (new use case class with an execute() method)
 
-Tarea N+4 — Repositorio / adapter
-            (implement new method in existing repository)
+Task N+4 — Repository / adapter
+           (implement the new method in the existing repository)
 
-Tarea N+5 — Controller + registro en módulo
-            (add endpoint + register use case in module providers)
+Task N+5 — Controller + module registration
+           (add endpoint + register the use case in the module providers)
 ```
 
-**CRITICAL for multi-micro plans:**
+**CRITICAL for multi-service plans:**
 - Clearly mark which microservice each task belongs to
 - Use the microservice name as a section header between groups
-- Tasks for micro-2 only start after micro-1 tasks are complete,
-  UNLESS micro-1 and micro-2 belong to different independent groups
+- Tasks for service-2 only start after service-1's tasks are complete,
+  UNLESS service-1 and service-2 belong to different independent groups
   detected in PHASE 2 — in that case, mark every task header in both
-  groups with a trailing `[P]` (e.g. `### Tarea 3: DTOs de request [P]`)
+  groups with a trailing `[P]` (e.g. `### Task 3: Request DTOs [P]`)
   to signal `/build` they can be executed using parallel tool calls.
 
 ### Task format
@@ -248,7 +251,7 @@ Each task MUST have:
 
 ### Final task — Run full test suite
 
-Always include as the last task — `MODULE_TEST_CMD` del profile (sección 10 — default):
+Always include as the last task — the profile's `MODULE_TEST_CMD` (section 10 — default):
 
 ```bash
 cd <microservice>
@@ -256,7 +259,7 @@ npx jest src/modules/<module>/ --no-coverage
 cd ..
 ```
 
-Esperado: PASS — todos los tests del módulo pasando.
+Expected: PASS — every test in the module passing.
 
 If multiple microservices: run for each one.
 
@@ -267,12 +270,12 @@ If multiple microservices: run for each one.
 Before saving, run this consistency check across the three artifacts —
 do NOT skip it even if the plan "looks complete":
 
-1. **AC → Task coverage:** for every AC in `spec.md`, list which Tarea(s)
+1. **AC → Task coverage:** for every AC in `spec.md`, list which Task(s)
    exercise it (via the test written in that task). Build the table:
 
-   | AC | Cubierto por |
-   |----|-------------|
-   | AC-1 | Tarea 2, Tarea 5 |
+   | AC | Covered by |
+   |----|-----------|
+   | AC-1 | Task 2, Task 5 |
 
    If any AC has zero tasks mapped → add the missing task now, before
    saving. Never save a plan with an uncovered AC.
@@ -299,18 +302,18 @@ Include the AC → Task table in the plan header (see
 
 ## PHASE 4: Save and hand off
 
-After saving `work/active/sm-<number>/plan.md`:
+After saving `work/active/spec-<number>/plan.md`:
 
 1. Show a brief summary:
-   - Total de tareas generadas
-   - Microservicios afectados en orden de implementación
-   - Si incluye entidad + migración o no
-   - Estimación de alcance (número de archivos a crear/modificar)
+   - Total tasks generated
+   - Affected microservices in implementation order
+   - Whether it includes an entity + migration
+   - Scope estimate (number of files to create/modify)
 
 2. Say:
-   "Plan guardado en `work/active/sm-<number>/plan.md`.
-   Revisá las secciones de diseño primero y cuando estés listo
-   ejecutalo con `/build sm-<number>`."
+   "Plan saved to `work/active/spec-<number>/plan.md`.
+   Review the design sections first and when you're ready
+   run it with `/build spec-<number>`."
 
 3. Stop — do not start executing.
 
@@ -320,41 +323,59 @@ After saving `work/active/sm-<number>/plan.md`:
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Orden de micros no claro | Diagrama de secuencia ambiguo | Leer el diagrama completo, inferir por dirección de flechas |
-| Campo en test no definido | design.md incompleto | Usar solo campos confirmados en design.md |
-| Use case sin registro en módulo | Tarea omitida | Siempre incluir paso de registro en module.ts |
-| Test sin AC que lo justifique | Test inventado | Cada test debe mapear a un AC de spec.md |
-| Ruta relativa en imports | Convención violada | Usar rutas absolutas desde src/ |
+| Service order unclear | Ambiguous sequence diagram | Read the whole diagram, infer from arrow direction |
+| Undefined field in a test | Incomplete design.md | Use only fields confirmed in design.md |
+| Use case not registered in the module | Task omitted | Always include the module.ts registration step |
+| A test with no AC behind it | Invented test | Every test must map to an AC in spec.md |
+| Relative path in imports | Convention violated | Use absolute paths from src/ |
 
 ---
 
 ## Example
 
-**Input:** `/plan sm-1933` con design.md que define un endpoint en `sm-capabilities-ms`.
+**Input:** `/plan spec-1933` with a design.md defining an endpoint in `catalog-ms`.
 
-**plan.md resultante (fragmento):**
+**Resulting plan.md (fragment):**
 
 ```markdown
-# sm-1933: Filtrar zonas por tipo de servicio — Plan de Implementación
+# spec-1933: Filter zones by service type — Implementation Plan
 
-**Historia:** `work/active/sm-1933/`
-**Microservicio(s):** `sm-capabilities-ms`
-**Objetivo:** Exponer endpoint de filtrado de zonas por tipo de servicio.
+**Story:** `work/active/spec-1933/`
+**Microservice(s):** `catalog-ms`
+**Goal:** Expose an endpoint that filters zones by service type.
 
 ---
 
-### Tarea 0: Preparar rama de trabajo
+### Task 0: Prepare the working branch
 ...
 
-### Tarea 1: DTOs de request y response
+### Task 1: Request and response DTOs
 
-**Archivos:**
-- Crear: `sm-capabilities-ms/src/domain/zones/infrastructure/entry-points/dtos/filter-zones-by-type.dto.ts`
-- Test: (sin test unitario para DTOs puros)
+**Files:**
+- Create: `catalog-ms/src/domain/zones/infrastructure/entry-points/dtos/filter-zones-by-type.dto.ts`
+- Test: (no unit test for pure DTOs)
 
-**Step 1: Crear FilterZonesByTypeRequestDto**
+**Step 1: Create FilterZonesByTypeRequestDto**
 ...
 ```
 
-**Salida al usuario:**
-> Plan guardado en `work/active/sm-1933/plan.md`. Revisá las secciones de diseño y ejecutalo con `/build sm-1933`.
+**Output to the user:**
+> Plan saved to `work/active/spec-1933/plan.md`. Review the design sections and run it with `/build spec-1933`.
+
+---
+
+## CRITICAL: Output Language
+
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
+`OUTPUT_LANGUAGE` if the project doesn't declare it): the task titles, the step
+descriptions, the expected outputs and the AC → Task table of `plan.md`. Never
+translate them to English on your own.
+
+Three things stay in English regardless of that key: the **task markers**
+(`Task 0`, `Task N` — `/build` and `/hotfix` locate them by name), the **identifiers**
+(paths, classes, commands, `IDENTIFIER_LANGUAGE`) and the **branch description** asked
+for in Task 0, since it ends up in git history.
+
+**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
+The message samples in this document are written in English; render them in the
+user's language when that differs.
