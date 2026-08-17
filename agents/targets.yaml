@@ -36,13 +36,18 @@ targets:
     guards:
       # Bash allowed, but every command goes through a validator that fails
       # CLOSED: if it can't parse the command, it blocks it.
+      #
+      # `{AGENTS_ROOT}` is resolved by sync-agents.mjs to the absolute path of
+      # this repo on the machine doing the sync. Never write a literal path
+      # here: the validator is versioned alongside the agents, and a hardcoded
+      # one breaks the guard silently on any other clone.
       shell:readonly:
         hooks:
           PreToolUse:
             - matcher: 'Bash'
               hooks:
                 - type: command
-                  command: 'node C:/Users/styve/.claude/scripts/validate-readonly-bash.js'
+                  command: 'node {AGENTS_ROOT}/scripts/hooks/sdd-validate-readonly-bash.js'
 
   # ─────────────────────────────────────────────────────────────────────────
   opencode:

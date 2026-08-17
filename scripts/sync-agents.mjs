@@ -53,6 +53,31 @@ function parseAgent(file) {
 }
 
 /**
+ * Resolves the placeholders a guard may carry, recursively, over any shape.
+ *
+ * `{AGENTS_ROOT}` is the absolute path of this repo on the machine running the
+ * sync. Guards reference scripts that are versioned here (see
+ * `scripts/hooks/`), and the emitted file must name them absolutely — the hook
+ * runner expands neither `~` nor a relative path. Resolving it at emit time is
+ * what keeps `targets.yaml` free of any one machine's paths.
+ *
+ * Forward slashes throughout: the emitted command is a shell string, and a
+ * Windows backslash inside one is an escape, not a separator.
+ */
+function substitutePlaceholders(value) {
+  if (typeof value === 'string') {
+    return value.replaceAll('{AGENTS_ROOT}', ROOT.split('\\').join('/'));
+  }
+  if (Array.isArray(value)) return value.map(substitutePlaceholders);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, substitutePlaceholders(v)]),
+    );
+  }
+  return value;
+}
+
+/**
  * Resolves capabilities into the target's vocabulary.
  * A capability may carry a guard: "shell:readonly" → base "shell" + guard.
  */
@@ -71,7 +96,7 @@ function resolveCapabilities(caps, target, agentName) {
       if (g === undefined) {
         die(`agent "${agentName}": guard "${base}:${guard}" is not implemented in target "${target._name}".`);
       }
-      guards.push(g);
+      guards.push(substitutePlaceholders(g));
     }
   }
   return { tools, guards };
@@ -213,5 +238,5 @@ for (const [targetName, targetRaw] of Object.entries(config.targets ?? {})) {
 }
 
 const s = `${stats.created} created · ${stats.updated} updated · ${stats.unchanged} unchanged` +
-  (PRUNE ? ` · ${stats.pruned} eliminados` : '');
+  (PRUNE ? ` · ${stats.pruned} pruned` : '');
 console.log(`\n${DRY ? '[dry-run] ' : ''}${s}\n`);
