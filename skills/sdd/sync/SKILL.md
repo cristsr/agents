@@ -82,6 +82,7 @@ stops the close-out at the start.
 |---|---|
 | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
 | `work/active/spec-<number>/` exists | Check `work/done/spec-<number>/` — if it's already there the story was already synced: report it and stop |
+| `node ~/.agents/scripts/validate-artifacts.mjs spec-<number>` exits `0` | Stop and report the issues it lists, verbatim — each one names the artifact and the broken contract. This is the mechanical form of the two rows below; don't re-derive by eye what it already checked. If `node` is unavailable (exit `2`), check both rows by hand and say the gate ran manually |
 | `plan.md` exists and **all** its tasks are marked `[X]` | Stop: "The plan still has incomplete tasks. Run `/build spec-<number>` first." |
 | `plan.md` has an `## AC Coverage` section with **zero** lines marked `✗` | Stop: "AC-<N> is not covered by any test (`<reason from the line>`). The story isn't ready to close." If the section is missing entirely, the plan predates this convention — ask the user to confirm AC coverage; don't infer it from the `[X]` markers |
 | `design.md` exists | Ask the user whether to skip doc promotion; do not invent module docs |

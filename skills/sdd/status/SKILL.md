@@ -45,7 +45,8 @@ are short. What matters here is the last two.
 | Condition | If it fails |
 |---|---|
 | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
-| A story id matching `STORY_ID_PATTERN` (or `STORY_ID_LEGACY_PREFIXES`), or no argument at all | With no argument, list every story under `WORKDIR_ACTIVE` — that's a valid invocation, not an error (Step 1) |
+| A story id matching `STORY_ID_PATTERN` (or `STORY_ID_LEGACY_PREFIXES`), or no argument at all | With no argument, the script lists every story under `WORKDIR_ACTIVE` — that's a valid invocation, not an error (Step 1) |
+| `node` on PATH, for `~/.agents/scripts/status.mjs` | Fall back to checking the files by hand and say so (Step 1, **Degrades**) |
 | The story's folder exists under `WORKDIR_ACTIVE` or `WORKDIR_DONE` | Report that no story carries that id, list the active ones, and stop. Don't create the folder |
 
 **Produces** — a stage report in the chat: one line per artifact, plus one "Next step"
@@ -57,8 +58,9 @@ story's workspace or anywhere else.
 
 **Never**
 
-- **Allowed:** existence checks (`ls`, `[ -f ]`, `[ -d ]`), reading the story's
-  artifacts, counting markers inside them (`rg -c`).
+- **Allowed:** running `~/.agents/scripts/status.mjs` (read-only), existence checks
+  (`ls`, `[ -f ]`, `[ -d ]`), reading the story's artifacts, counting markers inside
+  them (`rg -c`).
 - **Forbidden:** any write, move, rename or delete; any state-changing git command;
   and invoking the next pipeline skill on the user's behalf. It reports the command,
   it doesn't run it.
@@ -74,54 +76,63 @@ story's workspace or anywhere else.
 
 ---
 
-## Step 1: Resolve the story
+## Step 1: Compute the stage
 
-- With `spec-XXXX` → work on that story.
-- Without a story → list ALL the active ones (the path resolves from `WORKDIR_ACTIVE`):
-
-```bash
-ls -d work/active/*/ 2>/dev/null
-```
-
-and show one line per story with its stage (Step 2 applied to each, without detail).
-
-## Step 2: Build the stage report
-
-For one story, check in order (paths resolve from `WORKDIR_ACTIVE`):
+The stage is **computed, not inferred**. Run the script — it reads the profile,
+resolves the workspace, and returns the pipeline as a dependency graph with each
+artifact's status already decided:
 
 ```bash
-id="<story-id>"
-# spec.md is the entry artifact; hu.md is its legacy name (items predating
-# the rename). Either one counts as present.
-{ [ -f "work/active/$id/spec.md" ] || [ -f "work/active/$id/hu.md" ]; } \
-  && echo "spec.md: YES" || echo "spec.md: no"
-for f in context.md design.md plan.md; do
-  [ -f "work/active/$id/$f" ] && echo "$f:  YES" || echo "$f:  no"
-done
-[ -d "work/active/$id/docs" ] && echo "docs/: YES" || echo "docs/: no"
+node ~/.agents/scripts/status.mjs <story-id> --json
 ```
+
+Without a story id (or with `--all`) it reports every active story instead — that's a
+valid invocation, not an error.
+
+The payload:
+
+| Field | What it holds |
+|---|---|
+| `artifacts[]` | one entry per pipeline stage, **in dependency order**, each with `status` (`done` \| `ready` \| `blocked`), `requires` and `missingDeps` |
+| `next` | the first non-`done` artifact and the exact command for it |
+| `next.regression` | `true` when that pending stage sits *behind* finished ones |
+| `counts` | ACs, `tasks: {done, total}`, pending `[NEEDS CLARIFICATION]` markers |
+| `docs`, `branch` | the contents of `docs/` and the `.branch` marker |
+| `warnings[]` | already-worded findings — render them, don't re-derive them |
+
+**The first `ready` entry is the artifact to write next.** Don't recompute the order,
+don't second-guess `next.command`: this skill renders the answer, it doesn't derive it.
 
 > **Legacy items.** Those closed before the rename use `hu.md` and an old ID prefix
-> (`STORY_ID_LEGACY_PREFIXES` in the profile). They're read normally — never renamed,
-> never reported as incomplete.
+> (`STORY_ID_LEGACY_PREFIXES` in the profile). The script accepts both — they're read
+> normally, never renamed, never reported as incomplete.
 
-Possible stages:
+**Degrades** — exit code `2` means the script couldn't run (unknown id, no workspace):
+report its message. If node is unavailable, fall back to checking the files by hand
+(`[ -f work/active/<id>/spec.md ]`, … , `rg -c '\[X\]' plan.md`) and say the report is
+the manual fallback.
 
-| Last stage | Has | Missing / next step |
+## Step 2: Read the answer
+
+The stages the script reports, and what each one means:
+
+| Stage `ready` | Meaning | Command |
 |---|---|---|
-| `inbox` | nothing | `/spec <id>` |
-| `spec` | spec.md | `/clarify` |
-| `context` | + context.md | `/design` |
-| `design` | + design.md (+ docs/) | `/plan` (after the design is approved) |
-| `plan` | + plan.md | `/build` |
-| `build` | plan.md with `[X]` tasks | count the `[X]`s: `rg -c '\[X\]' work/active/$id/plan.md` — if not all are done, `/build` resumes; if all are, `/sync` |
-| `done` | folder under `WORKDIR_DONE` | `/commit` |
+| `spec` | nothing written yet | `/spec <id>` |
+| `context` | spec.md exists (or still carries markers) | `/clarify` |
+| `design` | context.md is clean | `/design` |
+| `plan` | design.md (+ docs/) approved | `/plan` |
+| `build` | plan.md written, tasks pending | `/build` (resumes at the first unchecked task) |
+| `sync` | every task `[X]` | `/sync` |
+| — (all done) | folder under `WORKDIR_DONE` | `/commit` |
 
-If there are `[NEEDS CLARIFICATION]` markers in spec.md, flag it: `/design` won't
-proceed until they're resolved.
+Two cases deserve a sentence of their own in the report rather than a bare command:
 
-If the folder exists under `WORKDIR_DONE` (`work/done/spec-<number>/`), the story's
-documentation is closed → report it and suggest `/commit`.
+- **Pending markers.** `counts.clarificationMarkers > 0` holds `context` open even
+  when later artifacts exist — `/design` won't proceed until they're resolved.
+- **Regression.** `next.regression` means a finished stage sits on top of an
+  unfinished one. Re-running that stage would discard built work, so the script
+  points at `/hotfix` instead. Say why, don't just relay the command.
 
 ## Step 3: Report and stop
 
@@ -129,6 +140,12 @@ Concise format, one line per artifact + one "Next step" line. Don't execute anyt
 else — the skill is read-only. Suggest the exact command for the next step
 (e.g. "Run `/build spec-0009` — it resumes from task 4 of 7."), and stop there: this
 skill reports the command, the user decides whether to run it.
+
+Render every entry in `warnings[]`; they're already worded and each one names a real
+inconsistency. If the report is clean but the user is about to move to the next stage,
+`node ~/.agents/scripts/validate-artifacts.mjs <story-id>` checks that the artifacts
+also hold their **shape**, not just their presence — this skill never runs it on its
+own, it names it.
 
 ---
 

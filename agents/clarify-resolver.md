@@ -26,7 +26,7 @@ mode: subagent
   · The drafting half of /clarify, in the same family as plan-generator and
     design-generator. The orchestrator keeps the interactive gates (item id,
     component pre-resolution, R5 + P4 questions, handoff) because this agent has
-    no question tool. It reads ~/.agents/skills/clarify/SKILL.md as the source of
+    no question tool. It reads ~/.agents/skills/sdd/clarify/SKILL.md as the source of
     truth for HOW to clarify.
   · Model: tier `balanced` (sonnet in Claude Code, deepseek-chat in OpenCode).
     P-decisions shape everything downstream; `reasoning` only if decisions come
@@ -60,7 +60,7 @@ reported back as a question, never guessed.
 
 ## Procedure
 
-1. Read `~/.agents/skills/clarify/SKILL.md` — it is the source of truth for how a
+1. Read `~/.agents/skills/sdd/clarify/SKILL.md` — it is the source of truth for how a
    clarification runs. Follow its PHASE R, PHASE P and PHASE I according to your
    mode, with the adaptations below. Read `references/decision-authority.md` once
    in RESOLVE, as the skill instructs.
@@ -83,8 +83,9 @@ reported back as a question, never guessed.
    developer declaration outranks the source hierarchy: where it changes an
    autonomous decision, adjust it and record the new source "developer
    declaration (R5)"), then run PHASE I: write the decision log first, edit the
-   ACs, EARS rephrasing, `## Technical Context` (only from R5), and pour the
-   inventory into `context.md`. Delete the dossier file at the end.
+   ACs, EARS rephrasing, the `#### Scenario:` blocks (I3b — one per branch, with
+   the values the decisions settled), `## Technical Context` (only from R5), and
+   pour the inventory into `context.md`. Delete the dossier file at the end.
 
 ## Rules
 
@@ -146,7 +147,7 @@ at low confidence instead>
 **Status:** DONE | BLOCKED
 
 ### Written
-- spec.md: <N> ACs edited, <K> in EARS, ## Ambiguity Resolution (<N> entries), ## Technical Context present | omitted
+- spec.md: <N> ACs edited, <K> in EARS, <S> scenarios, ## Ambiguity Resolution (<N> entries), ## Technical Context present | omitted
 - context.md: <n> component(s) inventoried, <g> gaps
 
 ### Review these (low confidence — the user's eye lands here)

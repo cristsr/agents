@@ -5,23 +5,27 @@ description: >
   referenced by skills vs. the YAML template, local references/ paths, and
   STACK_REFS pack files — then validates the current project's
   `.agents/profile.yaml` against the schema (required keys, enums, paths,
-  cross-key rules) and its `docs/rules.md` against the constitution contract.
+  cross-key rules), its `docs/rules.md` against the constitution contract, and
+  every active story's artifacts against the structural contract the skills share.
   Use when the user says "/healthcheck", "validate the skills", "audit the
   ecosystem", "verify consistency", "check the profile", "is my profile valid",
-  or after editing skills/bootstrap or the rules to confirm nothing is broken.
-  Read-only — never modifies files.
+  "are my stories well-formed", or after editing skills/bootstrap or the rules to
+  confirm nothing is broken. Read-only — never modifies files.
 ---
 
 # healthcheck
 
 ## Overview
 
-Runs three validators. The first checks the **ecosystem** — the global skills against
+Runs four validators. The first checks the **ecosystem** — the global skills against
 the profile template; the second checks **this project's profile** against the schema;
 the third checks **this project's constitution** (`docs/rules.md`) against the contract
-its template declares. Each can pass while another fails: a profile is only as valid
-as the template it was written from, a template is only useful if the skills cite it
-correctly, and a constitution only binds if it is well-formed enough to be checked.
+its template declares; the fourth checks **the stories in flight** against the
+structural contract the skills navigate by. Each can pass while another fails: a
+profile is only as valid as the template it was written from, a template is only
+useful if the skills cite it correctly, a constitution only binds if it is well-formed
+enough to be checked, and a well-configured project can still hold a story whose
+artifacts contradict each other.
 
 `~/.agents/scripts/validate-skills.mjs` (Node) checks
 along four axes:
@@ -81,10 +85,31 @@ no article leans on code review alone for its verification. It exists because a
 constitution `/design` and `/plan` must validate against is only trustworthy if it is
 well-formed enough to be checked mechanically.
 
+## Step 3.5: Validate this project's live stories
+
+Only if the current project has active stories — skip without comment when
+`WORKDIR_ACTIVE` holds none, or when this is the skills repo itself:
+
+```bash
+node "$HOME/.agents/scripts/validate-artifacts.mjs" --all
+```
+
+It checks each story's artifacts against the structural contract the skills share:
+the ACs (numbering, non-empty bodies, scenario shape), the front-matter `type`
+against `ITEM_TYPES`, the headings `/sync` and `/build` navigate by
+(`## Ambiguity Resolution`, `## Global Architecture Impact`, `## AC Coverage`), the
+`### AC → Task traceability` table against `spec.md`'s ACs, and the task numbering.
+
+This is the one step that validates **work in flight** rather than the ecosystem, so
+a finding here is a story to fix, not a skill to fix. Report it in its own line of
+the summary. Exit `1` is expected on a story mid-clarification — read which artifact
+the issue names before treating it as a failure.
+
 ## Step 4: Report
 
-Report all three validators together — a green ecosystem with a broken profile or a
-malformed constitution is not a green run.
+Report every validator together — a green ecosystem with a broken profile, a
+malformed constitution or a story whose artifacts contradict each other is not a
+green run.
 
 - **No issues** → "Ecosystem consistent: <N> profile keys, packs and references OK.
   Profile valid: <N> keys, schema v<n>."

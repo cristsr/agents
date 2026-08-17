@@ -36,7 +36,29 @@ origin: <tracker:<key> | audit:<reference> | manual>
      or ambiguous about something that changes the implementation (response
      code, behavior on invalid/empty input, undefined business term, implied
      edge case, contradiction). The markers are resolved and removed during
-     clarification. No markers if the item is fully specified. -->
+     clarification. No markers if the item is fully specified.
+
+     /spec does NOT write scenarios: it transcribes what arrived. The concrete
+     cases are added by /clarify, once the ambiguities are resolved. -->
+
+<!-- Scenarios (written by /clarify, never by /spec). OPTIONAL per AC: they are
+     what turns a criterion into a case a test can be written against, so add
+     one per branch when an AC has branches (happy path + error, empty result,
+     boundary). An AC that is a single unconditional rule needs none.
+
+     Shape, when present — the validator checks it:
+
+### AC-N: <title>
+WHEN <trigger>, THE SYSTEM SHALL <response>.
+
+#### Scenario: <name of the concrete case>
+- **WHEN** <the specific action, with real values>
+- **THEN** <the observable outcome, with real values>
+
+     `**WHEN**` and `**THEN**` are both required; `**GIVEN**` (precondition) and
+     `**AND**` (extra step) are optional. The scenario describes observable
+     behavior — never a class name, a framework decision or an execution step. -->
+
 
 ## Business Rules
 

@@ -218,7 +218,7 @@ the same agent in Claude Code). Pass a self-contained prompt with:
   into Task 0
 - the absolute path to the project's `.agents/profile.yaml`
 - the profile's `stack.SKILLS` list (or `none` if unset/empty)
-- a pointer that it must read `~/.agents/skills/plan/SKILL.md` (this document)
+- a pointer that it must read `~/.agents/skills/sdd/plan/SKILL.md` (this document)
   and follow the drafting PHASEs below, and that any decision it cannot make is
   reported back as an escalation — never silently guessed
 
@@ -233,14 +233,22 @@ the report.
   resolve. Do not save anything: show the escalation to the user and ask how to
   proceed. Options: fix the design artifact first (`/refine`), or instruct a
   specific mapping. Never accept a plan with an uncovered AC.
-- **Status `DONE`** → verify lightly before closing:
-  - `plan.md` exists at `work/active/spec-<number>/plan.md`
-  - its header carries the `### AC → Task traceability` table covering every AC
-    of `spec.md`
+- **Status `DONE`** → verify before closing. Run the artifact check first — it covers
+  the traceability table, Task 0's position and the task numbering mechanically:
+
+  ```bash
+  node ~/.agents/scripts/validate-artifacts.mjs spec-<number>
+  ```
+
+  Exit `0` → then confirm by eye the two things a script cannot know:
   - no task is marked `[X]`
   - Task 0's commands contain the branch name from `.branch` and verify it
     (they do not create it)
-  Any deviation → report it and re-delegate or fix manually before closing.
+
+  Exit `1` → report the issues it lists, verbatim, and re-delegate or fix them before closing;
+  an uncovered AC is never accepted. Exit `2` (no `node`) → run the whole list by
+  hand, including the traceability table against `spec.md`'s ACs, and say the check
+  was manual.
 
 ### Step 6 — Close
 
@@ -254,6 +262,11 @@ Show the summary (PHASE 4 below) and stop. Do not start executing.
 
 1. Read `work/active/spec-<number>/spec.md` — extract:
    - All acceptance criteria — these drive the test cases
+   - Each AC's `#### Scenario:` blocks — a scenario is already a test case: its
+     `**WHEN**` is the arrange+act and its `**THEN**` the assertion, with the real
+     values `/clarify` settled. Write the test from the scenario rather than
+     re-deriving one from the AC's prose, and give the test a name that traces back
+     to it. An AC with several scenarios needs several test cases
    - Business rules and edge cases
 
 2. Read `work/active/spec-<number>/context.md` — extract:

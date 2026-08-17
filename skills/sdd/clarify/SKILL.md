@@ -113,7 +113,9 @@ the run at the start, not after the survey has been paid for.
 - an `## Ambiguity Resolution` section in `spec.md` with one entry per unknown —
   decision, rationale, source and confidence — including the searches that came back
   empty
-- every AC verifiable as written, rephrased in EARS where it wasn't
+- every AC verifiable as written, rephrased in EARS where it wasn't, and carrying one
+  `#### Scenario:` per branch (happy path, error, empty, boundary) with the real
+  values the decisions settled — an AC that is a single unconditional rule carries none
 - `## Technical Context` in `spec.md` **only** if the developer declared constraints
   or debt in R5; omitted entirely otherwise
 - `context.md` with the inventory `<STACK_REFS>/references/context-template.md` asks
@@ -236,7 +238,7 @@ opencode, the same agent in Claude Code) in **RESOLVE** mode. Pass:
 - the story id and the absolute path to `work/active/spec-<number>/`
 - the resolved <component>s (from step 2)
 - the absolute path to the project's `.agents/profile.yaml`
-- a pointer that it must read `~/.agents/skills/clarify/SKILL.md` (this document)
+- a pointer that it must read `~/.agents/skills/sdd/clarify/SKILL.md` (this document)
   and follow the drafting PHASEs, and that any question it cannot ask is returned in
   its report — never silently guessed
 
@@ -567,6 +569,36 @@ a wording reformulation: it doesn't change behavior, there's no decision to dele
 - **Preserve the original text** as a `> Original: "<text>"` line underneath.
 - Use several EARS lines if the AC has both a happy path and an error case.
 - **Never** reformulate an AC that is already clear and testable.
+
+### I3b — Concrete scenarios (automatic, never asked)
+
+EARS makes an AC unambiguous; a scenario makes it **executable**. Write one
+`#### Scenario:` per branch under the AC it belongs to — with the real values the
+decisions in I1 settled, never placeholders:
+
+```markdown
+### AC-2: An empty result is not an error
+IF no zone matches the requested service type, THEN THE SYSTEM SHALL return 200 with
+an empty array.
+
+#### Scenario: No zone offers the requested service
+- **WHEN** the client requests `GET /zones?serviceType=DRONE` and no zone offers it
+- **THEN** the response is 200 with an empty `data` array
+```
+
+- **`**WHEN**` and `**THEN**` are both mandatory** when a scenario exists.
+  `**GIVEN**` (precondition) and `**AND**` (extra step) are optional.
+- **One per branch**: happy path, error, empty result, boundary. An AC that is a
+  single unconditional rule (`THE SYSTEM SHALL ...`) needs no scenario — don't
+  manufacture one.
+- **Observable behavior only.** No class names, no framework decisions, no
+  step-by-step execution. The test: if the implementation can change without
+  changing what the scenario says, the scenario is right; if it can't, it's
+  describing implementation and belongs in `design.md`.
+- Every resolution recorded in `## Ambiguity Resolution` that changed a **value**
+  (an HTTP code, a limit, a format) should be visible in a scenario. That's what
+  makes a decision testable rather than merely written down.
+- This is a wording task, like EARS: never asked, never escalated.
 
 ### I4 — Write `## Technical Context` (only what the human declared)
 
