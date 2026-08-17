@@ -28,7 +28,7 @@ enough to be checked, and a well-configured project can still hold a story whose
 artifacts contradict each other.
 
 `~/.agents/scripts/validate-skills.mjs` (Node) checks
-along four axes:
+along seven axes:
 
 1. **Profile keys** — every key the skills reference exists in
    `contracts/sdd-profile.template.yaml` (the ones that don't come out as warnings, to review
@@ -45,6 +45,14 @@ along four axes:
    that exists in the generic pack (the fallback floor every project shares, whatever
    `STACK_REFS` lists); an `<STACK_REFS>/architecture/` reference is an error — packs
    carry no guides, the framework concretion lives in the framework skill.
+6. **Handoffs** — every `/<command>` a skill or an agent names in prose resolves to a
+   skill that exists, or to a host command on the validator's allowlist. A skill
+   hands off by NAME, so a rename that updates the folder and not the prose leaves
+   a call into a void that reads as authoritative and does nothing.
+7. **Absolute paths** — every `~/.agents/…` path cited in a skill, an agent or a
+   contract exists on disk. Those paths encode the source tree's shape, so every
+   move breaks some of them, and a broken one stays invisible until someone
+   follows it.
 
 **Announce at start:** "Validating the SDD ecosystem's consistency."
 
@@ -122,6 +130,10 @@ green run.
   - Port in the catalog but not in the template → projects have no way to wire it.
   - Nonexistent `references/` → create the file or fix the reference.
   - Missing pack → copy the template into the pack or fix the reference.
+  - `/<command>` that is not a skill → a rename left the prose behind: point it at the
+    skill's current name. If the host provides it, add it to the validator's
+    `HOST_COMMANDS`.
+  - `~/.agents/…` path that doesn't exist → the file moved: update the citation.
   - Required profile key null → run `/bootstrap` to fill it; don't invent the value.
   - Profile path that doesn't resolve → the project moved, or the key is a leftover.
 - **Warnings (non-key tokens)** → mention them briefly; they only need action if one

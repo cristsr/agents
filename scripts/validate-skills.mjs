@@ -14,6 +14,7 @@
 
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { discoverSkills, duplicateNames } from './lib/skills.mjs';
+import { invocations, agentsPaths } from './lib/prose.mjs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -38,6 +39,27 @@ const isFile = (p) => { try { return statSync(p).isFile(); } catch { return fals
 // The skill directories, at whatever depth the source tree nests them
 // (skills/sdd/pipeline/clarify/, skills/conventions/nestjs/, …).
 const skillDirs = () => discoverSkills(SKILLS);
+
+// The other two places that cite the ecosystem by path. Agents hand off to
+// skills in prose exactly as skills do, and the contracts are what a project
+// reads first — a dead path in either is the same defect as in a SKILL.md.
+const agentFiles = () =>
+  readdirSync(join(ROOT, 'agents'))
+    .filter((n) => n.endsWith('.md'))
+    .map((n) => join(ROOT, 'agents', n));
+
+const contractFiles = () =>
+  readdirSync(CONTRACTS)
+    .filter((n) => n.endsWith('.md') || n.endsWith('.yaml'))
+    .map((n) => join(CONTRACTS, n));
+
+// The scripts cite the tree too — in a comment, or in the very error message that
+// tells a developer where the template they are missing lives. A dead path there
+// is read at the worst possible moment, so they are checked alongside the prose.
+const scriptFiles = () =>
+  readdirSync(join(ROOT, 'scripts'))
+    .filter((n) => n.endsWith('.mjs'))
+    .map((n) => join(ROOT, 'scripts', n));
 
 // Skill files, excluding the two meta skills (they teach the format, they don't
 // carry it) — same `-not -path '*/skill-creator/*' ...` the bash script used.
@@ -248,6 +270,46 @@ if (!isFile(CHAT_CONVENTIONS)) {
 // skills sharing a name in different categories would collide on install.
 for (const [a, b] of duplicateNames(skillDirs())) {
   report(`ISSUE: duplicate skill name "${a.name}" — ${a.category}/ and ${b.category}/ would install to the same place`);
+}
+
+// --- 7. Every `/command` invoked in prose resolves to a real skill ---
+// A skill hands off by NAME: "invoke /docs", "that's /plan's job". A rename that
+// updates the folder but not the prose leaves a call into a void that no reader
+// notices — the skill sounds authoritative and the step silently does nothing.
+// This is what let `/architecture` survive its own rename in seven places.
+//
+// Fenced code blocks are stripped first: `cd /tmp` is a shell path, not a call.
+// Anything the HOST provides rather than this repo goes in the allowlist.
+const HOST_COMMANDS = new Set([
+  'code-review', 'init', 'run', 'loop', 'schedule', 'simplify',
+  'security-review', 'config', 'help', 'clear', 'compact',
+]);
+// Two spellings count as an invocation, and only these two: the skill wrapped in
+// backticks (`` `/plan` ``), or one opening a word after a space, a quote or a
+// parenthesis ("run /plan"). What this deliberately excludes is the alternation
+// prose is full of — `` `providers`/registrations ``, `use case(s)/handler(s)` —
+// where the slash separates two words and names no command at all.
+{
+  const skillNames = new Set(skillDirs().map((s) => s.name));
+  for (const f of [...skillFiles(SKILLS), ...agentFiles()]) {
+    for (const cmd of invocations(readFileSync(f, 'utf8'))) {
+      if (skillNames.has(cmd) || HOST_COMMANDS.has(cmd)) continue;
+      report(`ISSUE [${f}]: invokes /${cmd}, which is not a skill in this ecosystem — a rename left the prose behind, or the command belongs to the host (add it to HOST_COMMANDS)`);
+    }
+  }
+}
+
+// --- 8. Every ~/.agents/… path cited anywhere resolves on disk ---
+// The skills, the agents and the contracts cite each other by absolute path.
+// Those paths encode the source tree's shape, so every move breaks some of them
+// — and a broken one is invisible until someone follows it. Paths carrying a
+// placeholder (`<name>`, `{name}`) are patterns, not destinations, and are skipped.
+for (const f of [...skillFiles(SKILLS), ...agentFiles(), ...contractFiles(), ...scriptFiles()]) {
+  for (const ref of agentsPaths(readFileSync(f, 'utf8'))) {
+    if (!existsSync(join(ROOT, ref))) {
+      report(`ISSUE [${f}]: cites ~/.agents/${ref}, which does not exist`);
+    }
+  }
 }
 
 if (issues === 0) {
