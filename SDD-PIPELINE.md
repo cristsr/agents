@@ -43,13 +43,13 @@ this is the map. Validate the ecosystem with `/healthcheck`.
 
 | Skill | Role |
 |---|---|
-| `/profile` | creates/updates `.agents/profile.md` |
-| `/rules` | non-negotiable rules (`docs/rules.md`) |
-| `/architecture` | C4 Level 1/2 (`docs/architecture/`) — invoked by `/sync` |
+| `/bootstrap` | creates/updates `.agents/profile.yaml` |
+| `/rules` | non-negotiable rules (`docs/rules.md`, validated by `validate-rules.mjs`) |
+| `/docs` | C4 Level 1/2 (`docs/architecture/`) — invoked by `/sync` |
 | `/healthcheck` | validates the ecosystem (script + checks) |
 | `/status` | stage diagnosis for an item |
 | `/scan` | refreshes `context.md` when the code changed (not a flow step) |
-| `/hexagonal-architecture` | BUILD — hexagonal structure (rules in `references/rules.md`, per-stack syntax in `<STACK_REFS>/architecture/`) |
+| `/hexagonal-architecture` | BUILD — hexagonal structure (rules in `references/rules.md`, framework dialect in the `nestjs` skill) |
 | `/hexagonal-audit` | AUDIT — 13 dimensions, ranked report + generates `spec.md` files in `work/active/` (bridge into the pipeline) |
 
 ## Agents (subagents)
@@ -76,8 +76,31 @@ only deletes orphans it generated itself. **Always edit the source**, never the
 installed file.
 
 > The `tier` is a default. The caller may pass an explicit `model` (e.g. the
-> project profile's `EXPLORER_MODEL`) and it takes precedence — which is advisable:
+> profile's `CODE_SURVEY` adapter) and it takes precedence — which is advisable:
 > some versions ignore the frontmatter field.
+
+## The profile
+
+`.agents/profile.yaml` at the project root is the only thing that adapts these global
+skills to a project. It is YAML: a `SCHEMA_VERSION` plus nine named blocks —
+`identity`, `items`, `intake`, `paths`, `language`, `vcs`, `stack`, `docs`, `mcp` —
+holding uppercase keys, plus `ports`, holding the adapters described below.
+
+It declares only what the skills actually read. Artifact file names (`spec.md`,
+`context.md`, `design.md`, `plan.md`) are a contract between skills, not settings, and
+stack knowledge — injection, DTO shape, what a survey locates — is not configuration
+at all: it lives in the pack's documents and the convention skills, in prose. Skills cite a key by bare name (`MODULE_ROOT`) and add the block only
+when it helps the reader find it (`MODULE_ROOT`, stack block).
+
+A key holding `null` is **not configured**: the skill uses the fallback its own
+contract declares. It never means "unknown" — a required key left null is an error,
+not an invitation to guess.
+
+- Template: `~/.agents/sdd-profile.template.yaml`
+- Created and updated by `/bootstrap`
+- Validated by `node ~/.agents/scripts/validate-profile.mjs .agents/profile.yaml`,
+  which `/bootstrap` runs on write and `/healthcheck` runs on demand
+- The reasoning behind the values: `~/.agents/skills/bootstrap/references/profile-guide.md`
 
 ## Profile keys per skill
 
@@ -85,24 +108,24 @@ installed file.
 |---|---|
 | `spec` | `STORY_ID_MODE`, `STORY_ID_PATTERN`, `STORY_KEY_PATTERN`, `STORY_ID_LEGACY_PREFIXES`, `ITEM_TYPES`, `TRACKER`, `INTAKE_FORMATS`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE` |
 | `prepare` | `WORKING_DIRECTORY`, `BASE_BRANCH`, `REPO_TOPOLOGY`, `PREP_SKILL`, `STORY_ID_PATTERN`, `WORKDIR_ACTIVE` |
-| `clarify` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE`, `COMPONENT_TERM`, `BASE_BRANCH`, stack (7), docs (8), `STACK_REFS`, `CODEGRAPH`, `EXPLORER_SUBAGENT`/`EXPLORER_MODEL` (no-graph fallback) |
+| `clarify` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE`, `COMPONENT_TERM`, `BASE_BRANCH`, the `stack` block, the `docs` block, `STACK_REFS` · ports: `CODE_SURVEY` |
 | `scan` (refresh) | the same as `clarify` minus the decision ones — it doesn't read the authority rubric |
-| `design` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE`, `API_CONTRACT`, `DIAGRAM_FORMAT`, `DESIGN_OUTPUT_MODE`, `API_CONTRACT_MODE`, stack (7), `STACK_REFS`, `MODEL_VALIDATE_CMD`, `YAML_VALIDATE_CMD`, `API_DIFF_TOOL` |
-| `plan` | the complete design + `TEST_FRAMEWORK`, `API_CONTRACT`, `STACK_REFS`, `MODULE_TEST_CMD` |
-| `build` | `plan.md`, `TEST_FRAMEWORK`, `STACK_REFS`, `MODULE_TEST_CMD`, `FULL_TEST_CMD`, `POSTMAN_GEN_CMD` |
-| `sync` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`/`WORKDIR_DONE`, `BASE_BRANCH`, `SYNC_MODE`, `API_CONTRACT_MODE`, `DESIGN_OUTPUT_MODE`, docs (8), `CI_GATES_CMD`, `API_DIFF_TOOL`, `MODEL_VALIDATE_CMD` |
+| `design` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`, `OUTPUT_LANGUAGE`, `API_CONTRACT`, `DIAGRAM_FORMAT`, `DESIGN_OUTPUT_MODE`, `API_CONTRACT_MODE`, the `stack` block, `STACK_REFS` · ports: `CONTRACT_LINT`, `DIAGRAM_CHECK`, `CONTRACT_DIFF` |
+| `plan` | the complete design + `TEST_FRAMEWORK`, `API_CONTRACT`, `STACK_REFS` · ports: `TESTS` |
+| `build` | `plan.md`, `TEST_FRAMEWORK`, `STACK_REFS` · ports: `TESTS`, `API_CLIENT_EXPORT` |
+| `sync` | `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`/`WORKDIR_DONE`, `BASE_BRANCH`, `API_CONTRACT_MODE`, `DESIGN_OUTPUT_MODE`, the `docs` block · ports: `CI_GATES`, `CONTRACT_DIFF`, `DIAGRAM_CHECK` |
 | `commit` | `STORY_ID_PATTERN`, `WORKDIR_DONE`, `BASE_BRANCH`, `OUTPUT_LANGUAGE` |
 | `forge` | plan/build/sync inputs + `BASE_BRANCH` |
-| `hotfix` | `plan.md`/`spec.md`, stack (7), `STACK_REFS`, `MODULE_TEST_CMD` |
+| `hotfix` | `plan.md`/`spec.md`, the `stack` block, `STACK_REFS` · ports: `TESTS` |
 | `refine` | artifacts + `API_CONTRACT_MODE` (for `<api-artifact>`) |
-| `architecture` | `PROJECT_NAME`, `DIAGRAM_FORMAT`, `OUTPUT_LANGUAGE`, `WORKDIR_DONE`, `DOCS_ARCHITECTURE`, `PROJECT_GRAPH_CMD` |
+| `docs` | `PROJECT_NAME`, `DIAGRAM_FORMAT`, `OUTPUT_LANGUAGE`, `WORKDIR_DONE`, `DOCS_ARCHITECTURE` · ports: `PROJECT_GRAPH` |
 
 > On top of its own row, **every skill that writes an artifact also reads
-> `ARTIFACT_LANGUAGE`** (section 5) — see "Language" below.
+> `ARTIFACT_LANGUAGE`** (language block) — see "Language" below.
 
 ## Language
 
-Three axes, three profile keys (section 5) — no skill decides the language on its own:
+Three axes, three profile keys (language block) — no skill decides the language on its own:
 
 | Axis | Key | Covers |
 |---|---|---|
@@ -124,23 +147,48 @@ project.
 The `SKILL.md` files themselves are written in English, and so are the message
 samples inside them; they get rendered in the user's language at runtime.
 
-## Tooling (profile section 10)
+## Ports (profile, ports block)
 
-Every pipeline tool is declared in the profile, with a per-project fallback:
-`CODEGRAPH`, `MODEL_VALIDATE_CMD`, `API_DIFF_TOOL`, `POSTMAN_GEN_CMD`,
-`YAML_VALIDATE_CMD`, `CI_GATES_CMD`, `MODULE_TEST_CMD`, `FULL_TEST_CMD`,
-`PROJECT_GRAPH_CMD`. A key at `—`/`no` → the skill uses the manual/legacy mode.
+A skill never names a tool. It names a **capability** — a port — and the wiring says
+which command, agent or MCP tool implements it here:
+
+`TESTS` · `CI_GATES` · `CONTRACT_LINT` · `CONTRACT_DIFF` · `DIAGRAM_CHECK` ·
+`API_CLIENT_EXPORT` · `PROJECT_GRAPH` · `CODE_SURVEY`
+
+Each port holds one ordered adapter list per operation, and the first **available**
+adapter wins. An adapter that resolves and then fails is a real failure: it reaches
+the skill, and the next adapter is not tried. A port with no usable adapter is
+**unbound**, and the skill applies the degraded behavior its own `Degrades` row
+declares — the profile never decides that.
+
+Adapters resolve in **layers**: the stack packs (`<STACK_REFS>/ports.yaml`, base →
+specific) hold the stack idiom, the profile overrides on top, per operation — `null`
+inherits, a list overrides, `[]` disables. So a project on a known stack starts
+already wired, and its profile only carries what is specific to that repo.
+
+The catalog — operations, placeholders and consumers — is `~/.agents/PORTS.md`.
 
 ## Per-stack packs (`STACK_REFS`)
 
-Per-stack templates in `~/.agents/stacks/<stack>/`:
+Pack layers in `~/.agents/stacks/<stack>/`, listed in a profile as
+`STACK_REFS: [ <base>, <specific>, … ]` — the later a pack sits, the more specific it
+is, and it overrides the earlier ones per port operation and per template file. Packs
+are **config + templates only**; all knowledge lives in skills:
+- `ports.yaml`: the layer's default port adapters — the first wiring layer, inherited
+  by every project whose `STACK_REFS` includes this pack.
 - `references/`: `api-template`, `data-model-template`, `scan-guide`, `context-template`,
-  `task-structure-template`, `openapi-to-dto-mapping`.
-- `architecture/`: the per-stack hexagonal concretion — `module-blueprint`, `nestjs-binding`,
-  `errors-and-logging`, `audit-scan.sh`, `audit-smells` (optional refs: one pack is enough).
+  `task-structure-template`, `openapi-to-dto-mapping` — the generic pack carries them
+  all; a specific pack only overrides the ones it flavors.
 
-Current packs: `generic` (default), `typescript-nestjs`. Without `STACK_REFS` → each
-skill's local (generic) `references/`.
+Current packs: `generic` (fallback), `typescript` (language), `nestjs` (framework).
+A NestJS TS project reads `[ ~/.agents/stacks/typescript, ~/.agents/stacks/nestjs ]` —
+the `typescript` pack alone serves any TS project without Nest. Without `STACK_REFS`
+→ each skill's local (generic) `references/`.
+
+The per-framework concretion is a **skill**, not a pack: `skills/nestjs/` carries the
+binding syntax, module blueprint, exception filters and audit material, loaded by name
+through `stack.SKILLS`. Skills own the rules; packs own the wiring and the artifact
+shapes — a skill never depends on a pack.
 
 ## Recent changes
 
