@@ -8,8 +8,12 @@
     "agents:sync": "node scripts/sync-agents.mjs",
     "agents:check": "node scripts/sync-agents.mjs --dry-run",
     "skills:check": "node scripts/validate-skills.mjs",
+    "skills:sync": "node scripts/sync-skills.mjs",
+    "skills:sync:check": "node scripts/sync-skills.mjs --dry-run",
     "profile:check": "node scripts/validate-profile.mjs",
-    "rules:check": "node scripts/validate-rules.mjs"
+    "rules:check": "node scripts/validate-rules.mjs",
+    "artifacts:check": "node scripts/validate-artifacts.mjs",
+    "story:status": "node scripts/status.mjs"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"

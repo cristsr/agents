@@ -46,11 +46,50 @@ this is the map. Validate the ecosystem with `/healthcheck`.
 | `/bootstrap` | creates/updates `.agents/profile.yaml` |
 | `/rules` | non-negotiable rules (`docs/rules.md`, validated by `validate-rules.mjs`) |
 | `/docs` | C4 Level 1/2 (`docs/architecture/`) — invoked by `/sync` |
-| `/healthcheck` | validates the ecosystem (script + checks) |
-| `/status` | stage diagnosis for an item |
+| `/healthcheck` | validates the ecosystem (script + checks) and every active story's artifacts |
+| `/status` | stage diagnosis for an item, computed by `scripts/status.mjs` |
 | `/scan` | refreshes `context.md` when the code changed (not a flow step) |
 | `/hexagonal-architecture` | BUILD — hexagonal structure (rules in `references/rules.md`, framework dialect in the `nestjs` skill) |
 | `/hexagonal-audit` | AUDIT — 13 dimensions, ranked report + generates `spec.md` files in `work/active/` (bridge into the pipeline) |
+
+## Skills (source layout)
+
+The source tree groups skills by **who owns the knowledge**, not by invocation name:
+
+```
+skills/
+├── sdd/              the pipeline and everything that operates on a story
+│                     bootstrap · rules · spec · prepare · clarify · design
+│                     plan · build · sync · commit · forge
+│                     status · scan · refine · hotfix · docs
+├── conventions/      never invoked by hand — loaded through `stack.SKILLS`
+│                     typescript · nestjs · error-handling · design-principles
+│                     hexagonal-architecture · hexagonal-audit
+└── meta/             skills about the ecosystem itself
+                      skill-creator · skill-evaluator · healthcheck
+```
+
+That layout is for the human reading the repo. **Both Claude Code and OpenCode
+resolve `<root>/<name>/SKILL.md` in a single level**, so the installed tree is flat
+and generated:
+
+```bash
+npm run skills:sync:check   # dry-run: what would change
+npm run skills:sync         # write the symlinks
+npm run skills:sync -- --prune
+```
+
+`sync-skills.mjs` links each source skill into `~/.claude/skills/<name>` — one
+destination for both tools, since OpenCode reads that path alongside its own. It
+only manages links pointing **into** the source tree: a real directory found in the
+destination is reported, never silently replaced (that is how a hand-made copy
+silently diverges), and `--prune` removes only the orphans it would have created.
+
+Because the destination is flat, **skill names must be unique across categories** —
+`validate-skills.mjs` fails on a duplicate. Nothing else depends on the layout: a
+skill is any directory holding a `SKILL.md`, at whatever depth, and cross-skill
+citations name the skill ("the `nestjs` skill's `references/…`"), never its path. So
+a category can be renamed or a skill moved between groups with a re-run and no edits.
 
 ## Agents (subagents)
 
@@ -100,7 +139,7 @@ not an invitation to guess.
 - Created and updated by `/bootstrap`
 - Validated by `node ~/.agents/scripts/validate-profile.mjs .agents/profile.yaml`,
   which `/bootstrap` runs on write and `/healthcheck` runs on demand
-- The reasoning behind the values: `~/.agents/skills/bootstrap/references/profile-guide.md`
+- The reasoning behind the values: `~/.agents/skills/sdd/bootstrap/references/profile-guide.md`
 
 ## Profile keys per skill
 
@@ -140,6 +179,10 @@ and `## Design Decisions` in `design.md` and for `## AC Coverage` in `plan.md`,
 locate `Task N` in `plan.md`. Translating a heading breaks the pipeline; only the
 text **under** it follows `ARTIFACT_LANGUAGE`.
 
+That contract is now **enforced**, not just declared: `validate-artifacts.mjs` parses
+those headings and fails when one is missing, mistranslated or inconsistent with
+another artifact (see "Artifact checks" below).
+
 **The git surface stays in English too**: commit messages, PR title and body, and
 branch descriptions (`/commit`, `/plan` Task 0) — shared history read outside the
 project.
@@ -167,6 +210,42 @@ inherits, a list overrides, `[]` disables. So a project on a known stack starts
 already wired, and its profile only carries what is specific to that repo.
 
 The catalog — operations, placeholders and consumers — is `~/.agents/PORTS.md`.
+
+## Artifact checks (scripts)
+
+Two scripts read a story's workspace and answer mechanically what a skill would
+otherwise infer by eye. Both run from the project root, resolve `.agents/profile.yaml`
+themselves, and degrade to documented fallbacks when there is none.
+
+```bash
+node ~/.agents/scripts/status.mjs [<story-id>] [--json] [--all]
+node ~/.agents/scripts/validate-artifacts.mjs <story-id> [--strict] [--json]
+node ~/.agents/scripts/validate-artifacts.mjs --all
+```
+
+**`status.mjs` — where the story is.** The pipeline is modeled as a dependency graph:
+each stage declares what it `requires`, and the status of each (`done` / `ready` /
+`blocked`) is computed from what is on disk. The first `ready` entry is the artifact
+to write next, so `/status` renders an answer instead of deriving one. It also flags a
+**regression** — an unfinished stage sitting behind finished ones, where re-running
+the stage would discard built work and `/hotfix` is the way back in.
+
+**`validate-artifacts.mjs` — whether the artifacts hold their shape.** It validates
+only what exists (a story at `context` stage is not faulted for having no plan), and
+checks across artifacts, which is where the contract actually breaks:
+
+| Artifact | What it checks |
+|---|---|
+| `spec.md` | front-matter `type` against `ITEM_TYPES`; `## Acceptance Criteria` present with `### AC-N:` headings numbered in order; no empty AC body; `#### Scenario:` blocks carry both `**WHEN**` and `**THEN**`; `## Ambiguity Resolution` once `context.md` exists; no `[NEEDS CLARIFICATION]` marker left after `/clarify` |
+| `design.md` | `## Global Architecture Impact` present **and** carrying a yes/no answer `/sync` can act on |
+| `plan.md` | `### AC → Task traceability` covering every AC in `spec.md` (and listing none that no longer exists); `Task 0` first, task numbering continuous; once every task is `[X]`, an `## AC Coverage` with one line per AC and zero `✗` |
+| archived | a story under `WORKDIR_DONE` with unchecked tasks — the equivalent of validating what was closed |
+
+Where they run: `/status` (Step 1) computes the stage; `/plan` (Step 5) checks the
+plan it just wrote; `/sync` (`Requires`) gates the close-out; `/healthcheck`
+(Step 3.5) sweeps every active story with `--all`. `--strict` promotes warnings to
+issues. Exit codes match the other validators: `0` valid · `1` issues · `2` could not
+run.
 
 ## Per-stack packs (`STACK_REFS`)
 
