@@ -1,0 +1,200 @@
+# SDD Profile — template
+#
+# Copy to `.agents/profile.yaml` at the PROJECT ROOT and fill it in. The SDD skills
+# (bootstrap, spec, prepare, clarify, scan, design, plan, build, refine, hotfix, sync,
+# commit, docs, rules) live in `~/.agents/skills/` and are global: this file is the
+# only thing that adapts them to a project. Without it, the skills stop.
+#
+# CONTRACT
+#   - Keys are grouped in named blocks. A skill cites a key by name and, when it
+#     matters, its block: `MODULE_ROOT` (stack block).
+#   - `null` means "not configured" — the skill uses the fallback declared in its
+#     own contract. It never means "unknown": leaving a REQUIRED key null is an
+#     error the validator reports.
+#   - This file is configuration, not documentation, and not stack knowledge. If a
+#     value changes when the code changes, it belongs in the docs — put a DOCS_*
+#     pointer here instead. If it answers "how does this stack do X", it belongs in
+#     the stack pack's own documents, not here.
+#
+# What each value means, and the rules that tie several of them together:
+#   ~/.agents/skills/bootstrap/references/profile-guide.md
+#
+# VALIDATE after every edit:
+#   node ~/.agents/scripts/validate-profile.mjs .agents/profile.yaml
+
+SCHEMA_VERSION: 2
+
+# ─────────────────────────────────────────────────────────────────────────────
+identity:
+  PROJECT_NAME: null
+  ORG: null
+
+# ─────────────────────────────────────────────────────────────────────────────
+# How a unit of work is identified and framed. ITEM_TYPES picks the framing block
+# each type uses in spec.md — trim the list to the types this project actually ships.
+items:
+  STORY_ID_MODE: sequential       # sequential | name | tracker-code
+  STORY_ID_PREFIX: spec-
+  STORY_ID_PATTERN: spec-<number>
+  STORY_KEY_PATTERN: SPEC-<number>
+  STORY_ID_LEGACY_PREFIXES: []
+  TRACKER: null
+  ITEM_TYPES: [feat, bug, debt, incident, chore]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Where raw items come from. INTAKE_FIELD_MAP maps each spec.md field to its label
+# in a structured export, so a different tracker or language changes only this map.
+intake:
+  INTAKE_FORMATS: [manual-text]
+  INTAKE_FIELD_MAP: null
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The story workspace. {{STORY_ID}} is resolved by each skill from the item it was
+# given, and WORKING_DIRECTORY must be an absolute path.
+#
+# The artifact file names are NOT configurable: every skill reads and writes
+# `spec.md`, `context.md`, `design.md`, `plan.md` and `docs/` inside the workspace.
+# They are a contract between skills, like the structural headings.
+paths:
+  WORKING_DIRECTORY: null
+  WORKDIR_ACTIVE: work/active/{{STORY_ID}}/
+  WORKDIR_DONE: work/done/{{STORY_ID}}/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OUTPUT_LANGUAGE is what the skills speak in chat; ARTIFACT_LANGUAGE is the prose
+# of the artifacts and follows OUTPUT_LANGUAGE when null. Three things stay English
+# regardless: structural section headings, identifiers, and the git surface.
+language:
+  OUTPUT_LANGUAGE: null
+  ARTIFACT_LANGUAGE: null
+  IDENTIFIER_LANGUAGE: English
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Git is assumed: every skill that touches version control runs git directly.
+vcs:
+  REPO_TOPOLOGY: mono-repo        # mono-repo | multi-repo
+  BASE_BRANCH: main
+  PREP_SKILL: prepare
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Which stack this project is on and where its code lives — not how the stack does
+# things. Injection, DTO shape and what a survey locates are documented in the
+# framework skills (typescript, hexagonal-architecture, nestjs) and in the packs'
+# `references/` templates — never summarized into a key here.
+#
+# STACK_REFS is a LIST of pack paths, ordered base → specific. Each pack is a layer:
+# a language pack (`typescript`) supplies the language-ecosystem defaults, a
+# framework pack (`nestjs`) adds its Nest-flavored templates on top (the framework
+# *knowledge* lives in the `nestjs` skill, loaded via SKILLS). A NestJS TypeScript
+# project reads `[ ~/.agents/stacks/typescript, ~/.agents/stacks/nestjs ]`; a plain
+# TS project (Express, CLI, frontend) reads only `typescript`. The later a pack sits,
+# the more specific it is: it overrides the earlier ones per port operation and per
+# template file, and anything no pack provides falls back to each skill's own
+# generic `references/`. A single path string also works for a one-pack project.
+# `null` (or empty) falls back to the generic references/ and inherits no adapters.
+#
+# SKILLS lists the best-practice skills the pipeline must load while drafting
+# plans and code (e.g. typescript, nestjs, hexagonal-architecture,
+# error-handling, design-principles). They are loaded by name from the skills the
+# harness exposes (~/.agents/skills/). This is the switchboard for knowledge: a
+# NestJS project declares [typescript, nestjs, hexagonal-architecture, ...]; a
+# plain TS project omits nestjs and hexagonal-architecture and never sees their
+# rules. null/empty = load only what the project's own CLAUDE.md / conventions.md
+# declare. A name that doesn't exist is reported, not fatal. Skills own the rules
+# and the framework dialect; the packs' STACK_REFS carry only config + templates.
+stack:
+  COMPONENT_TERM: null
+  LANGUAGE: null
+  FRAMEWORK: null
+  ARCHITECTURE: null
+  MODULE_ROOT: null
+  ORM: null
+  MIGRATIONS: null
+  TEST_FRAMEWORK: null
+  API_CONTRACT: OpenAPI 3.1
+  DIAGRAM_FORMAT: Mermaid         # Mermaid | PlantUML
+  STACK_REFS: null
+  SKILLS: null
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pointers to the project's living docs — folders, not individual files. The file
+# names inside them are conventions every skill shares (README.md, api.yaml, flows/),
+# like the artifact names in the story workspace; only the folders are configurable.
+#
+#   DOCS_ARCHITECTURE — C4 Level 1/2 (context.md + containers.md), owned by /architecture.
+#   DOCS_MODULE — folder pattern for per-module docs (e.g. apps/<app>/docs/). The
+#     canonical OpenAPI is <module>/api.yaml under it, which is why it is required
+#     when API_CONTRACT_MODE is delta. Legacy-promoted artifacts land there too.
+#
+# The components themselves are identified from the stack block's MODULE_ROOT (the
+# folder where the code lives — e.g. apps/): its subdirectories are the components,
+# and a component's docs are <component>/README.md and <component>/docs/.
+#
+# Docs-as-code is optional: the default keeps documentation as per-story Markdown.
+# Adopting it means setting DOCS_UNIT_README and DOCS_UNIT_FLOWS together with
+# DESIGN_OUTPUT_MODE = full-flow, plus binding the DIAGRAM_CHECK port. Half the set
+# is worse than none — /design writes flows /sync has nowhere to put.
+docs:
+  DOCS_ARCHITECTURE: docs/architecture/
+  DOCS_MODULE: null
+  API_CONTRACT_MODE: delta        # delta | full
+  DESIGN_OUTPUT_MODE: full        # full | full-flow
+  DOCS_UNIT_README: null
+  DOCS_UNIT_FLOWS: null
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MCP servers this pipeline expects to find. The harness provides them (.mcp.json);
+# this only declares which ones the SDD flow relies on, so /healthcheck can report a
+# missing one instead of a port silently falling through to a shallower adapter.
+# An `mcp:` adapter in `ports` must belong to a server listed here.
+mcp:
+  EXPECTED: []
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The capabilities the skills depend on, and what provides each one HERE. A skill
+# never names a tool: it calls a port, and this block decides the implementation.
+#
+#   <PORT>:
+#     <operation>:
+#       - <adapter>        # ordered by preference; the first AVAILABLE one wins
+#
+# Adapters are a shell command (with the operation's placeholders), `mcp:<tool>`,
+# `agent:<name>` (optionally `?model=<model>`), or `inline` — the skill doing it with
+# its own file tools, which is always available and therefore ends the chain.
+#
+# An adapter that resolves and then FAILS is a real failure: it propagates to the
+# skill and the next adapter is not tried. Otherwise a red test suite would fall
+# through to another runner and report green.
+#
+# Each operation resolves in layers — the stack packs first (base → specific, a later
+# pack's operation replacing an earlier one's), this file on top:
+#
+#   null (or omitted) → INHERIT the packs' adapters (<STACK_REFS>/ports.yaml)
+#   [ ... ]           → use these instead of the packs'
+#   []                → explicitly UNBOUND: ignore the packs, don't use this capability
+#
+# Inheritance is per operation, not per port: binding TESTS.full leaves TESTS.module
+# inherited. With no STACK_REFS, null simply means unbound.
+#
+# An unbound port sends the skill to the degraded behavior its own contract declares.
+# The profile never decides that.
+#
+# The catalog of ports, their operations and their placeholders: ~/.agents/PORTS.md
+ports:
+  TESTS:
+    module: null
+    full: null
+  CI_GATES:
+    run: null
+  CONTRACT_LINT:
+    run: null
+  CONTRACT_DIFF:
+    run: null
+  DIAGRAM_CHECK:
+    run: null
+  API_CLIENT_EXPORT:
+    run: null
+  PROJECT_GRAPH:
+    run: null
+  CODE_SURVEY:
+    run: null
