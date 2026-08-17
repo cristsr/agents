@@ -1,0 +1,43 @@
+# Port adapters — generic
+#
+# The stack-agnostic pack cannot know how a project runs its tests, so almost
+# everything here is deliberately unbound: an empty list sends the consuming skill
+# to its own `Degrades` row, which is the honest outcome. A wrong guess would run
+# the wrong command and report a green that isn't.
+#
+# CODE_SURVEY is the exception — its adapters are provided by the agent harness,
+# not by the project's stack, so they hold for any repo. Its graph adapter is the
+# only one that returns call paths and blast radius; being an MCP tool, it is
+# available when the codegraph server is in the session and skipped otherwise.
+# Declare `codegraph` under mcp.EXPECTED in the profile to use it.
+#
+# A project on this pack wires its ports in `.agents/profile.yaml`. The catalog is
+# ~/.agents/PORTS.md.
+
+TESTS:
+  module: []
+  full: []
+
+CI_GATES:
+  run: []
+
+CONTRACT_LINT:
+  run: []
+
+CONTRACT_DIFF:
+  run: []
+
+DIAGRAM_CHECK:
+  run: []
+
+API_CLIENT_EXPORT:
+  run: []
+
+PROJECT_GRAPH:
+  run: []
+
+CODE_SURVEY:
+  run:
+    - mcp:mcp__codegraph__codegraph_explore
+    - agent:code-explorer?model=sonnet
+    - inline
