@@ -11,4 +11,4 @@
 # own TESTS operation in the profile, not here — this file is stack idiom, and
 # no two repos wire their Nest projects alike.
 #
-# The catalog of ports is ~/.agents/PORTS.md.
+# The catalog of ports is ~/.agents/contracts/PORTS.md.

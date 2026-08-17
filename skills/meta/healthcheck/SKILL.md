@@ -31,12 +31,12 @@ artifacts contradict each other.
 along four axes:
 
 1. **Profile keys** — every key the skills reference exists in
-   `sdd-profile.template.yaml` (the ones that don't come out as warnings, to review
+   `contracts/sdd-profile.template.yaml` (the ones that don't come out as warnings, to review
    whether they're new keys or prose tokens).
 2. **Profile blocks** — every block a skill cites (`stack block`) exists in the
    template, and no skill still points at the pre-YAML numbered sections.
 3. **Ports** — every port is in all three places it must be: the catalog
-   (`~/.agents/PORTS.md`), the template's `ports` block, and the skills that call it.
+   (`~/.agents/contracts/PORTS.md`), the template's `ports` block, and the skills that call it.
    A port called from a skill but absent from the catalog is a call into a void.
 4. **Local + cross-skill paths** — every `references/<file>` a skill consults exists in
    that skill, and every "the `<skill>` skill's `references/<file>`" cross-reference
@@ -114,11 +114,11 @@ green run.
 - **No issues** → "Ecosystem consistent: <N> profile keys, packs and references OK.
   Profile valid: <N> keys, schema v<n>."
 - **With issues** → list them with their probable cause and the fix:
-  - Key missing from the template → add it to `sdd-profile.template.yaml`.
+  - Key missing from the template → add it to `contracts/sdd-profile.template.yaml`.
   - Block cited but nonexistent → fix the citation, or add the block to the template.
   - Stale `section <n>` reference → replace it with the block name.
   - Port called but not in the catalog → the skill invented a capability: either add
-    it to `PORTS.md` and the template, or call the port that already covers it.
+    it to `contracts/PORTS.md` and the template, or call the port that already covers it.
   - Port in the catalog but not in the template → projects have no way to wire it.
   - Nonexistent `references/` → create the file or fix the reference.
   - Missing pack → copy the template into the pack or fix the reference.

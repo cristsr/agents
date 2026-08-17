@@ -32,6 +32,20 @@ identity:
 # ─────────────────────────────────────────────────────────────────────────────
 # How a unit of work is identified and framed. ITEM_TYPES picks the framing block
 # each type uses in spec.md — trim the list to the types this project actually ships.
+#
+# EVIDENCE_MODE_TYPES is the FIRST of the three guardrails around `build_mode:
+# evidence` — the carril where an AC is closed with executable evidence (a validator,
+# a dry-run, a linter) instead of a test written red-first. Only the types listed here
+# may opt into it; everything else is TDD, and a story with no `build_mode` field is
+# TDD too. The default is deliberately restrictive: `feat` and `bug` deliver runtime
+# behavior, which is what tests are for. Widening the list is a deliberate, auditable
+# edit of this file — never a decision taken inside one conversation. A project whose
+# deliverables are mostly not code (a docs repo, a skills ecosystem, a prompt library)
+# is exactly the case for adding `feat` here.
+#
+# The other two guardrails are not configurable: spec.md must carry a non-empty
+# `## Build Mode Rationale`, and validate-artifacts.mjs fails the story when either
+# check is broken. See ~/.agents/README.md § "Build modes".
 items:
   STORY_ID_MODE: sequential       # sequential | name | tracker-code
   STORY_ID_PREFIX: spec-
@@ -40,6 +54,7 @@ items:
   STORY_ID_LEGACY_PREFIXES: []
   TRACKER: null
   ITEM_TYPES: [feat, bug, debt, incident, chore]
+  EVIDENCE_MODE_TYPES: [debt, chore, incident]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Where raw items come from. INTAKE_FIELD_MAP maps each spec.md field to its label
@@ -179,10 +194,15 @@ mcp:
 # An unbound port sends the skill to the degraded behavior its own contract declares.
 # The profile never decides that.
 #
-# The catalog of ports, their operations and their placeholders: ~/.agents/PORTS.md
+# The catalog of ports, their operations and their placeholders: ~/.agents/contracts/PORTS.md
 ports:
   TESTS:
     module: null
+    full: null
+  # Only consumed by a story running in `build_mode: evidence`. Binding it is what
+  # makes that mode usable at all: unbound, such a story stops instead of degrading.
+  VERIFY:
+    run: null
     full: null
   CI_GATES:
     run: null

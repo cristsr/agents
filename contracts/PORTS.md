@@ -120,6 +120,29 @@ Consumed by `/build` (the TDD cycle and the pre-review run), `/hotfix`, `/forge`
 `module` is the hot path — it runs on every red-green-refactor turn, so it must be
 the narrowest command the stack allows.
 
+### `VERIFY` — check a deliverable that no test suite covers
+
+| Operation | Placeholders | Contract |
+|---|---|---|
+| `run` | `<target>` | Checks one deliverable. Exit 0 = the evidence is green. |
+| `full` | `<component>` | The closing check over a whole component. Exit 0 = green. |
+
+Consumed by `/plan`, `/build`, `/hotfix` and `/forge` **only when the story runs in
+`build_mode: evidence`** — the story declares in its front matter that its acceptance
+criteria are closed with executable evidence rather than with a test written red-first.
+In `build_mode: tdd` (the default) this port is never called and `TESTS` keeps the hot
+path unchanged.
+
+What it runs is whatever actually proves the deliverable: a schema validator over a
+Markdown artifact, a linter over a config file, a migration dry-run, a docs link check.
+The contract is the exit code, exactly as in `TESTS`.
+
+**This port is not optional in its mode.** A story in `build_mode: evidence` whose
+`VERIFY` is unbound stops — it does not degrade to "reviewed by eye". That is the same
+rule as `TESTS.module` unbound in `tdd`, and it is what keeps the relaxed mode from
+becoming an escape hatch: without a way to verify, there is no evidence to close an AC
+with.
+
 ### `CI_GATES` — the gates CI would run
 
 | Operation | Placeholders | Contract |

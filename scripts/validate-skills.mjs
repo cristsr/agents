@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // validate-skills.mjs — SDD ecosystem healthcheck (Node port of validate-skills.sh)
 // Checks:
-//   1. Every profile key referenced by the skills exists in sdd-profile.template.yaml
+//   1. Every profile key referenced by the skills exists in the template
+//      (contracts/sdd-profile.template.yaml)
 //   2. Every profile block a skill cites ("stack block") exists in the template
-//   3. Ports: the catalog (PORTS.md), the template's ports block, each pack's
+//   3. Ports: the catalog (contracts/PORTS.md), the template's ports block, each pack's
 //      ports.yaml, and the skills that call them — a port must appear in all three
 //   4. Every local references/<file> path referenced by a skill exists in that skill
 //   5. Every <STACK_REFS>/<file> template exists in the generic pack (the fallback
@@ -18,10 +19,14 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SKILLS = join(ROOT, 'skills');
-const TEMPLATE = join(ROOT, 'sdd-profile.template.yaml');
+// The ecosystem's shared contracts. They sit in contracts/ — not inside a skill —
+// because the packs, the validators and every skill read them; owning them from one
+// skill would invert that dependency.
+const CONTRACTS = join(ROOT, 'contracts');
+const TEMPLATE = join(CONTRACTS, 'sdd-profile.template.yaml');
 const STACKS = join(ROOT, 'stacks');
 const PACKS = ['generic', 'typescript', 'nestjs'];
-const CATALOG = join(ROOT, 'PORTS.md');
+const CATALOG = join(CONTRACTS, 'PORTS.md');
 
 const STOP_KEYS = /^(AC|ACs|API|CI|DTO|DTOs|EARS|FAIL|FTS5|NEW|NEXT|OK|PASS|PR|REST|SQL|TDD|TODO|UI|UUID|YAML|X|Y|Z|M|N|P|A|B|C)$/;
 
