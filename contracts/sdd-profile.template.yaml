@@ -17,7 +17,7 @@
 #     the stack pack's own documents, not here.
 #
 # What each value means, and the rules that tie several of them together:
-#   ~/.agents/skills/bootstrap/references/profile-guide.md
+#   ~/.agents/skills/sdd/bootstrap/references/profile-guide.md
 #
 # VALIDATE after every edit:
 #   node ~/.agents/scripts/validate-profile.mjs .agents/profile.yaml

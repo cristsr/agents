@@ -8,7 +8,7 @@ description: >
   delivery), takes the best of Spec Kit (articles, quality gates,
   semantic-versioned governance) and Kiro (EARS-style testable principles,
   inclusion modes), and produces a polished rules.md under docs/.
-  Use when the user says "/rules", "/constitution", "create the rules",
+  Use when the user says "/rules", "the constitution", "create the rules",
   "define the project's principles", "generate rules.md", "the project's
   non-negotiable rules", or wants to establish or amend project-wide governing
   principles that other skills (design, plan) must validate against.
@@ -242,7 +242,7 @@ in English; render them in the user's language when that differs.
 
 ## Example
 
-**Input:** `/constitution`
+**Input:** `/rules`
 
 **Flow (Create mode, this workspace):**
 1. PHASE 1: resolves `docs/rules.md` in the project (doesn't exist → Create mode,

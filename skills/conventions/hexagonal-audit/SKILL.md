@@ -11,7 +11,7 @@ description: >
   "find architecture improvements", "does this respect hexagonal", or wants to
   turn architecture debt into backlog stories. Do NOT use to build modules (use
   /hexagonal-architecture), to survey the codebase for an item (use /clarify),
-  or for C4 diagrams of the whole system (use /architecture).
+  or for C4 diagrams of the whole system (use /docs).
 metadata:
   author: styve
   version: "1.0"

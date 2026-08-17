@@ -10,7 +10,7 @@ description: >
   define what to build.
   Do NOT use before /clarify is complete. Do NOT use for planning tasks (use /plan).
   Do NOT use for system-wide architecture (C4 Level 1/2 — actors, external
-  systems, apps/microservices) — that's /architecture, invoked by /sync.
+  systems, apps/microservices) — that's /docs, invoked by /sync.
 ---
 
 # design
@@ -336,7 +336,7 @@ Extract the story number from the caller's input, then read:
 
    If found, load its Articles and its active Quality Gates. If it does not
    exist (or is empty) → continue without it, and note in the PHASE 5 summary
-   that no constitution was found (the developer may want to run `/constitution`).
+   that no constitution was found (the developer may want to run `/rules`).
 
 ---
 
@@ -740,7 +740,7 @@ For each **Article**, confirm the design does not violate it. For each active
 
 Apply the four gates above as **built-in defaults** anyway (Simplicity,
 Anti-Abstraction, Integration-First, Test-First) — they are sound regardless —
-and note in the summary that running `/constitution` would make them enforceable
+and note in the summary that running `/rules` would make them enforceable
 project-wide.
 
 Record the gate table in `design.md` under `## Quality Gates Validation`
@@ -764,7 +764,7 @@ After the verification passes and the escalations are handled:
    - The Quality Gates validation result (all ✅, or which ones are ⚠️ with an exception)
    - Any escalations the subagent reported (create/modify ambiguity, gate ⚠️)
      and their resolution
-   - If there was no constitution, a mention that `/constitution` would make it enforceable
+   - If there was no constitution, a mention that `/rules` would make it enforceable
 
 2. Point the user to the artifacts for review — `design.md`, `<api-artifact>`
    (`api.delta.yaml` or `api.yaml`, per `API_CONTRACT_MODE`), `docs/diagram.md`,
@@ -791,7 +791,7 @@ After the verification passes and the escalations are handled:
 | context.md not found | /clarify never ran | Tell the user to run /clarify first |
 | `spec.md` has `[NEEDS CLARIFICATION]` markers | Unresolved ambiguities | STOP: run `/clarify spec-<number>` before designing |
 | A Quality Gate fails (⚠️) | The design violates a principle | Adjust the design to pass it, or record a justified exception in `design.md` and approve it in PHASE 5 |
-| No constitution | `/constitution` never ran | Apply the 4 built-in gates by default; suggest `/constitution` to make them enforceable |
+| No constitution | `/rules` never ran | Apply the 4 built-in gates by default; suggest `/rules` to make them enforceable |
 | Undefined field in a schema | Ambiguous item | Ask in PHASE 3 before designing |
 | Affected <component> not identified | Incomplete context.md | Ask the user before continuing |
 | Diagram with no schema names on the arrows | Missing contract information | Resolve in PHASE 3 before diagramming |

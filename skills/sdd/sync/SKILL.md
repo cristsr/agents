@@ -8,7 +8,7 @@ description: >
   appends design.md's "Design Decisions" section (if any) to the
   cumulative docs/decisions.md log, and reads the "Global Architecture
   Impact" section /design already left in design.md — if it says yes,
-  invokes /architecture with the node/edge already specified (sync detects
+  invokes /docs with the node/edge already specified (sync detects
   nothing on its own, it only promotes what /design already documented) —
   and moves the work/active folder to work/done. Doesn't touch git — that's
   /commit's job. Use when the user says "/sync spec-XXXX", "sync the
@@ -17,7 +17,7 @@ description: >
   Do NOT use to execute plan tasks (use /build), fix post-build defects
   (use /hotfix), group/execute commits and draft the PR (use /commit, right
   after /sync), or bootstrap docs/architecture/ from scratch (use
-  /architecture directly).
+  /docs directly).
 ---
 
 # sync
@@ -316,10 +316,10 @@ Sync does **not** re-derive this from a git diff — it just reads the
 answer and promotes it.
 
 1. Read `## Global Architecture Impact` from `design.md`.
-2. If it says **Yes**: invoke the `architecture` skill in Update mode with
+2. If it says **Yes**: invoke the `docs` skill in Update mode with
    this story's number (`spec-<number>`), passing along the level (Context/
    Container), the change, and the concrete node/edge already specified
-   there — `architecture` applies it, it doesn't have to infer it.
+   there — `docs` applies it, it doesn't have to infer it.
 3. If it says **No**: skip silently, note "no global architecture changes"
    in the close-out summary.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // validate-rules.mjs — validates a project's `docs/rules.md` (the constitution)
 // against the contract its template declares
-// (`~/.agents/skills/rules/references/rules-template.md`).
+// (`~/.agents/skills/sdd/rules/references/rules-template.md`).
 // Run after every rules edit (the /rules skill runs it on write, /healthcheck on demand):
 //   node ~/.agents/scripts/validate-rules.mjs [docs/rules.md]
 //
@@ -33,7 +33,7 @@ const target = process.argv[2] ?? resolve(process.cwd(), 'docs/rules.md');
 const abs = resolve(target);
 if (!existsSync(abs)) {
   console.error(`FAIL: no rules document at ${abs}`);
-  console.error('Create it with /rules (template: ~/.agents/skills/rules/references/rules-template.md).');
+  console.error('Create it with /rules (template: ~/.agents/skills/sdd/rules/references/rules-template.md).');
   process.exit(2);
 }
 

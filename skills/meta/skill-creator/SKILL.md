@@ -14,7 +14,7 @@ description: >
   workflow they want Claude to follow consistently.
   Do NOT use to review or score an existing skill (use /skill-evaluator), to
   edit project artifacts of a user story (use /refine), or to define
-  project-wide governing principles (use /constitution).
+  project-wide governing principles (use /rules).
 ---
 
 # skill-creator

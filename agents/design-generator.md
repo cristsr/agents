@@ -12,7 +12,7 @@ description: >
   Use when the /design orchestrator delegates: ANALYZE before the orchestrator's
   questions, DRAFT after. Do NOT use to ask the user anything (no question tool),
   to run the PHASE 3 questions or the PHASE 5 approval (that's the orchestrator),
-  to design system-wide architecture (/architecture), or to plan (/plan).
+  to design system-wide architecture (/docs), or to plan (/plan).
 tier: balanced
 capabilities: [read, search, skills, edit]
 mode: subagent
