@@ -233,11 +233,10 @@ hotfix flow.
 ## PHASE 4: Append the hotfix task to plan.md
 
 Append to the end of `plan.md`, under a `## Hotfixes` header (create it if it doesn't
-exist), a task with the same structure `docs/architecture` already defines for normal
-tasks — consult `<STACK_REFS>/references/task-structure-template.md` (if no pack in
-`STACK_REFS` provides it: the local `../plan/references/task-structure-template.md` —
-generic) — but numbered
-`HOTFIX-N` instead of a sequential task number:
+exist), a task with the same structure normal tasks follow — consult
+`<STACK_REFS>/references/task-structure-template.md` (if no pack in `STACK_REFS`
+provides it: the local `../plan/references/task-structure-template.md` — generic) —
+but numbered `HOTFIX-N` instead of a sequential task number:
 
 ```markdown
 ### Task HOTFIX-N: <short description of the fix>
@@ -260,6 +259,14 @@ generic) — but numbered
 
 Update the "AC → Task traceability" table in the header: add/update the affected AC's
 row so it includes `Task HOTFIX-N`.
+
+**`**Related AC:**` and the traceability row are where this fix's origin is
+recorded — the code the task writes carries none of it.** The pull is strongest
+here, because a hotfix exists *because of* an AC and a regression test invites
+naming it: write the regression test against the behavior ("returns 200 with an
+empty list"), never against `AC-2`. The AC numbering is what `/refine` and this
+very skill change, so a code comment citing one is stale by the same edit that
+created the fix. Full rule: the `design-principles` skill, § "Comments".
 
 ---
 
@@ -307,7 +314,7 @@ fix didn't break anything that was already passing).
    > (or `diagram`/`data-model` as appropriate) to keep it aligned."
 
 2. Delegate a conventions check to the `conventions-reviewer` subagent over this
-   single task's diff (same pattern as `/build` Step 3.2).
+   single task's diff (same pattern as `/build` Step 3.3).
 
 3. Show a summary:
    - AC corrected/added

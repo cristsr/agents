@@ -127,7 +127,7 @@ Three axes, three profile keys — no skill decides the language on its own:
 |---|---|---|
 | Conversation | `OUTPUT_LANGUAGE` | announcements, questions, closing reports |
 | Artifact prose | `ARTIFACT_LANGUAGE` | the text inside every artifact |
-| Identifiers | `IDENTIFIER_LANGUAGE` | paths, classes, fields, endpoints, YAML keys |
+| Identifiers | `IDENTIFIER_LANGUAGE` | paths, classes, fields, endpoints, YAML keys — **and code comments and test names**, which belong to the codebase rather than to the artifact prose |
 
 **Structural headings stay in English regardless.** They are a contract between
 skills, parsed by name: `## Acceptance Criteria`, `## Ambiguity Resolution`,

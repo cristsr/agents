@@ -127,6 +127,21 @@ reason:
    YAML and frontmatter keys, error codes, table and column names are matched
    verbatim. Whether a team names things in English or another language is
    `IDENTIFIER_LANGUAGE`'s decision (normally English).
+2b. **Code comments and test names go with the code**, so they follow
+   `IDENTIFIER_LANGUAGE` too, not `ARTIFACT_LANGUAGE`. A comment sits one line
+   above the symbol it explains and a test name *is* the sentence a symbol makes:
+   splitting the two languages inside one file costs the reader more than either
+   choice would on its own. The boundary is the file, not the grammar — prose that
+   lives in an artifact follows the artifact, prose that lives in a `.ts` follows
+   the code.
+
+   What a comment may **say** is a separate question, and not a language setting:
+   only what the code cannot say about itself, and never a reference to the story's
+   artifacts (`AC-3`, `spec-0042`, `Task 7`). The story workspace is archived by
+   `/sync` and the AC numbers move when `/refine` or `/hotfix` run, so a code
+   comment citing one becomes a dead and then a lying pointer. That rule lives in
+   the `design-principles` skill, § "Comments", and `/build` applies it while
+   writing.
 3. **The git surface is shared.** Commit messages, PR title and body and branch
    descriptions are prose, but they are history read outside the project — CI,
    other teams, future maintainers. They default to English so the shared record

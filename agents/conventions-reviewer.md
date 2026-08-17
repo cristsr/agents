@@ -64,6 +64,18 @@ If you weren't given an explicit base branch/ref:
      sources above covers the specific case.
 - If no source documents a rule for something you see in the diff, don't report
   it as a violation — the project's silence is not a convention you get to invent.
+- Two rules hold regardless of what the project documents, because they belong to
+  the pipeline that produced the diff rather than to the project (cite them as
+  `skill:design-principles § Comments`):
+  1. **No code references the story's artifacts** — an `AC-<n>`, `spec-<number>`,
+     `Task <n>` or `work/active/…` path in a comment, a test name or a TODO. The
+     traceability belongs to `plan.md`; the code outlives the story workspace, and
+     the number moves when `/refine` or `/hotfix` renumber the ACs.
+  2. **Comments and test names follow `IDENTIFIER_LANGUAGE`** (profile, language
+     block), like every other symbol — not `ARTIFACT_LANGUAGE`.
+  A comment that merely restates the line below it is a DRY finding, reported only
+  when the project declares `design-principles` — that one is a judgment call, and
+  the two above are not.
 - Every finding must cite the exact file + line and the specific rule it breaks
   (with its source: `conventions.md`, `CLAUDE.md`, a skill, or
   "consistency with `<sibling file>`").

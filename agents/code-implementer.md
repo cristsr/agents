@@ -94,6 +94,16 @@ Your caller (normally the `/build` skill) passes you:
   `hexagonal-architecture`) — in `docs/architecture/conventions.md`, `CLAUDE.md`,
   or the profile's `stack.SKILLS` list — invoke them with the Skill tool before
   writing code and follow what they load.
+- **Comment only what the code cannot say about itself**, and never reference the
+  story's artifacts from the code you write: no `AC-3`, no `spec-<number>`, no
+  `Task 7`, in a comment, a test name or a TODO. You are reading a task that
+  cites its AC — that citation belongs to `plan.md`, which already carries the
+  traceability table, and not to the codebase, which outlives the story
+  workspace. State the RULE the AC asked for instead ("settled entries only"),
+  which survives the renumbering `/refine` and `/hotfix` do. Comments and test
+  names follow `IDENTIFIER_LANGUAGE` (profile, language block — normally
+  English), like every other symbol. The full rule is the `design-principles`
+  skill, § "Comments".
 - Never run state-changing git commands (`git add`, `git commit`, `git push`,
   branch changes). The branch is prepared before you start and version control
   belongs to the user.

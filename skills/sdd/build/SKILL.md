@@ -79,7 +79,7 @@ plan.
 **Produces** — this is what `/sync` looks for
 
 - `plan.md` with every task marked `[X]`
-- an `## AC Coverage` section appended to `plan.md` (Step 3.3), one line per AC,
+- an `## AC Coverage` section appended to `plan.md` (Step 3.4), one line per AC,
   zero lines marked `✗`
 - a green test suite for every affected <component>
 
@@ -109,7 +109,7 @@ in both cases rather than executing tasks it cannot verify.
 
 **Ports** — `TESTS` (`module` on every red-green-refactor turn, `full` at Step 3.1)
 in the `tdd` carril; `VERIFY` (`run` per task, `full` at Step 3.1) in `evidence`;
-`API_CLIENT_EXPORT` (Step 3.4) in both. This skill names capabilities, never tools:
+`API_CLIENT_EXPORT` (Step 3.5) in both. This skill names capabilities, never tools:
 which command implements each one is the profile's `ports` block.
 
 **Profile keys**
@@ -118,7 +118,7 @@ which command implements each one is the profile's `ports` block.
   throughout this document as `spec-<number>` and `work/active/spec-<number>/`
 - `WORKING_DIRECTORY`, `BASE_BRANCH` — the location and branch gates in `Requires`
 - `TEST_FRAMEWORK` — the shape of the test files this stack expects (`tdd` carril)
-- `API_CONTRACT_MODE` — which contract artifact feeds the client collection (Step 3.4)
+- `API_CONTRACT_MODE` — which contract artifact feeds the client collection (Step 3.5)
 - `COMPONENT_TERM` and the stack block — the term for a deployable unit, and the stack
 - `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
 
@@ -127,7 +127,7 @@ which command implements each one is the profile's `ports` block.
 ## Step 1: Review plan critically
 
 0. Read `spec.md`'s front matter and note the `build_mode` (absent → `tdd`). It tells
-   you which port each task's verification step calls, and what Step 3.3 must point
+   you which port each task's verification step calls, and what Step 3.4 must point
    at. Don't re-litigate it: `/clarify` decided it and `/plan` re-checked its
    guardrail — if the plan you are about to run contradicts the field, that is a
    critical gap (Step 2's table), not something to resolve by picking one.
@@ -166,6 +166,17 @@ For each task:
 6. Continue immediately to the next task — do not wait for user input
 
 **Do NOT stop between tasks.**
+
+**What the code may not carry.** A task cites the AC it satisfies, because a plan
+is traceable by design. The code is not: never write `AC-3`, `spec-<number>` or
+`Task 7` into a comment, a test name or a TODO. The traceability lives in
+`plan.md`'s `### AC → Task traceability` table and in `## AC Coverage`, both of
+which stay with the story; the code outlives the workspace `/sync` archives, so
+the citation becomes a pointer nobody can follow — and a stale one, since
+`/refine` renumbers ACs and `/hotfix` adds them. Write the rule the AC asked for
+("settled entries only"), not its number. Comment only what the code cannot say
+about itself, and follow `IDENTIFIER_LANGUAGE` for comments and test names, like
+any other symbol. Full rule: the `design-principles` skill, § "Comments".
 
 In `build_mode: evidence` the cycle written in each task runs forward instead of
 red-first: apply the change, then run the task's `VERIFY.run` command and compare
@@ -260,7 +271,23 @@ After ALL tasks are complete:
    In `build_mode: evidence` this is `VERIFY.full` instead, with `VERIFY.run` per
    deliverable as the fallback when `full` is unbound.
 
-2. Delegate a conventions check to the `conventions-reviewer` subagent —
+2. **Grep the diff for artifact references in the code** — one command, before
+   delegating anything:
+
+   ```bash
+   git diff BASE_BRANCH...HEAD | grep -nE '^\+.*\b(AC-[0-9]+|Task [0-9]+|spec-[0-9]+|work/active)\b'
+   ```
+
+   Substitute `BASE_BRANCH` (`develop`) from the profile. Hits in `plan.md` are
+   expected — that is where traceability belongs. A hit in a source or test file is
+   a violation of the Step 2 rule: rewrite the line to state the rule instead of the
+   AC number, then re-run. No output means clean.
+
+   This is grepped rather than trusted because it is the one convention whose cost
+   is invisible at the moment it is broken: the comment reads as helpful today and
+   points nowhere once `/sync` archives the workspace.
+
+3. Delegate a conventions check to the `conventions-reviewer` subagent —
    it runs read-only against the diff and keeps the verbose review out of
    this conversation's context. Invoke `Agent` with:
    - `subagent_type: "conventions-reviewer"`
@@ -269,7 +296,7 @@ After ALL tasks are complete:
    - A prompt naming each affected microservice, so it can run `git diff`
      against `BASE_BRANCH` in each one
 
-3. **Validate against the original spec:** read `work/active/spec-<number>/spec.md` again
+4. **Validate against the original spec:** read `work/active/spec-<number>/spec.md` again
    and build a closing checklist — one line per AC, marked against what was actually
    implemented and tested (not against what the plan intended). **Append it to
    `plan.md`** under an `## AC Coverage` heading, at the end of the file:
@@ -300,7 +327,7 @@ After ALL tasks are complete:
    AC ✓ just because its task is [X] — verify the test (or the check) actually
    exercises that AC's behavior.
 
-4. **Generate the Postman collection** from the approved contract — never hand-write it.
+5. **Generate the Postman collection** from the approved contract — never hand-write it.
    `<api-artifact>` = `docs/api.delta.yaml` if `API_CONTRACT_MODE = delta`, otherwise
    `docs/api.yaml` (profile, docs block). Call the `API_CLIENT_EXPORT.run` port with
    `docs/<api-artifact>` as `<input>` and `docs/postman_collection.json` as `<output>`,
@@ -318,7 +345,7 @@ After ALL tasks are complete:
      `<api-artifact>` straight into Postman as an alternative." — do not block the rest
      of the completion flow on this.
 
-5. Show a completion summary:
+6. Show a completion summary:
    - Tasks completed (with a count)
    - Files created (list of paths)
    - Files modified (list of paths)
@@ -327,7 +354,7 @@ After ALL tasks are complete:
    - Postman collection generated at `docs/postman_collection.json` (or why it was skipped)
    - The subagent's conventions findings (if any)
 
-6. Say (include the next-step suggestion in the same summary):
+7. Say (include the next-step suggestion in the same summary):
    "All tasks completed. Review the changes and tell me if anything needs adjusting.
    Once they're OK, the next step is `/sync spec-<number>` to close out the module's
    documentation (and then `/commit spec-<number>` for the commits and the PR)."
@@ -369,7 +396,7 @@ Quick summary:
 | Branch is main/master | User forgot to switch | Stop immediately, ask for correct branch |
 | Use case not injected | Module registration missing | Check module.ts providers array |
 | An AC with no task in the traceability table | `/plan` produced the plan before this change, or PHASE 3.5 was skipped | STOP at Step 1.3, ask for the plan to be regenerated with `/plan spec-<number>` |
-| An AC ends up `✗` in `## AC Coverage` | The tasks are done but no test exercises that AC's behavior | STOP at Step 3.3 — report the uncovered ACs and ask; `/sync` will refuse to close the story anyway |
+| An AC ends up `✗` in `## AC Coverage` | The tasks are done but no test exercises that AC's behavior | STOP at Step 3.4 — report the uncovered ACs and ask; `/sync` will refuse to close the story anyway |
 | An `evidence` task's baseline run starts red | The deliverable was already broken before this task | Stop: a later green would prove nothing. Report it — fixing the pre-existing break is its own decision |
 | A `VERIFY` command exits 0 but prints something the plan didn't predict | The check is weaker than the plan assumed, or the expected output is stale | Treat it as a failed verification. Do not mark `[X]` on a check whose output you cannot match |
 | `plan.md` is written in the other carril than `spec.md` declares | The mode changed after the plan was written | Critical gap: stop at Step 1 and ask for `/plan spec-<number>` to be regenerated. Never reconcile it by choosing one yourself |
@@ -423,7 +450,9 @@ the `Task N` headings and the `## AC Coverage` heading are structural — never 
 their wording.
 
 **Code comments and test names follow the code**, i.e. `IDENTIFIER_LANGUAGE`
-(normally English) — they are part of the codebase, not of the artifact prose.
+(normally English) — they are part of the codebase, not of the artifact prose. What
+a comment may say (only the why, and never the story's ACs) is a convention rather
+than a language rule: it lives in Step 2 and in the `design-principles` skill.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The progress and summary samples in this document are written in English; render them

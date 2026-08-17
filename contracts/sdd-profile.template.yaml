@@ -79,6 +79,13 @@ paths:
 # OUTPUT_LANGUAGE is what the skills speak in chat; ARTIFACT_LANGUAGE is the prose
 # of the artifacts and follows OUTPUT_LANGUAGE when null. Three things stay English
 # regardless: structural section headings, identifiers, and the git surface.
+#
+# IDENTIFIER_LANGUAGE covers the whole CODE surface, not just the names: paths,
+# classes, fields, endpoints, YAML keys — plus code comments and test names. A
+# comment sits one line above a symbol, so the two following different languages
+# makes the file harder to read than either choice on its own. What a comment may
+# SAY (only the why, never the story's ACs) is a convention, not a language
+# setting: it lives in the `design-principles` skill, § "Comments".
 language:
   OUTPUT_LANGUAGE: null
   ARTIFACT_LANGUAGE: null

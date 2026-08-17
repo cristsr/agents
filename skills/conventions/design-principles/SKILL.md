@@ -1,14 +1,16 @@
 ---
 name: design-principles
 description: >
-  Enforces software design principles: SOLID, DRY, YAGNI, and Tell Don't Ask. Use when
-  designing classes, services, or modules; reviewing code for duplication or unnecessary
-  complexity; creating abstractions; adding new features; or asked about OOP best practices,
-  code design, responsibilities, or coupling.
+  Enforces software design principles: SOLID, DRY, YAGNI, Tell Don't Ask, and how code
+  is commented (only the why, never the story's ACs, language per IDENTIFIER_LANGUAGE).
+  Use when designing classes, services, or modules; writing or reviewing code comments,
+  docstrings or TODOs; reviewing code for duplication or unnecessary complexity; creating
+  abstractions; adding new features; or asked about OOP best practices, code design,
+  responsibilities, or coupling.
 metadata:
   author: styve
-  version: "1.0"
-  tags: [solid, dry, yagni, tell-dont-ask, oop, design, principles]
+  version: "1.1"
+  tags: [solid, dry, yagni, tell-dont-ask, comments, oop, design, principles]
   category: code-quality
 ---
 
@@ -102,6 +104,52 @@ class NotificationService {
 
 If a requirement is not in the current story, do not implement it. Extend when the need
 arrives — not before.
+
+---
+
+## Comments — the why, never the what
+
+CRITICAL: A comment earns its place by explaining what the code cannot say about
+itself: a constraint, a rejected alternative, a non-obvious consequence. Code that
+needs a comment to be *read* needs a better name instead. Write the comment you
+would want to find in six months, and nothing else — an obvious comment is
+duplication under DRY, and every reader pays to confirm it says nothing.
+
+```typescript
+// Wrong: restates the code, and cites an artifact the reader cannot resolve
+// AC-3: validate the transfer
+// Loop over the entries and sum the settled ones
+function sum(entries: Entry[]): Money { … }
+
+// Correct: says what the code cannot
+// Internal transfers appear on both ledgers, so summing raw entries
+// double-counts them. Settled-only is what the balance is reconciled against.
+function sum(entries: Entry[]): Money { … }
+```
+
+**Never reference the story's artifacts from code.** No `AC-3`, no `spec-0042`,
+no `Task 7`, no link to `work/active/…` — not in a comment, a test name, a commit
+body or a TODO. Three reasons, and each one is enough:
+
+- **The reference dies.** The story workspace is archived to `work/done/` when
+  `/sync` closes it. The code outlives it, so the citation becomes a pointer to
+  something the reader cannot open.
+- **The number moves.** `/refine` renumbers ACs and `/hotfix` adds them. A
+  comment saying `AC-3` keeps claiming AC-3 after AC-3 became AC-4 — it does not
+  break, it lies.
+- **Traceability already has a home.** The `### AC → Task traceability` table in
+  `plan.md` and `## AC Coverage` are where an AC maps to what proves it. A
+  comment duplicating that adds a second source of truth that nothing validates.
+
+What replaces it: say *what the rule is*, not which AC asked for it. "Settled
+entries only" survives every renumbering; "AC-3" survives none. If the rule is
+worth citing an authority for, cite the durable one — the constitution article,
+the living module doc, the ADR in `docs/decisions.md`.
+
+**Language:** comments and test names follow `IDENTIFIER_LANGUAGE` (profile,
+language block — normally English). They are part of the codebase, not of the
+artifact prose that follows `ARTIFACT_LANGUAGE`: a reader of the code should not
+have to switch languages between a symbol and the line above it.
 
 ---
 
@@ -252,6 +300,7 @@ See `references/solid-guide.md` for NestJS-specific DI patterns.
 
 | Principle | Rule | Symptom of Violation |
 |-----------|------|----------------------|
+| Comments | Only the why; never cite the story's artifacts | `// AC-3`, `spec-0042`, a comment restating the line below |
 | Tell Don't Ask | Logic inside objects, not outside | Chain of getters + external if |
 | DRY | One source of truth per concept | Copy-pasted logic or validation |
 | YAGNI | Build what is needed now | Unused params, speculative abstractions |

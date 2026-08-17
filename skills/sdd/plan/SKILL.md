@@ -547,6 +547,18 @@ Each task MUST have:
 - Expected output for every bash command
 - One mock per external dependency
 
+**The code inside a task carries no reference to this story.** A task is written
+against an AC and the traceability table records that; the code it dictates must
+not — no `AC-<n>`, `spec-<number>`, `Task <n>` or `work/active/…` in a comment, a
+test name or a TODO. This is the one rule where you are the last line of defense:
+`code-implementer` copies a task's code **verbatim** by design, so an `// AC-3`
+written here lands in the repository and outlives the workspace `/sync` archives.
+Write the rule the AC states ("settled entries only"), which survives the
+renumbering `/refine` and `/hotfix` do. Comment only what the code cannot say
+about itself, in `IDENTIFIER_LANGUAGE` like every other symbol. Full rule: the
+`design-principles` skill, § "Comments"; `/build` greps the diff for it before
+closing.
+
 **Tests must cover:**
 - Each acceptance criterion from spec.md → at least one test case
 - Edge cases mentioned in spec.md
