@@ -50,16 +50,21 @@ targets:
     out: ~/.config/opencode/agents/{name}.md
     format: opencode
 
-    # This OpenCode runs against a local LM Studio (see opencode.json), not
+    # This OpenCode runs against the DeepSeek API (see opencode.json), not
     # against Anthropic — which is why the tiers resolve to completely different
-    # models than in claude-code. With only two local models, `reasoning` and
-    # `balanced` collapse into the same one: adjust when a larger local model exists.
+    # models than in claude-code. Three API models today: `reasoning` is the
+    # reasoner, `balanced` the general chat model, `fast` the flash model.
     tiers:
-      reasoning: lmstudio/qwen/qwen3.5-9b
-      balanced: lmstudio/qwen/qwen2.5-coder-7b
-      fast: lmstudio/qwen/qwen2.5-coder-7b
+      reasoning: deepseek/deepseek-reasoner
+      balanced: deepseek/deepseek-chat
+      fast: deepseek/deepseek-v4-flash
 
-    # capability → native tools (object of booleans)
+    # capability → native tools (object of booleans).
+    # Note: there is deliberately NO `write` capability — OpenCode treats `edit`
+    # as the master switch: a standalone `write: allow` with `edit: deny` does not
+    # enable Write (verified on 1.18.3). Write-without-edit is not expressible, so
+    # a write-only agent still declares `edit` and enforces the restriction in its
+    # prompt.
     capabilities:
       read: { read: true }
       search: { grep: true, glob: true }
@@ -69,12 +74,17 @@ targets:
       web: { webfetch: true }
       agents: { task: true }
 
-    # What isn't declared is emitted explicitly as false, rather than omitted.
+    # What isn't declared is emitted as a `deny` rule, rather than omitted.
     # OpenCode enables everything by default: omitting would be granting.
-    # Verified with `opencode debug agent <name>`: anything not listed here stays
-    # enabled by default. `invalid` and `question` are handled by OpenCode itself.
+    # Emitted via the `permission` field — NOT the deprecated `tools` field,
+    # which in some OpenCode versions fails to enable `edit`/`write`
+    # (verified on 1.18.3). Verified with `opencode debug agent <name>`:
+    # anything not listed here stays enabled by default, so deny_unlisted
+    # closes that gap. `patch` is not a permission key (it errored), so it is
+    # excluded from known_tools. `invalid` and `question` are handled by
+    # OpenCode itself.
     deny_unlisted: true
-    known_tools: [read, grep, glob, bash, skill, edit, write, webfetch, task, patch, todowrite]
+    known_tools: [read, grep, glob, bash, skill, edit, write, webfetch, task, todowrite]
 
     defaults:
       mode: subagent

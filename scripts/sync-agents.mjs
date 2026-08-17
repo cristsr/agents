@@ -113,14 +113,19 @@ const emitters = {
   opencode(meta, target, name) {
     const { tools, guards } = resolveCapabilities(meta.capabilities, target, name);
     const granted = Object.assign({}, ...tools);
+    const permission = {};
+    for (const t of Object.keys(granted)) if (t !== 'patch') permission[t] = 'allow';
     if (target.deny_unlisted) {
-      for (const t of target.known_tools ?? []) if (!(t in granted)) granted[t] = false;
+      for (const t of target.known_tools ?? []) {
+        if (t === 'patch' || t in permission) continue;
+        permission[t] = 'deny';
+      }
     }
     const fm = {
       description: meta.description,
       mode: meta.mode ?? target.defaults?.mode ?? 'subagent',
       model: resolveModel(meta.tier, target, name),
-      tools: granted,
+      permission,
     };
     for (const g of guards) merge(fm, g);
     return fm;
