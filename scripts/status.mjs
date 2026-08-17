@@ -14,7 +14,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { loadProfile, listStories, storyIdMatcher, workdirBase } from './lib/profile.mjs';
-import { readStory, acceptanceCriteria, clarificationMarkers, tasks, acCoverage, traceability } from './lib/story.mjs';
+import { readStory, acceptanceCriteria, clarificationMarkers, tasks, acCoverage, traceability, buildMode } from './lib/story.mjs';
 
 // ── The pipeline graph ──────────────────────────────────────────────────────
 // Order here is dependency order; ties break by declaration order, so the first
@@ -27,6 +27,21 @@ const PIPELINE = [
   { id: 'build', file: null, requires: ['plan'], command: '/build' },
   { id: 'sync', file: null, requires: ['build'], command: '/sync' },
 ];
+
+/**
+ * The graph as the story's carril draws it. In `build_mode: evidence` there is no
+ * API contract and no sequence diagram for /design to produce, so the stage is
+ * skipped rather than pending — otherwise the next step would read "/design" in a
+ * carril where /design never runs — and /plan hangs off context.md instead.
+ */
+function pipelineFor(mode) {
+  if (mode !== 'evidence') return PIPELINE;
+  return PIPELINE.map((node) => {
+    if (node.id === 'design') return { ...node, skipped: true };
+    if (node.id === 'plan') return { ...node, requires: ['context'] };
+    return node;
+  });
+}
 
 const argv = process.argv.slice(2);
 const asJson = argv.includes('--json');
@@ -76,6 +91,8 @@ function buildReport(storyId) {
   const doneTasks = taskList.filter((t) => t.done);
   const coverage = acCoverage(story.text.plan);
   const closed = story.location === 'done';
+  const mode = buildMode(story.text.spec);
+  const pipeline = pipelineFor(mode);
 
   // Satisfaction per artifact. `context` is not done while unresolved markers
   // remain: /clarify's own contract is to leave zero, so a spec still carrying
@@ -89,9 +106,11 @@ function buildReport(storyId) {
     sync: closed,
   };
 
-  const artifacts = PIPELINE.map((node) => {
+  const artifacts = pipeline.map((node) => {
     const missingDeps = node.requires.filter((dep) => !satisfied[dep]);
-    const status = satisfied[node.id] ? 'done' : missingDeps.length ? 'blocked' : 'ready';
+    const status = node.skipped && !satisfied[node.id]
+      ? 'skipped'
+      : satisfied[node.id] ? 'done' : missingDeps.length ? 'blocked' : 'ready';
     const entry = {
       id: node.id,
       status,
@@ -102,8 +121,8 @@ function buildReport(storyId) {
     return entry;
   });
 
-  const next = artifacts.find((a) => a.status !== 'done');
-  const nextNode = next ? PIPELINE.find((n) => n.id === next.id) : null;
+  const next = artifacts.find((a) => a.status !== 'done' && a.status !== 'skipped');
+  const nextNode = next ? pipeline.find((n) => n.id === next.id) : null;
 
   // A pending artifact sitting BEHIND finished ones is a regression, not the next
   // step: something downstream was already built on top of it. Naming it matters —
@@ -130,6 +149,7 @@ function buildReport(storyId) {
     storyId,
     root: profile.root,
     location: story.location,
+    buildMode: mode,
     dir: rel(story.dir),
     artifacts,
     next: nextNode && !closed
@@ -159,7 +179,7 @@ function output(report) {
     process.exit(0);
   }
 
-  const glyph = { done: '✓', ready: '◑', blocked: '·' };
+  const glyph = { done: '✓', ready: '◑', blocked: '·', skipped: '–' };
   const detail = {
     spec: report.counts.acceptanceCriteria ? `${report.counts.acceptanceCriteria} ACs` : '',
     context: '',
@@ -169,10 +189,13 @@ function output(report) {
     sync: report.location === 'done' ? 'archived' : '',
   };
 
-  console.log(`${report.storyId} · ${report.location}${report.branch ? ` · ${report.branch}` : ''}\n`);
+  const modeLabel = report.buildMode === 'tdd' ? '' : ` · ${report.buildMode} mode`;
+  console.log(`${report.storyId} · ${report.location}${modeLabel}${report.branch ? ` · ${report.branch}` : ''}\n`);
   for (const a of report.artifacts) {
     const name = a.outputPath ? a.id.padEnd(9) : a.id.padEnd(9);
-    const suffix = a.status === 'blocked' ? `blocked: needs ${a.missingDeps.join(', ')}` : detail[a.id] ?? '';
+    const suffix = a.status === 'blocked'
+      ? `blocked: needs ${a.missingDeps.join(', ')}`
+      : a.status === 'skipped' ? 'not required in evidence mode' : detail[a.id] ?? '';
     console.log(`  ${glyph[a.status]} ${name} ${suffix}`.trimEnd());
   }
   if (report.warnings.length) {

@@ -4,8 +4,8 @@
 //   node ~/.agents/scripts/validate-profile.mjs [.agents/profile.yaml]
 //
 // The STRUCTURE (which blocks and keys exist) is derived from
-// `~/.agents/sdd-profile.template.yaml`, so adding a key to the template registers
-// it here automatically. The RULES below — required, enums, cross-checks — are the
+// `~/.agents/contracts/sdd-profile.template.yaml`, so adding a key to the template
+// registers it here automatically. The RULES below — required, enums, cross-checks — are the
 // only thing this file owns.
 //
 // Exit codes: 0 = valid · 1 = issues found · 2 = could not run (bad args, no parser)
@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve, isAbsolute } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const TEMPLATE = resolve(HERE, '..', 'sdd-profile.template.yaml');
+const TEMPLATE = resolve(HERE, '..', 'contracts', 'sdd-profile.template.yaml');
 
 // ── YAML parsing ────────────────────────────────────────────────────────────
 // js-yaml when available (resolved from ~/.agents/node_modules regardless of the
@@ -138,6 +138,7 @@ const ENUMS = {
 const LISTS = [
   'items.STORY_ID_LEGACY_PREFIXES',
   'items.ITEM_TYPES',
+  'items.EVIDENCE_MODE_TYPES',
   'intake.INTAKE_FORMATS',
   'mcp.EXPECTED',
   'stack.SKILLS',
@@ -225,7 +226,7 @@ if (template) {
 
 // ── 2b. Ports: capability wiring ────────────────────────────────────────────
 // The template is the registry of valid ports and operations — it mirrors the
-// catalog in ~/.agents/PORTS.md, which validate-skills.mjs keeps in sync with it.
+// catalog in ~/.agents/contracts/PORTS.md, which validate-skills.mjs keeps in sync.
 //
 // Adapters resolve in layers: the stack packs first (base → specific, later wins),
 // the profile on top. What a skill actually gets is the resolved value, so that is
@@ -297,7 +298,7 @@ if (ports != null && (typeof ports !== 'object' || Array.isArray(ports))) {
   for (const [port, ops] of Object.entries(ports)) {
     const path = `ports.${port}`;
     if (!(port in template.ports)) {
-      warn(path, 'unknown port — not in the catalog (~/.agents/PORTS.md)');
+      warn(path, 'unknown port — not in the catalog (~/.agents/contracts/PORTS.md)');
       continue;
     }
     if (ops == null || typeof ops !== 'object' || Array.isArray(ops)) {
@@ -446,6 +447,24 @@ if (get('docs.API_CONTRACT_MODE') === 'delta' && !isSet(get('docs.DOCS_MODULE'))
 if (isSet(get('docs.DOCS_UNIT_README')) && !isSet(get('docs.DOCS_UNIT_FLOWS'))) {
   warn('docs.DOCS_UNIT_FLOWS', 'a unit README without flows — C4 L4 has nowhere to land');
 }
+// `build_mode: evidence` is opt-in per item type, and the opt-in only means
+// something if the type exists and if something can actually run the check.
+const evidenceTypes = get('items.EVIDENCE_MODE_TYPES');
+const itemTypes = get('items.ITEM_TYPES');
+if (Array.isArray(evidenceTypes) && Array.isArray(itemTypes)) {
+  const unknown = evidenceTypes.filter((t) => !itemTypes.includes(t));
+  if (unknown.length) {
+    issue('items.EVIDENCE_MODE_TYPES', `lists type(s) absent from ITEM_TYPES: ${unknown.join(', ')} — no item can ever carry them`);
+  }
+}
+if (Array.isArray(evidenceTypes) && evidenceTypes.length) {
+  const verify = get('ports.VERIFY.run');
+  const resolvedVerify = verify != null ? verify : packPorts?.VERIFY?.run ?? null;
+  if (!isSet(resolvedVerify)) {
+    warn('ports.VERIFY', 'EVIDENCE_MODE_TYPES declares eligible types but this port is unbound — an evidence-mode story would have nothing to close its ACs with, and /plan stops');
+  }
+}
+
 const survey = get('ports.CODE_SURVEY.run');
 if (Array.isArray(survey) && survey.length === 1 && survey[0] === 'inline') {
   warn('ports.CODE_SURVEY', 'only inline — surveys will be slower and spend the main context');

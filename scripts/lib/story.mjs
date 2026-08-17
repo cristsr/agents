@@ -1,7 +1,7 @@
 // story.mjs — reads a story workspace and parses the structural contract the SDD
 // skills write into its artifacts.
 //
-// The headings parsed here are the SAME contract SDD-PIPELINE.md declares under
+// The headings parsed here are the SAME contract the README declares under
 // "Language": `## Acceptance Criteria`, `### AC-N:`, `## Ambiguity Resolution`,
 // `## Global Architecture Impact`, `## Design Decisions`, `### Task N:`,
 // `## AC Coverage`. They stay English regardless of ARTIFACT_LANGUAGE, which is
@@ -65,6 +65,23 @@ export function frontMatter(text) {
     if (kv) out[kv[1]] = kv[2].trim().replace(/^["'](.*)["']$/, '$1');
   }
   return out;
+}
+
+/** The two carriles a story can be built in. Order is not significant. */
+export const BUILD_MODES = ['tdd', 'evidence'];
+
+/**
+ * The story's `build_mode`, from spec.md's front matter.
+ *
+ * Absent (or no front matter at all) means `tdd`: every story written before the
+ * mode existed is a TDD story, and that is the safe default — `evidence` is the
+ * one that has to be asked for, justified and validated. Returns the raw value
+ * when it is not a known mode, so the caller can report it instead of silently
+ * normalizing a typo into the relaxed carril.
+ */
+export function buildMode(specText) {
+  const value = frontMatter(specText)?.build_mode;
+  return value ? value.trim() : 'tdd';
 }
 
 /**

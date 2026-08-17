@@ -265,14 +265,20 @@ row so it includes `Task HOTFIX-N`.
 
 ## PHASE 5: Execute the hotfix task
 
-Same TDD discipline as `/build` Step 2, but scoped to this single task:
+Same discipline as `/build` Step 2, in the story's own carril (`spec.md`'s
+`build_mode`, absent → `tdd`), scoped to this single task:
 1. Mark in_progress (TodoWrite optional for a single task)
-2. Regression test → confirm it fails → implement the minimum fix →
-   confirm it passes
+2. **`tdd`:** regression test → confirm it fails → implement the minimum fix →
+   confirm it passes.
+   **`evidence`:** run the `VERIFY.run` check first and confirm it reproduces the
+   defect (it is the regression test's equivalent — a check that passes on the
+   broken state cannot vouch for the fix), apply the minimum fix, re-run and
+   confirm the expected output.
 3. Mark `### Task HOTFIX-N: ... [X]` in `plan.md`
 4. Call the `TESTS.module` port for the affected module, from the <component>'s
    directory and returning to the working directory afterwards. If the port is
-   unbound, call `TESTS.full` for the <component> instead.
+   unbound, call `TESTS.full` for the <component> instead. In `evidence` this is
+   `VERIFY.full`, falling back to `VERIFY.run`.
 
 Expected: PASS — including the new regression test and all existing ones (verify the
 fix didn't break anything that was already passing).

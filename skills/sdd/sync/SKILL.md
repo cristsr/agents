@@ -84,8 +84,8 @@ stops the close-out at the start.
 | `work/active/spec-<number>/` exists | Check `work/done/spec-<number>/` — if it's already there the story was already synced: report it and stop |
 | `node ~/.agents/scripts/validate-artifacts.mjs spec-<number>` exits `0` | Stop and report the issues it lists, verbatim — each one names the artifact and the broken contract. This is the mechanical form of the two rows below; don't re-derive by eye what it already checked. If `node` is unavailable (exit `2`), check both rows by hand and say the gate ran manually |
 | `plan.md` exists and **all** its tasks are marked `[X]` | Stop: "The plan still has incomplete tasks. Run `/build spec-<number>` first." |
-| `plan.md` has an `## AC Coverage` section with **zero** lines marked `✗` | Stop: "AC-<N> is not covered by any test (`<reason from the line>`). The story isn't ready to close." If the section is missing entirely, the plan predates this convention — ask the user to confirm AC coverage; don't infer it from the `[X]` markers |
-| `design.md` exists | Ask the user whether to skip doc promotion; do not invent module docs |
+| `plan.md` has an `## AC Coverage` section with **zero** lines marked `✗` | Stop: "AC-<N> is not covered (`<reason from the line>`). The story isn't ready to close." (in `build_mode: evidence` the line points at the command that proves the AC rather than at a test — the gate is the same) If the section is missing entirely, the plan predates this convention — ask the user to confirm AC coverage; don't infer it from the `[X]` markers |
+| `design.md` exists | In `build_mode: evidence` (spec.md front matter) there is no design to promote: skip Steps 3 and 4 silently and go on to the archive — that carril never produced a contract, a flow or a `## Design Decisions` section. In `tdd`, ask the user whether to skip doc promotion; do not invent module docs |
 | `git branch --show-current` ≠ `BASE_BRANCH` | Stop and ask the user to switch to the working branch |
 
 The `[X]` markers say the *tasks* were executed; `## AC Coverage` says the

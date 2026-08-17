@@ -1,7 +1,8 @@
 ---
 name: build
 description: >
-  Executes a written TDD implementation plan autonomously, task by task,
+  Executes a written implementation plan autonomously, task by task — TDD by
+  default, or evidence-driven when spec.md declares build_mode: evidence —
   marking each task as completed in plan.md. Use when the user says
   "/build spec-XXXX", "execute the plan", "implement the plan", "build story",
   or references a plan file (work/active/spec-*/plan.md).
@@ -20,6 +21,15 @@ upon completion. Ask for review only once all tasks are complete.
 **Announce at start:** "Executing plan spec-<number>."
 
 **Core principle:** Full autonomous execution — mark progress, review at the end.
+
+**Two carriles.** `spec.md`'s front matter declares the story's `build_mode` (absent
+means `tdd`). It changes exactly two things here: which port verifies a task
+(`TESTS.module` in `tdd`, `VERIFY.run` in `evidence`) and what a `## AC Coverage`
+line points at (a test, or the command that proves the deliverable). The plan itself
+already carries the right cycle in each task — written by `/plan` for that carril —
+so execution follows the task text as always. Everything else is identical: the
+traceability gate, the four valid reasons to stop, the `[P]` groups, and the rule
+that a `✗` is an unfinished build.
 
 ---
 
@@ -91,20 +101,23 @@ unit's living docs under `<unit>/docs/` (that's `/sync`).
 Step 2. There is no fifth.
 
 **Degrades** — `TESTS.full` unbound → `TESTS.module` per affected module, which
-covers the same ground in more runs; `API_CLIENT_EXPORT` unbound → skip and note it,
-never block the close. `TESTS.module` unbound is **not** a degradation: without a way
-to run tests there is no TDD cycle, and Step 2 stops.
+covers the same ground in more runs; `VERIFY.full` unbound → `VERIFY.run` per
+deliverable; `API_CLIENT_EXPORT` unbound → skip and note it, never block the close.
+The per-task port is **not** degradable in either carril: without `TESTS.module`
+there is no TDD cycle, and without `VERIFY.run` there is no evidence — Step 2 stops
+in both cases rather than executing tasks it cannot verify.
 
 **Ports** — `TESTS` (`module` on every red-green-refactor turn, `full` at Step 3.1)
-and `API_CLIENT_EXPORT` (Step 3.4). This skill names capabilities, never tools: which
-command implements each one is the profile's `ports` block.
+in the `tdd` carril; `VERIFY` (`run` per task, `full` at Step 3.1) in `evidence`;
+`API_CLIENT_EXPORT` (Step 3.4) in both. This skill names capabilities, never tools:
+which command implements each one is the profile's `ports` block.
 
 **Profile keys**
 
 - `STORY_ID_PATTERN`, `WORKDIR_ACTIVE` — the story's id and workspace, written
   throughout this document as `spec-<number>` and `work/active/spec-<number>/`
 - `WORKING_DIRECTORY`, `BASE_BRANCH` — the location and branch gates in `Requires`
-- `TEST_FRAMEWORK` — the shape of the test files this stack expects
+- `TEST_FRAMEWORK` — the shape of the test files this stack expects (`tdd` carril)
 - `API_CONTRACT_MODE` — which contract artifact feeds the client collection (Step 3.4)
 - `COMPONENT_TERM` and the stack block — the term for a deployable unit, and the stack
 - `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
@@ -113,6 +126,11 @@ command implements each one is the profile's `ports` block.
 
 ## Step 1: Review plan critically
 
+0. Read `spec.md`'s front matter and note the `build_mode` (absent → `tdd`). It tells
+   you which port each task's verification step calls, and what Step 3.3 must point
+   at. Don't re-litigate it: `/clarify` decided it and `/plan` re-checked its
+   guardrail — if the plan you are about to run contradicts the field, that is a
+   critical gap (Step 2's table), not something to resolve by picking one.
 1. Read `work/active/spec-<number>/plan.md` completely
 2. Check for already completed tasks — look for [X] markers:
    - If tasks are already marked [X] → resume from the first incomplete task
@@ -149,6 +167,18 @@ For each task:
 
 **Do NOT stop between tasks.**
 
+In `build_mode: evidence` the cycle written in each task runs forward instead of
+red-first: apply the change, then run the task's `VERIFY.run` command and compare
+against the **verbatim** expected output the plan wrote down. Two rules carry the
+weight TDD's red step normally carries, and neither is optional:
+
+- A task that opens with a **baseline** run (a modification to something already
+  covered) must show it green *before* the change. A baseline that starts red is a
+  stop, not a task to push through — you cannot attribute a later red to your work.
+- Matching the expected output means matching it. A command that "ran fine" but
+  printed something the plan didn't predict is a failed verification, and it goes to
+  the same table below as a failing test.
+
 **Right after `Task 0`** (working-branch verification), and before touching any source
 file, re-run `git branch --show-current` in each affected <component>. If it is still
 `main`, `master` or `BASE_BRANCH`, the working branch isn't checked out — stop and
@@ -176,7 +206,8 @@ concurrently, one `code-implementer` subagent per group:
    - the group's <component> and the full text of its pending tasks, verbatim —
      they are self-contained (exact file paths, complete code, TDD cycle,
      expected outputs)
-   - the resolved test command for the group (the profile's `TESTS.module` port)
+   - the story's build mode and the resolved verification command for the group:
+     the `TESTS.module` port in `tdd`, the `VERIFY.run` port in `evidence`
    - the conventions to respect: `.agents/profile.yaml`,
      `docs/architecture/conventions.md`, `docs/architecture/testing.md`
    The `code-implementer` subagent's own prompt already encodes the execution
@@ -186,8 +217,9 @@ concurrently, one `code-implementer` subagent per group:
 
 3. **Collect and verify — never trust a subagent blindly.** When a subagent
    returns:
-   - re-run that group's test command (port `TESTS.module`) yourself, once per
-     group, and confirm it passes before accepting the group's work
+   - re-run that group's verification command yourself (port `TESTS.module`, or
+     `VERIFY.run` in the evidence carril), once per group, and confirm it passes
+     before accepting the group's work
    - only then mark the group's tasks `[X]` in plan.md (the subagent does not
      write plan.md, so concurrent `[X]` edits are impossible)
    - if a subagent failed or its verification is not green, do not mark `[X]`:
@@ -207,7 +239,7 @@ The only valid reasons to stop mid-execution:
 | Reason | Action |
 |--------|--------|
 | Missing dependency (package, file, class) | Stop, report exactly what is missing |
-| Test fails repeatedly (more than twice) | Stop, show the error, ask for guidance |
+| Test — or a `VERIFY` check — fails repeatedly (more than twice) | Stop, show the error, ask for guidance |
 | Instruction is ambiguous or contradictory | Stop, quote the instruction, ask for clarification |
 | Plan has a critical gap that prevents starting | Stop, describe the gap, wait for resolution |
 
@@ -224,6 +256,9 @@ After ALL tasks are complete:
    directory afterwards.
 
    If the port is unbound → call `TESTS.module` per affected module instead.
+
+   In `build_mode: evidence` this is `VERIFY.full` instead, with `VERIFY.run` per
+   deliverable as the fallback when `full` is unbound.
 
 2. Delegate a conventions check to the `conventions-reviewer` subagent —
    it runs read-only against the diff and keeps the verbose review out of
@@ -250,11 +285,20 @@ After ALL tasks are complete:
    before closing the story. Never translate it, and write one line per AC in
    `spec.md`, no more and no fewer.
 
-   Every line carries a concrete test reference. If an AC cannot be marked ✓ with one,
-   mark it `✗ <reason>` — and then **stop before declaring the plan complete**: report
-   the uncovered ACs and ask how to proceed. A `✗` is not a footnote to a finished
-   build, it's an unfinished build. Do not mark an AC ✓ just because its task is [X] —
-   verify the test actually exercises that AC's behavior.
+   Every line carries a concrete reference. In `build_mode: evidence` that reference
+   is the **command that proves it** (in backticks) or the artifact path plus its
+   validator, and the same rule applies as for a test — `validate-artifacts.mjs`
+   rejects a ✓ with nothing behind it:
+
+   ```markdown
+   AC-1: <short text> — ✓ `node scripts/validate-skills.mjs` → OK: 50 profile keys, no issues.
+   ```
+
+   If an AC cannot be marked ✓ with one, mark it `✗ <reason>` — and then **stop before
+   declaring the plan complete**: report the uncovered ACs and ask how to proceed. A
+   `✗` is not a footnote to a finished build, it's an unfinished build. Do not mark an
+   AC ✓ just because its task is [X] — verify the test (or the check) actually
+   exercises that AC's behavior.
 
 4. **Generate the Postman collection** from the approved contract — never hand-write it.
    `<api-artifact>` = `docs/api.delta.yaml` if `API_CONTRACT_MODE = delta`, otherwise
@@ -326,6 +370,9 @@ Quick summary:
 | Use case not injected | Module registration missing | Check module.ts providers array |
 | An AC with no task in the traceability table | `/plan` produced the plan before this change, or PHASE 3.5 was skipped | STOP at Step 1.3, ask for the plan to be regenerated with `/plan spec-<number>` |
 | An AC ends up `✗` in `## AC Coverage` | The tasks are done but no test exercises that AC's behavior | STOP at Step 3.3 — report the uncovered ACs and ask; `/sync` will refuse to close the story anyway |
+| An `evidence` task's baseline run starts red | The deliverable was already broken before this task | Stop: a later green would prove nothing. Report it — fixing the pre-existing break is its own decision |
+| A `VERIFY` command exits 0 but prints something the plan didn't predict | The check is weaker than the plan assumed, or the expected output is stale | Treat it as a failed verification. Do not mark `[X]` on a check whose output you cannot match |
+| `plan.md` is written in the other carril than `spec.md` declares | The mode changed after the plan was written | Critical gap: stop at Step 1 and ask for `/plan spec-<number>` to be regenerated. Never reconcile it by choosing one yourself |
 | A `[P]` group's subagent modifies a file another group already touched | Wrong grouping in `/plan` | Stop the parallel batch, resolve the conflict, continue the remaining groups sequentially |
 | A `[P]` group's subagent fails or its verification is red | A bug in that group's code, or a test/instructions gap | Inspect the reported error, fix it, re-run that group's verification before marking `[X]`; never accept a subagent's word without re-running its tests |
 | `API_CLIENT_EXPORT` unbound, or its adapter unavailable | Tool not installed or project doesn't use it | Skip the step, suggest importing `<api-artifact>` straight into Postman, don't block the close |

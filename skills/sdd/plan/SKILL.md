@@ -1,11 +1,14 @@
 ---
 name: plan
 description: >
-  Generates a detailed TDD implementation plan from the approved design artifacts
-  (spec.md, context.md, design.md) and saves it to work/active/spec-<number>/plan.md.
+  Generates a detailed implementation plan — TDD by default, or evidence-driven when
+  spec.md declares build_mode: evidence — from the approved artifacts
+  (spec.md, context.md, and design.md when the carril requires it) and saves it to
+  work/active/spec-<number>/plan.md.
   Use when the user says "/plan spec-XXXX", "generate the plan", "create the
   implementation plan", "plan the story", or has completed /design and wants TDD tasks.
-  Do NOT use before /design is complete and approved.
+  Do NOT use before /design is complete and approved — except in the evidence carril,
+  which has no design stage.
   Do NOT use for executing tasks (use /build).
 ---
 
@@ -13,8 +16,9 @@ description: >
 
 ## Overview
 
-Read the approved artifacts, determine implementation order from the sequence
-diagram, and produce a complete TDD plan organized by <component>.
+Read the approved artifacts, determine the implementation order, and produce a
+complete plan organized by <component> — TDD tasks ordered by the sequence diagram in
+the default carril, evidence tasks ordered by deliverable dependencies in the other.
 
 **The skill runs as two actors:**
 
@@ -35,6 +39,21 @@ diagram, and produce a complete TDD plan organized by <component>.
 
 **Core principle:** the plan is written, not executed — every task is text `/build`
 runs later, including the git commands in Task 0.
+
+**Two carriles.** `spec.md`'s front matter declares the story's `build_mode`
+(resolved by `/clarify`, absent means `tdd`), and it decides which artifacts are
+required, how the implementation order is derived, which task template applies and
+what closes an AC:
+
+| | `tdd` (default) | `evidence` |
+|---|---|---|
+| Requires `design.md` + contract + diagram | yes | no |
+| Order comes from | the sequence diagram | dependencies between deliverables |
+| Task template | `task-structure-template.md` | `task-structure-evidence-template.md` |
+| Verification port | `TESTS` | `VERIFY` |
+
+Everything else is identical in both — Task 0, the AC → Task traceability table, the
+`[P]` groups, and the refusal to save a plan with an uncovered AC.
 
 ---
 
@@ -75,15 +94,21 @@ document:
 
 **Requires**
 
+The four rows marked **(tdd only)** are skipped when the story runs in
+`build_mode: evidence` — that carril has no design artifacts to require. Everything
+else is checked in both.
+
 | Condition | Check | If it fails |
 |---|---|---|
 | You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
 | `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find `work/active/spec-<number>/spec.md`. Run `/spec spec-<number>` first." |
 | `context.md` exists | `[ -f work/active/spec-<number>/context.md ]` | Stop: "I couldn't find `work/active/spec-<number>/context.md`. Run `/clarify spec-<number>` first." |
-| `design.md` exists | `[ -f work/active/spec-<number>/design.md ]` | Stop: "I couldn't find the complete design artifacts for spec-<number>. Run `/design spec-<number>` first." |
-| The sequence diagram exists | `<flow-artifact>` is present under `work/active/spec-<number>/` | Same stop as `design.md` — the implementation order comes from it (drafting PHASE 2) |
-| The API contract exists | `[ -f work/active/spec-<number>/docs/<api-artifact> ]` | Same stop as `design.md` — it is the source of truth for every DTO task |
-| A declared data model has its file | `design.md` has a `## Data Modeling` section ⇒ `docs/data-model.md` exists | Stop: "`design.md` states there's a new data model but I couldn't find `docs/data-model.md`. Run `/design spec-<number>` again." |
+| The build mode is valid and eligible | orchestrator step 0 | Stop — see `Escalates` |
+| `design.md` exists **(tdd only)** | `[ -f work/active/spec-<number>/design.md ]` | Stop: "I couldn't find the complete design artifacts for spec-<number>. Run `/design spec-<number>` first." |
+| The sequence diagram exists **(tdd only)** | `<flow-artifact>` is present under `work/active/spec-<number>/` | Same stop as `design.md` — the implementation order comes from it (drafting PHASE 2) |
+| The API contract exists **(tdd only)** | `[ -f work/active/spec-<number>/docs/<api-artifact> ]` | Same stop as `design.md` — it is the source of truth for every DTO task |
+| A declared data model has its file **(tdd only)** | `design.md` has a `## Data Modeling` section ⇒ `docs/data-model.md` exists | Stop: "`design.md` states there's a new data model but I couldn't find `docs/data-model.md`. Run `/design spec-<number>` again." |
+| `VERIFY` resolves to a usable adapter **(evidence only)** | the `VERIFY` port, resolved across packs + profile | Stop: "This story runs in `build_mode: evidence` but the `VERIFY` port is unbound — there is nothing to close its ACs with. Bind it in `.agents/profile.yaml`, or move the story back to `tdd`." |
 | The working branch exists (prepare ran) | `[ -f work/active/spec-<number>/.branch ]` | Stop: "I couldn't find `work/active/spec-<number>/.branch`. Run `/prepare spec-<number>` first — it creates and checks out the working branch that Task 0 verifies." |
 | No plan is already under execution | `plan.md` is absent, or present with **no** task marked `[X]` | Ask before overwriting — see `Escalates` |
 
@@ -96,7 +121,8 @@ document:
 - `Task 0` as the first task: verifies the working branch (created and checked out by
   `/prepare`) in every affected <component>, with the branch name read from
   `work/active/spec-<number>/.branch` (orchestrator step 3)
-- `Task N` headings numbered sequentially, each with its TDD cycle, exact file paths
+- `Task N` headings numbered sequentially, each with its verification cycle (TDD or
+  evidence, per the carril), exact file paths
   and the expected output of every command; tasks belonging to independent groups
   carry a trailing `[P]` and the groups are named in the header's
   "Implementation groups" line
@@ -136,6 +162,12 @@ Not `spec.md`, `context.md`, `design.md` or anything under the story's `docs/`
 - An AC that cannot be mapped to any task with the design artifacts at hand
   (drafting PHASE 3.5): the `plan-generator` subagent reports `BLOCKED`, and the
   orchestrator asks — never save a plan with an uncovered AC.
+- A story claiming `build_mode: evidence` that does not hold up (step 0): an unknown
+  mode value, a `type` outside `EVIDENCE_MODE_TYPES`, or a missing/empty
+  `## Build Mode Rationale`. Stop and report which of the three failed — this is the
+  guardrail's last mechanical line, and it is not negotiable at plan time. The fix is
+  `/refine` on `spec.md`, or widening `EVIDENCE_MODE_TYPES` in the profile if the
+  project's deliverables genuinely warrant it.
 
 **Degrades**
 
@@ -144,6 +176,11 @@ Not `spec.md`, `context.md`, `design.md` or anything under the story's `docs/`
   the same local `references/`.
 - `TESTS.module` unbound → the <component>'s full suite (`TESTS.full`), both in
   each task's TDD steps and in the final task.
+- `VERIFY.run` unbound with `build_mode: evidence` → **not a degradation, a stop**
+  (`Requires`). A carril whose only verification is a check cannot fall back to no
+  check; that is exactly the escape hatch the mode is designed not to be.
+  `VERIFY.full` unbound alone → the final task calls `VERIFY.run` once per
+  deliverable instead.
 - `docs/rules.md` absent → skip the constitution check (drafting PHASE 1, step 6c).
 - `stack.SKILLS` unset/empty → the `plan-generator` subagent loads only what the
   project's `conventions.md`/`CLAUDE.md` require.
@@ -167,7 +204,9 @@ restore, which is exactly why regenerating over a plan with `[X]` tasks asks fir
   the `plan-generator` subagent reads, and which of them is the source of truth
   (drafting PHASE 1)
 - `TEST_FRAMEWORK` — the shape of the test files, for the TDD cycle in
-  every task and the final task
+  every task and the final task (`tdd` carril only)
+- `ITEM_TYPES`, `EVIDENCE_MODE_TYPES` (items block) — the eligibility check in
+  orchestrator step 0
 - `STACK_REFS` and the stack block (`COMPONENT_TERM`, `LANGUAGE`, `FRAMEWORK`, `ORM`,
   `MIGRATIONS`, `MODULE_ROOT`) — the task templates (resolved across the listed packs,
   most specific first, generic fallback) and the header's `Stack` line
@@ -179,14 +218,41 @@ restore, which is exactly why regenerating over a plan with `[X]` tasks asks fir
 
 ## Orchestrator flow
 
-Run these six steps. The drafting PHASEs below (PHASE 1-3.5) are executed by the
+Run these seven steps. The drafting PHASEs below (PHASE 1-3.5) are executed by the
 `plan-generator` subagent, which reads this document — the orchestrator does not
 perform them itself.
 
+### Step 0 — Read the build mode, and re-check its guardrail
+
+Read `spec.md`'s front matter. No `build_mode` field → `tdd`; run everything below
+unchanged. `build_mode: evidence` → verify the three conditions **before** any other
+precondition, because they decide which of the others apply:
+
+1. The value is exactly `evidence` (any other non-`tdd` value is an error, never a
+   synonym).
+2. The item's `type` is in `EVIDENCE_MODE_TYPES` (items block; default
+   `[debt, chore, incident]`).
+3. `spec.md` carries a non-empty `## Build Mode Rationale`.
+
+The mechanical form of all three, plus the rest of the artifact contract:
+
+```bash
+node ~/.agents/scripts/validate-artifacts.mjs spec-<number>
+```
+
+Exit `1` on a `build_mode` issue → stop and quote it verbatim (`Escalates`). Exit `2`
+(no `node`) → check the three by eye and say the gate ran manually.
+
+**Why /plan re-checks what /clarify already decided:** `/clarify` may not have run
+(the field can be hand-written), and this is the last gate before an entire plan gets
+written against the wrong carril. It costs one command.
+
 ### Step 1 — Preconditions (Requires)
 
-Check every `Requires` row above. Any failure → stop with the listed message.
-Also read `docs/rules.md` existence only if you need it for the delegation prompt.
+Check every `Requires` row above, skipping the four marked **(tdd only)** when step 0
+resolved the mode to `evidence`, and adding the `VERIFY` row in that case. Any failure
+→ stop with the listed message. Also read `docs/rules.md` existence only if you need it
+for the delegation prompt.
 
 ### Step 2 — Overwrite gate
 
@@ -216,6 +282,9 @@ the same agent in Claude Code). Pass a self-contained prompt with:
 - the story id and the absolute path to `work/active/spec-<number>/`
 - the working branch name (read from `.branch` in step 3), to be written literally
   into Task 0
+- **the build mode resolved in step 0** (`tdd` or `evidence`) and, when it is
+  `evidence`, the resolved `VERIFY.run` / `VERIFY.full` adapters — the subagent
+  writes them into the tasks, it does not re-resolve the port
 - the absolute path to the project's `.agents/profile.yaml`
 - the profile's `stack.SKILLS` list (or `none` if unset/empty)
 - a pointer that it must read `~/.agents/skills/sdd/plan/SKILL.md` (this document)
@@ -259,6 +328,13 @@ Show the summary (PHASE 4 below) and stop. Do not start executing.
 ## Drafting PHASE 1: Load artifacts
 
 *Executed by the `plan-generator` subagent.*
+
+> **In `build_mode: evidence`, steps 3-6 do not apply** — there is no `design.md`, no
+> API contract, no sequence diagram and no data model to read. Read `spec.md` (1),
+> `context.md` (2), the constitution (6c), the conventions (7-8), the header template
+> (9), and take the task shape from
+> `<STACK_REFS>/references/task-structure-evidence-template.md` instead of step 10;
+> skip step 11 (there are no DTOs to map). Steps 6b and 11b apply in both carriles.
 
 1. Read `work/active/spec-<number>/spec.md` — extract:
    - All acceptance criteria — these drive the test cases
@@ -310,7 +386,9 @@ Show the summary (PHASE 4 below) and stop. Do not start executing.
     [ -s docs/rules.md ] && echo "FOUND" || echo "NONE"
     ```
 
-7. Read `docs/architecture/testing.md` — apply TDD task format and test commands throughout.
+7. Read `docs/architecture/testing.md` — apply TDD task format and test commands
+   throughout (in the evidence carril, take from it only what applies: the project's
+   conventions for naming and running checks, not the red-first cycle).
 8. Read `docs/architecture/conventions.md` — apply naming conventions throughout.
 9. Consult `references/plan-header-template.md` — required header format.
 10. Consult `<STACK_REFS>/references/task-structure-template.md` (if no pack in
@@ -330,6 +408,24 @@ Show the summary (PHASE 4 below) and stop. Do not start executing.
 ## Drafting PHASE 2: Determine implementation order
 
 *Executed by the `plan-generator` subagent.*
+
+### In `build_mode: evidence` — order by what validates what
+
+There is no sequence diagram. The order comes from the dependencies between the
+deliverables themselves, and the rule is: **whatever other artifacts are validated
+against comes first.** A catalog before the file that declares entries against it; a
+schema before the documents it validates; a template before the skill that cites it.
+
+Derive them from `context.md`'s inventory and from the ACs, and write the ordered list
+down before any task. Getting this backwards produces a plan whose middle tasks fail
+their own check for a reason that has nothing to do with their content.
+
+Independent groups work the same as below: two deliverables with no validation
+relationship between them can be `[P]`.
+
+Then skip the rest of this phase.
+
+### In `build_mode: tdd` — order by the call chain
 
 Read the sequence diagram in `<flow-artifact>`.
 
@@ -390,7 +486,22 @@ running it when the working branch is already checked out passes without changes
 Note: refreshing the base branch is `/prepare`'s job and must have run before this
 plan. Task 0 does not pull, rebase or create branches — it only verifies.
 
-### Tasks per <component> (in sequence diagram order)
+### Tasks in `build_mode: evidence`
+
+One task per deliverable, in the order fixed in PHASE 2, following
+`<STACK_REFS>/references/task-structure-evidence-template.md` (the generic pack
+carries it; a specific pack may override it). Each task carries the complete content
+to write — never a description of it — and closes with the `VERIFY.run` command and
+its **verbatim** expected output.
+
+The template's rules are binding, not stylistic: a check that cannot fail is not a
+check, a modification of something already covered opens with a baseline run, and a
+task verified only by "the reviewer reads it" does not belong in this carril.
+
+The final task per affected <component> calls `VERIFY.full` (or `VERIFY.run` once per
+deliverable when `full` is unbound). Then skip the rest of this phase.
+
+### Tasks per <component> (in sequence diagram order) — `build_mode: tdd`
 
 For EACH <component>, in the order determined in PHASE 2,
 generate tasks following this order when applicable:
@@ -458,7 +569,14 @@ If `TESTS.module` is unbound → use `TESTS.full` for that <component> instead.
 *Executed by the `plan-generator` subagent before writing plan.md.*
 
 Before saving, run this consistency check across the three artifacts —
-do NOT skip it even if the plan "looks complete":
+do NOT skip it even if the plan "looks complete".
+
+> **Check 1 runs in both carriles — it is the contract itself.** Checks 2-4 read the
+> API contract and the data model, so they apply only in `build_mode: tdd`. In
+> `evidence`, replace them with a single equivalent: **every task names a `VERIFY`
+> command and a verbatim expected output**, and every AC in the table is closed by at
+> least one of those commands. An AC whose only "verification" is a human reading the
+> result is not covered — report `BLOCKED`.
 
 1. **AC → Task coverage:** for every AC in `spec.md`, list which Task(s)
    exercise it (via the test written in that task). Build the table:
@@ -499,6 +617,8 @@ After the delegation returns `DONE` and step 5's verification passes:
 
 1. Show a brief summary:
    - Total tasks generated
+   - The build mode the plan was written for, and the check backing it when it is
+     `evidence` (the resolved `VERIFY` adapter)
    - Affected <component>s in implementation order
    - Whether it includes an entity + migration
    - Scope estimate (number of files to create/modify)
@@ -525,6 +645,10 @@ After the delegation returns `DONE` and step 5's verification passes:
 | Relative path in imports | Convention violated | Follow `docs/architecture/conventions.md` |
 | `plan.md` already has `[X]` tasks | `/build` already ran on this story | Ask before regenerating — a targeted fix is `/hotfix spec-<number>` |
 | `TESTS.module` unbound | Project without a per-module command | Write the TDD steps and the final task against `TESTS.full` |
+| `build_mode: evidence` with an ineligible `type` | The allowlist was never widened, or the field was hand-written | Stop at step 0 and quote the validator. Widening `EVIDENCE_MODE_TYPES` is the developer's call — never write the plan against the guardrail |
+| `build_mode: evidence` with `VERIFY` unbound | The project declared the mode but bound no check | Stop: bind the port, or move the story back to `tdd`. Never plan tasks whose verification is a human reading them |
+| An `evidence` story that ALSO has design artifacts | `/design` ran before the mode was decided | Not an error: the artifacts are extra context. Plan against the evidence carril anyway — the mode in `spec.md` wins |
+| No `design.md` and the mode is `tdd` | `/design` never ran | Stop as always — in `tdd` the design is the input, and `evidence` is not the way around that |
 | `.branch` missing at Requires | `/prepare` never ran | Stop and ask the user to run `/prepare spec-<number>` first — Task 0 verifies the branch, it doesn't create it |
 | Subagent reports `BLOCKED` | An AC cannot be mapped with the artifacts at hand | Show the escalation to the user and ask; `/refine` the design or instruct the mapping — never save a plan with an uncovered AC |
 | The written plan lacks the traceability table or has `[X]` | `plan-generator` deviated from PHASE 3.5 | Report it, re-delegate or fix manually before closing |

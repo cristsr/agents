@@ -15,6 +15,13 @@ type: <feat | bug | debt | incident | chore>
 origin: <tracker:<key> | audit:<reference> | manual>
 ---
 
+<!-- A third front-matter field, `build_mode`, may appear here — but /spec never
+     writes it. It is resolved by /clarify (P2b) and only ever written with the
+     value `evidence`, alongside a `## Build Mode Rationale` section; its absence
+     means `tdd`, which is the default for every item. Same rule as the
+     `#### Scenario:` blocks: /spec transcribes what arrived, /clarify decides. -->
+
+
 # <story-id>: <title>
 
 <!-- Framing block — pick the one matching the type. See the section

@@ -4,7 +4,7 @@ description: >
   Creates or updates a project's `.agents/profile.yaml` by interviewing the
   developer about project identity, story ID pattern, artifact paths, stack,
   language, and conventions, then validating the result against the SDD schema.
-  Copies from the SDD template at `~/.agents/sdd-profile.template.yaml` if
+  Copies from the SDD template at `~/.agents/contracts/sdd-profile.template.yaml` if
   available, or creates from scratch.
   Use when the user says "/bootstrap", "create the profile", "initialize SDD",
   "configure the project profile", "setup profile", or when a skill reports
@@ -26,7 +26,7 @@ The file is a YAML map of named blocks — `identity`, `items`, `intake`, `paths
 `ports`, which wires this project's tools to the capabilities the skills call. `null` means
 "not configured, use the skill's fallback"; it never means "unknown". The reasoning
 behind the values, and the cross-key rules a project can get wrong, live in
-`references/profile-guide.md`; the port catalog is `~/.agents/PORTS.md`.
+`references/profile-guide.md`; the port catalog is `~/.agents/contracts/PORTS.md`.
 
 ## CRITICAL: the profile is configuration, not documentation
 
@@ -68,7 +68,7 @@ A one-line key summarizing them would only be a second version to keep in sync.
 1. If `.agents/profile.yaml` exists and the user wants to update it, read it
    first and ask what to change.
 2. If it doesn't exist, check for the template:
-   - `~/.agents/sdd-profile.template.yaml` — copy and fill it
+   - `~/.agents/contracts/sdd-profile.template.yaml` — copy and fill it
    - If no template exists, create from scratch with the standard blocks
 3. Ask the developer:
    - Story ID prefix / pattern (e.g. `spec-<number>`)
@@ -90,6 +90,14 @@ A one-line key summarizing them would only be a second version to keep in sync.
    - ORM and test framework
    - Architecture pattern
    - Which MCP servers the pipeline should rely on (`mcp.EXPECTED`), if any
+   - `EVIDENCE_MODE_TYPES` — which item types may opt into `build_mode: evidence`,
+     the carril where an AC is closed by a check rather than by a test written
+     red-first. The default `[debt, chore, incident]` is deliberately restrictive and
+     fits most projects: `feat` and `bug` deliver runtime behavior, which is what
+     tests are for. Only widen it when the project's deliverables genuinely are not
+     runtime code — a docs repo, a skills or prompt library — and say out loud that
+     doing so is the guardrail's first layer, not a formality. `[]` disables the
+     carril entirely, which is a fine answer for a pure application repo.
    - The docs block — the only block whose default demands a second value, so
      decide it here rather than at validation:
      - `API_CONTRACT_MODE`: `delta` (each story contributes its paths/schemas to
@@ -106,7 +114,7 @@ A one-line key summarizing them would only be a second version to keep in sync.
    ask only what the code cannot tell you. What you learn about the system's
    composition while surveying informs the `DOCS_*` pointers; it does **not**
    get transcribed into the profile.
-5. **Wire the ports** (`~/.agents/PORTS.md` is the catalog). Two layers already do
+5. **Wire the ports** (`~/.agents/contracts/PORTS.md` is the catalog). Two layers already do
    most of the work, and you only write the third:
 
    - The **stack packs** (`<STACK_REFS>/ports.yaml` — a list of layers, base →
@@ -134,6 +142,13 @@ A one-line key summarizing them would only be a second version to keep in sync.
      invocation with a path filter.
    - **Prefer the CI entry point for `CI_GATES`**, since the point of that port is
      running what CI would run.
+   - **`VERIFY` only matters if the project will use `build_mode: evidence`.** It is
+     what closes an AC when no test suite covers the deliverable — a schema or
+     artifact validator, a docs link check, a migration dry-run. Bind it when the
+     project ships work of that kind (a docs tree, config, a skills or prompt
+     library); leave it unbound otherwise. Never point it at something that passes
+     regardless of the content: a check that cannot fail is the one adapter worse
+     than none, because it launders an unverified story into a green one.
    - When several scripts plausibly fit and the choice changes behavior, **ask** with
      the candidates you found — don't pick silently.
 

@@ -20,13 +20,20 @@
 # radius. It is an MCP tool: available when the codegraph server is in the session,
 # skipped otherwise. Declare `codegraph` under mcp.EXPECTED in the profile to use it.
 #
-# The catalog of ports is ~/.agents/PORTS.md.
+# The catalog of ports is ~/.agents/contracts/PORTS.md.
 
 TESTS:
   module:
     - npx jest <module> --no-coverage
   full:
     - npx jest --no-coverage
+
+# Left unbound on purpose, like CI_GATES: `build_mode: evidence` deliverables differ
+# per repo (a docs tree, a config file, a migration), and no TypeScript idiom covers
+# them. A project that uses that mode binds this in its profile.
+VERIFY:
+  run: []
+  full: []
 
 CI_GATES:
   run: []

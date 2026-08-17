@@ -1,6 +1,6 @@
 # Profile guide — the reasoning behind the keys
 
-The template (`~/.agents/sdd-profile.template.yaml`) carries the contract: blocks,
+The template (`~/.agents/contracts/sdd-profile.template.yaml`) carries the contract: blocks,
 keys and one-line comments. This file carries what doesn't fit in a comment — the
 decisions a value encodes and the ones it silently makes for the whole pipeline.
 
@@ -41,6 +41,40 @@ node ~/.agents/scripts/validate-profile.mjs .agents/profile.yaml
 The script derives the valid key names from the template, so a key it calls unknown
 is either a typo or a key that was never registered. It checks required values,
 enums, list types, paths that must exist on disk, and the cross-key rules below.
+
+---
+
+## EVIDENCE_MODE_TYPES — who may leave the TDD carril
+
+A story declares its carril in `spec.md`'s front matter: `build_mode: tdd` (the
+default, and what the absence of the field means) or `build_mode: evidence`, where an
+acceptance criterion is closed by an executable check over the deliverable — the
+`VERIFY` port — instead of by a test written red-first.
+
+That second carril exists for work the first one cannot express: a deliverable that is
+not code (documentation, ADRs, a research spike, a skill or prompt definition), and
+code where red-first is impossible by construction (a pure refactor, an infra chore, a
+data migration). It is **not** a fast lane for work that simply lacks tests.
+
+`EVIDENCE_MODE_TYPES` is the first of three guardrails and the only configurable one:
+
+| Layer | Where it lives | Configurable |
+|---|---|---|
+| Which item types may opt in | `EVIDENCE_MODE_TYPES` (items block) | yes — this key |
+| A non-empty `## Build Mode Rationale` in `spec.md` | the artifact contract | no |
+| `validate-artifacts.mjs` + `/plan`'s step 0 re-check | the validator | no |
+
+The default `[debt, chore, incident]` fits most repositories: `feat` and `bug` deliver
+runtime behavior, which is exactly what a test is for. Widening it is a deliberate
+edit someone can find in a diff — which is the point, and the reason the decision does
+not live inside a conversation. A repository whose deliverables are mostly not code
+(a documentation site, a skills ecosystem) is the legitimate case for adding `feat`.
+`[]` turns the carril off entirely.
+
+Two coherence rules the validator enforces: every type listed must exist in
+`ITEM_TYPES`, and declaring eligible types while leaving `VERIFY` unbound raises a
+warning — the mode would be nominally available with nothing to verify anything, and
+`/plan` stops on such a story rather than running it.
 
 ---
 
@@ -134,7 +168,7 @@ capability here. Swapping Jest for pytest is one line in this block; no skill ch
 because no skill ever knew about Jest.
 
 The full catalog — every port, its operations, its placeholders and which skills
-consume it — is `~/.agents/PORTS.md`. Four things decide most of the wiring:
+consume it — is `~/.agents/contracts/PORTS.md`. Four things decide most of the wiring:
 
 **Most of it is already wired.** Adapters resolve in layers: the stack packs
 (`<STACK_REFS>/ports.yaml`, base → specific) carry the stack idiom, and this file

@@ -86,6 +86,12 @@ What this skill needs, what it guarantees to the next stage, and what it may not
 **Check every `Requires` row before any other work** — a failed precondition stops
 the design at the start, not halfway through a contract.
 
+> **This skill does not run in `build_mode: evidence`.** When `spec.md`'s front matter
+> declares that carril, the story has no API contract, no sequence diagram and no data
+> model to produce, and `/plan` does not require any of them — the pipeline goes
+> `/clarify → /plan`. If you are invoked on such a story, say so and stop; the story is
+> not missing a step. Changing the carril is `/refine` on `spec.md`, not a design run.
+
 **Requires**
 
 | Condition | Check | If it fails |

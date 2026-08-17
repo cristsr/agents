@@ -93,8 +93,9 @@ The payload:
 
 | Field | What it holds |
 |---|---|
-| `artifacts[]` | one entry per pipeline stage, **in dependency order**, each with `status` (`done` \| `ready` \| `blocked`), `requires` and `missingDeps` |
-| `next` | the first non-`done` artifact and the exact command for it |
+| `artifacts[]` | one entry per pipeline stage, **in dependency order**, each with `status` (`done` \| `ready` \| `blocked` \| `skipped`), `requires` and `missingDeps` |
+| `buildMode` | the story's carril (`tdd` \| `evidence`), from `spec.md`'s front matter |
+| `next` | the first artifact that is neither `done` nor `skipped`, and the exact command for it |
 | `next.regression` | `true` when that pending stage sits *behind* finished ones |
 | `counts` | ACs, `tasks: {done, total}`, pending `[NEEDS CLARIFICATION]` markers |
 | `docs`, `branch` | the contents of `docs/` and the `.branch` marker |
@@ -102,6 +103,10 @@ The payload:
 
 **The first `ready` entry is the artifact to write next.** Don't recompute the order,
 don't second-guess `next.command`: this skill renders the answer, it doesn't derive it.
+
+A `skipped` stage is not a gap. In `build_mode: evidence` the `design` stage is
+skipped by construction — that carril has no contract or diagram to produce — so
+report it as "not required in this carril" and never suggest `/design` for it.
 
 > **Legacy items.** Those closed before the rename use `hu.md` and an old ID prefix
 > (`STORY_ID_LEGACY_PREFIXES` in the profile). The script accepts both — they're read

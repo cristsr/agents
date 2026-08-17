@@ -8,7 +8,8 @@ description: >
   developer knows; P decides every unknown with problem and terrain in full view,
   escalating only what no source can determine (scope, business intent, irreversible
   choices, rule conflicts); I writes the decision log, the precise ACs, and the
-  context file. Use when the user says "/clarify spec-XXXX", "clarify story",
+  context file. It also resolves the story's `build_mode` — the carril /plan and
+  /build will follow — and never picks the relaxed one without asking. Use when the user says "/clarify spec-XXXX", "clarify story",
   "resolve ambiguities", "enrich the story", "analyze the story", "scan the context",
   "survey the module", or has created spec.md with /spec. Add "--ask" to force
   the legacy question-by-question mode. Do NOT use to refresh context.md alone
@@ -118,6 +119,11 @@ the run at the start, not after the survey has been paid for.
   values the decisions settled — an AC that is a single unconditional rule carries none
 - `## Technical Context` in `spec.md` **only** if the developer declared constraints
   or debt in R5; omitted entirely otherwise
+- the story's **`build_mode`** resolved (P2b): the `build_mode: evidence` front-matter
+  field plus a `## Build Mode Rationale` section when the developer chose that carril,
+  and nothing written in the front matter when it stays `tdd` — the default is the
+  absence of the field. Either way the resolution is logged in
+  `## Ambiguity Resolution`
 - `context.md` with the inventory `<STACK_REFS>/references/context-template.md` asks
   for, per affected <component>, and a **detected gaps** section that is always
   present even when empty
@@ -126,7 +132,8 @@ the run at the start, not after the survey has been paid for.
 `clarify-resolver` subagent, verified by the orchestrator
 
 - `work/active/spec-<number>/spec.md` — the ACs, `## Ambiguity Resolution`,
-  `## Technical Context`
+  `## Technical Context`, and the `build_mode` field + `## Build Mode Rationale`
+  when P2b resolved the story into the evidence carril
 - `work/active/spec-<number>/context.md` — regenerated whole on every run
 - `work/active/spec-<number>/.clarify-dossier.md` — **transient** working file: written
   by the RESOLVE delegation, read and deleted by the IMPLEMENT delegation. Never a
@@ -152,9 +159,12 @@ read-only inputs here.
 the source hierarchy and recorded with its confidence. The `clarify-resolver` subagent
 returns the candidates; the **orchestrator** asks them — at most 3 per run, in a
 **single `AskUserQuestion` call** (P3/P4); above that the item's scope isn't ready and
-the wrap-up says so. Two questions sit outside that budget: the affected <component>s
+the wrap-up says so. Three questions sit outside that budget: the affected <component>s
 when the catalog can't identify them (R3 — pre-resolved by the orchestrator, it can't
-be deferred), and R5's conditional free-text question about unwritten constraints.
+be deferred), R5's conditional free-text question about unwritten constraints, and the
+**build-mode question** (P2b), asked whenever the evidence carril is a candidate —
+that one is never resolved autonomously, and a full escalation budget does not
+suppress it.
 With `--ask` there is no budget and no autonomy — every unknown is asked, one per
 turn, and the whole run stays in the orchestrator.
 
@@ -185,8 +195,11 @@ turn, and the whole run stays in the orchestrator.
 - `MODULE_ROOT` (stack block) — the folder where the code lives: its subdirectories
   are the <component>s, and each component's docs (`<component>/README.md`,
   `<component>/docs/`) feed R4
+- `EVIDENCE_MODE_TYPES` (items block) — which item types may opt into
+  `build_mode: evidence` (P2b); default `[debt, chore, incident]`
 - `CODE_SURVEY` (port) — the
-  survey and its fallback
+  survey and its fallback. `VERIFY` (port) is not called here — P2b only checks
+  whether it resolves to a real adapter
 - `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
 
 ---
@@ -254,8 +267,14 @@ answers), the R5 question (if warranted), and its autonomous decisions. If it re
   (up to 3 questions together, never a loop). Each question uses the subagent's
   recommended answer as the first option, labelled " (Recommended)"; `header` max 12
   chars; the implicit "Other" covers custom answers — don't add one.
+- If it carries a **`Build mode`** entry (P2b) → add it to that same call as one more
+  question (`header: "Build mode"`), with `tdd` first. It sits **outside** the
+  3-escalation budget, so a full budget never suppresses it, and it is never resolved
+  for the user. If the entry says the type is ineligible, don't ask: report it and say
+  the way in is widening `EVIDENCE_MODE_TYPES` in the profile.
 
-If the report lists no R5 and no escalations → skip this step entirely.
+If the report lists no R5, no escalations and no build-mode question → skip this step
+entirely.
 
 ### Step 5 — Delegate IMPLEMENT
 
@@ -264,6 +283,7 @@ step 3 inputs:
 
 - the R5 free-text answer (or `none`/`-`)
 - the selections for each escalation the user made
+- the build mode the user picked (or `tdd` when the question wasn't asked)
 
 The `clarify-resolver` subagent's own prompt already encodes the drafting contract
 (dossier handoff, R5 authority over the hierarchy, decision-log-first, EARS, context.md
@@ -482,6 +502,52 @@ With every decision on the table, review the set before touching anything:
 
 This step is impossible in a per-unknown loop — it's the main reason P is separate.
 
+### P2b — Resolve the build mode
+
+Which carril `/plan` and `/build` will follow. Two values, and the default is
+`tdd` — the absence of the field in the front matter, and what every story written
+before this axis existed carries.
+
+| Mode | The AC is closed by | For |
+|---|---|---|
+| `tdd` | a test written red-first against the behavior | runtime behavior: features, defects, anything with a unit that can fail |
+| `evidence` | an executable check over the deliverable (`VERIFY.run`) | a deliverable no test suite covers, or code where red-first is impossible |
+
+**When `evidence` is a candidate.** Two families, and nothing else:
+
+- **The deliverable is not code**: documentation, ADRs, architecture docs, a prompt
+  or agent definition, a research/spike whose output is a decision, a skill.
+- **It is code, but the red-first cycle cannot exist**: a pure refactor with no
+  behavior change (the test that would "fail first" cannot be written by definition),
+  an infra/config chore, a data migration or one-shot script.
+
+A story that adds or changes runtime behavior is `tdd`, full stop — "there is no time
+to write tests" and "it's a small change" are not this axis.
+
+**Three conditions, all of them required.** If any fails, the mode stays `tdd`:
+
+1. The item's `type` is in `EVIDENCE_MODE_TYPES` (profile, items block; default
+   `[debt, chore, incident]`).
+2. There is a **real check**: an adapter for the `VERIFY` port that can tell the
+   deliverable being right from being wrong. Unbound port, or a check that passes no
+   matter what the file says → not eligible. Name the concrete check in your report;
+   "the reviewer reads it" is not one.
+3. Every AC can be closed by that check. If some can and some can't, the story is
+   `tdd` — a split carril inside one plan is how coverage gets lost.
+
+**Never autonomous.** Even with all three conditions met, `evidence` is **returned as
+a question**, outside the 3-escalation budget (same standing as R5), with `tdd` first
+as the safe default and the concrete check named in the recommended option. `tdd` *is*
+autonomous — it is the default, and choosing it needs no one's permission.
+
+When the type is ineligible but the deliverable genuinely isn't code, say so in your
+report and stop there: the fix is widening `EVIDENCE_MODE_TYPES` in the profile, a
+deliberate edit the developer makes. **Never write the field against the allowlist** —
+`validate-artifacts.mjs` fails the story and `/plan` refuses to run anyway.
+
+Record the resolution — mode, why, and the check that backs it — in the decision
+table, whichever way it went.
+
 ### P3 — Select what to escalate
 
 Over the **complete** candidate list, pick the highest-impact ones.
@@ -500,6 +566,11 @@ Put the selected ones in your report's "Escalations" list, each with a `question
 short `header` (max 12 chars), and 2-4 `options` with the recommended one **first**
 (" (Recommended)") and its rationale in the `description`. The **orchestrator** asks
 them all in a **single `AskUserQuestion` call** — never a one-per-turn loop.
+
+The **build-mode question** (P2b), when there is one, goes in its own `Build mode`
+field of the report, not in the escalations list — it doesn't consume the budget, and
+the orchestrator adds it to the same call. Its options are always `tdd` first and
+`evidence` second, each naming what would close the ACs.
 
 ### Decision table
 
@@ -542,6 +613,15 @@ reconstruct; reapplying edits is trivial.
 - **AC-6 · autonomous (low):** Format of the batch identifier? → **ULID**.
   *Rationale:* time-sortable, no coordination required.
   *No precedent:* the repo has no batch-identifier convention yet.
+```
+
+One entry is always present, whichever way it went — the **build mode** from P2b:
+
+```markdown
+- **Build mode · consulted:** TDD or evidence for this item? → **evidence**
+  (developer's decision).
+  *Rationale:* the deliverable is a set of `SKILL.md` files; there is no unit that
+  can fail first. *Check:* `VERIFY.run` → `node ~/.agents/scripts/validate-skills.mjs`.
 ```
 
 Also record the searches that came back **empty** and the inconsistencies found in
@@ -609,6 +689,34 @@ from the code — that lives in `context.md`, which is its place.
 Use `references/tech-context-template.md`. **If the developer declared nothing, omit
 the whole section.**
 
+### I4b — Write the build mode (only when it isn't `tdd`)
+
+The mode the developer picked in P2b:
+
+- **`tdd`** → write **nothing** in the front matter. The absence of the field *is*
+  the default, and adding it as noise would suggest the axis was contested when it
+  wasn't. The decision still gets its line in `## Ambiguity Resolution`.
+- **`evidence`** → add `build_mode: evidence` to the front matter, after `origin`, and
+  write the `## Build Mode Rationale` section right below the framing block, before
+  `## Acceptance Criteria`:
+
+```markdown
+## Build Mode Rationale
+
+**Why not TDD:** <what makes a red-first test impossible or meaningless here —
+the concrete reason, not "it's not code">
+**What verifies it:** `VERIFY.run` → `<the exact check that closes the ACs>`
+```
+
+`## Build Mode Rationale` is a structural heading — English always, like
+`## AC Coverage`; the prose under it follows `ARTIFACT_LANGUAGE`. Both lines are
+mandatory and neither may be empty: `validate-artifacts.mjs` fails the story
+otherwise, and that is the point — the mode is only valid when what replaces TDD is
+written down.
+
+Never write the field for a type outside `EVIDENCE_MODE_TYPES`, and never write it
+when the developer wasn't asked.
+
 ### I5 — Write `context.md`
 
 Pour the dossier's inventory into `<STACK_REFS>/references/context-template.md`
@@ -646,6 +754,9 @@ the technical context is surveyed by asking (component, artifacts, patterns,
 constraints, integrations, technical debt), one per turn. The code inventory and
 `context.md` are produced all the same.
 
+The build-mode question (P2b) is asked here too, under the same rule: `evidence` is
+never assumed, and the eligibility conditions are identical.
+
 Useful when the item touches terrain where you don't want anything decided out of your
 sight — typically a new domain or strong contractual implications.
 
@@ -660,9 +771,11 @@ sight — typically a new domain or strong contractual implications.
 inventory prose. Never translate them to English on your own.
 
 Two things stay in English regardless of that key: the **section headings**
-(`## Acceptance Criteria`, `## Ambiguity Resolution`, `## Technical Context` — other
-skills read them by name) and the **identifiers** quoted from the code — paths,
-classes, fields, endpoints (`IDENTIFIER_LANGUAGE`).
+(`## Acceptance Criteria`, `## Ambiguity Resolution`, `## Technical Context`,
+`## Build Mode Rationale` — other skills and the validator read them by name) and the
+**identifiers** quoted from the code — paths, classes, fields, endpoints
+(`IDENTIFIER_LANGUAGE`). The front-matter keys and values (`type`, `origin`,
+`build_mode: evidence`) are identifiers too — never translated.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The message samples in this document are written in English; render them in the
@@ -686,6 +799,9 @@ user's language when that differs.
 | Component off `BASE_BRANCH` | Base not prepared | Warn and continue — you survey whatever is checked out; suggest `/prepare` |
 | Only `context.md` needs refreshing | The code changed, the ACs didn't | Use `/scan spec-<number>` — don't re-clarify |
 | `assets/` has files that can't be read | Opaque binary, scanned PDF with no extractable text | List them in the wrap-up and carry the gap to the dossier — never guess what an unreadable asset says |
+| The deliverable clearly isn't code but the `type` isn't in `EVIDENCE_MODE_TYPES` | The project never widened the allowlist | Report it and leave the story in `tdd`. The way in is editing `EVIDENCE_MODE_TYPES` in `.agents/profile.yaml` — never write the field against the allowlist, both the validator and `/plan` reject it |
+| `evidence` looks right but `VERIFY` is unbound | The project declared no check for this kind of deliverable | Not eligible: without a check there is nothing to close an AC with. Either bind the port first or stay in `tdd` |
+| Only some ACs can be closed by the check | The item mixes a refactor with new behavior | `tdd` for the whole story — a split carril inside one plan is how coverage gets lost. Splitting the item is the other option |
 | The user reverts several decisions in a row | Rubric miscalibrated for the domain | Apply the changes and suggest `--ask` for the next items in that area |
 | The RESOLVE delegation reports `BLOCKED` | It cannot even build the unknowns list (missing context, contradictory spec) | Show the blocker to the user; fix the input (`/refine`/`/spec`) and re-delegate |
 | The handoff grep is non-zero | IMPLEMENT left a resolved marker in place | Stop: the run isn't complete — re-run `/clarify spec-<number>` |

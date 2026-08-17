@@ -4,7 +4,7 @@
 //   node ~/.agents/scripts/validate-artifacts.mjs <story-id> [--strict] [--json]
 //   node ~/.agents/scripts/validate-artifacts.mjs --all [--strict]
 //
-// SDD-PIPELINE.md already declares that the structural headings are a contract
+// The README already declares that the structural headings are a contract
 // between skills — `## Ambiguity Resolution`, `## Global Architecture Impact`,
 // `## Design Decisions`, `### AC → Task traceability`, `## AC Coverage`, `Task N` —
 // and that translating one breaks the pipeline. Until now nothing enforced it.
@@ -21,6 +21,7 @@ import { loadProfile, listStories, storyIdMatcher, key } from './lib/profile.mjs
 import {
   readStory, frontMatter, acceptanceCriteria, clarificationMarkers,
   tasks, traceability, acCoverage, hasHeading, section,
+  buildMode, BUILD_MODES,
 } from './lib/story.mjs';
 
 const argv = process.argv.slice(2);
@@ -70,6 +71,9 @@ function validate(storyId) {
 
   const closed = story.location === 'done';
   const clarified = Boolean(story.files.context);
+  const mode = buildMode(story.text.spec);
+  const evidence = mode === 'evidence';
+  if (evidence) notes.push('evidence mode');
 
   // ── spec.md ───────────────────────────────────────────────────────────────
   const acs = acceptanceCriteria(story.text.spec);
@@ -86,6 +90,24 @@ function validate(storyId) {
         issue('spec.md', `front-matter type "${fm.type}" is not one of ITEM_TYPES (${itemTypes.join(', ')})`);
       }
       if (!fm.origin) warn('spec.md', 'front-matter has no `origin`');
+
+      // ── build_mode: the two guardrails a script can enforce ────────────────
+      // A story with no `build_mode` is TDD, which is why the relaxed carril is
+      // the only one that has anything to prove here.
+      if (fm.build_mode && !BUILD_MODES.includes(mode)) {
+        issue('spec.md', `front-matter build_mode "${fm.build_mode}" is not one of: ${BUILD_MODES.join(', ')} (absent means tdd)`);
+      } else if (evidence) {
+        const eligible = key(profile, 'EVIDENCE_MODE_TYPES', ['debt', 'chore', 'incident']);
+        if (Array.isArray(eligible) && fm.type && !eligible.includes(fm.type)) {
+          issue('spec.md', `build_mode "evidence" is not open to type "${fm.type}" — eligible types are (${eligible.join(', ')}). Widen EVIDENCE_MODE_TYPES in .agents/profile.yaml if this project's deliverables warrant it; never force the field`);
+        }
+        const rationale = section(story.text.spec, 'Build Mode Rationale');
+        if (!hasHeading(story.text.spec, 'Build Mode Rationale')) {
+          issue('spec.md', 'build_mode "evidence" without a `## Build Mode Rationale` section — the mode is only valid when why-not-TDD and what-verifies-it are written down');
+        } else if (!rationale) {
+          issue('spec.md', '`## Build Mode Rationale` is empty — state why TDD does not apply and which check closes the ACs instead');
+        }
+      }
     }
 
     if (!hasHeading(story.text.spec, 'Acceptance Criteria')) {
@@ -197,8 +219,17 @@ function validate(storyId) {
             issue('plan.md', `${ac.id} has no line in "## AC Coverage" — one line per AC in spec.md, no more and no fewer`);
           }
         }
-        const noTest = coverage.filter((r) => r.covered && !/[./]\w+/.test(r.text));
-        for (const r of noTest) warn('plan.md', `${r.id} is marked ✓ with no concrete test reference`);
+        // What counts as "a concrete reference" depends on the carril: a test path
+        // in tdd, a quoted command or an artifact path in evidence. The evidence
+        // mode has no red-first step to vouch for the check, so the reference is
+        // the only thing standing between a ✓ and an assertion — it is an issue
+        // there, not the warning it can afford to be in tdd.
+        const reference = evidence ? /`[^`]+`|[./]\w+/ : /[./]\w+/;
+        const unreferenced = coverage.filter((r) => r.covered && !reference.test(r.text));
+        for (const r of unreferenced) {
+          if (evidence) issue('plan.md', `${r.id} is marked ✓ with no evidence — an evidence-mode line names the command that proves it (in backticks) or the artifact path and its validator`);
+          else warn('plan.md', `${r.id} is marked ✓ with no concrete test reference`);
+        }
       }
     }
   }

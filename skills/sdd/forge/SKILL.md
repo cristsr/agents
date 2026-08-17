@@ -74,13 +74,18 @@ default), otherwise `docs/api.yaml`.
 
 **Requires** — the preflight; verified in this order, all of them, before Step 1
 
+Read `spec.md`'s `build_mode` first (absent → `tdd`): the rows marked **(tdd only)**
+are skipped in the evidence carril, which has no design artifacts by construction, and
+the **(evidence only)** row replaces them.
+
 | Condition | Check | If it fails |
 |---|---|---|
 | You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
 | `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find `work/active/spec-<number>/spec.md`. Run `/spec spec-<number>` first." |
 | `context.md` exists | `[ -f work/active/spec-<number>/context.md ]` | Stop: "Run `/clarify spec-<number>` first." |
-| `design.md` exists | `[ -f work/active/spec-<number>/design.md ]` | Stop: "Run `/design spec-<number>` first." |
-| The API contract exists | `[ -f work/active/spec-<number>/docs/<api-artifact> ]` | Same stop as `design.md` — `/plan` reads it as the source of truth for every DTO task |
+| `design.md` exists **(tdd only)** | `[ -f work/active/spec-<number>/design.md ]` | Stop: "Run `/design spec-<number>` first." |
+| The API contract exists **(tdd only)** | `[ -f work/active/spec-<number>/docs/<api-artifact> ]` | Same stop as `design.md` — `/plan` reads it as the source of truth for every DTO task |
+| The build mode holds up **(evidence only)** | `node ~/.agents/scripts/validate-artifacts.mjs spec-<number>` reports no `build_mode` issue, and the `VERIFY` port resolves | Abort with the validator's message — forge runs unattended, so a carril that doesn't hold up must never reach `/plan` |
 | No unresolved ambiguity | `spec.md` has zero `[NEEDS CLARIFICATION]` markers | Stop: "Resolve the ambiguities with `/clarify spec-<number>` before forging." Building on ambiguities produces incorrect DTOs |
 | No plan is already under execution | `plan.md` is absent, or present with **no** task marked `[X]` | Stop and hand over: a plan with `[X]` tasks is `/build spec-<number>` to resume, or `/hotfix spec-<number>` for a targeted fix — never a re-forge, which would regenerate the plan and discard its execution state |
 | The working branch exists (prepare ran) | `[ -f work/active/spec-<number>/.branch ]` | Stop: "Run `/prepare spec-<number>` first — it creates and checks out the working branch that `/plan`'s Task 0 verifies and `/build` requires." |

@@ -112,6 +112,13 @@ Not `plan.md` — ever, in any mode (see `Never`). Not the project's source or t
 - A structural change when `plan.md` already has `[X]` tasks: ask which case it is —
   a post-build defect from a clarification gap is `/hotfix`, a genuinely larger scope
   is a full `/plan` regeneration (PHASE 4).
+- A change to `spec.md`'s **`build_mode`** — it switches the carril the whole pipeline
+  follows. Confirm explicitly, and say what it drags along: entering `evidence`
+  requires a non-empty `## Build Mode Rationale` and an eligible `type`
+  (`EVIDENCE_MODE_TYPES`), leaving it back to `tdd` requires the design artifacts
+  `/plan` will then demand. In both directions an existing `plan.md` is written for
+  the other carril and must be regenerated. Run
+  `node ~/.agents/scripts/validate-artifacts.mjs spec-<number>` after applying it.
 - Guided Mode stops after **5 sections** and asks whether to continue.
 
 **Degrades**

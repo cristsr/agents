@@ -12,10 +12,18 @@
 # Declare `codegraph` under mcp.EXPECTED in the profile to use it.
 #
 # A project on this pack wires its ports in `.agents/profile.yaml`. The catalog is
-# ~/.agents/PORTS.md.
+# ~/.agents/contracts/PORTS.md.
 
 TESTS:
   module: []
+  full: []
+
+# What proves a non-code deliverable is a fact about THIS repo — which validator,
+# which dry-run, which link checker — never about a stack. A guessed adapter here
+# would report a green that means nothing, so a project on `build_mode: evidence`
+# binds it in its own profile.
+VERIFY:
+  run: []
   full: []
 
 CI_GATES:
