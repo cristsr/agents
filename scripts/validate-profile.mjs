@@ -190,8 +190,28 @@ const get = (path) => path.split('.').reduce((o, k) => (o == null ? undefined : 
 const isSet = (v) => v != null && v !== '' && !(Array.isArray(v) && v.length === 0);
 
 // ── 1. Schema version ───────────────────────────────────────────────────────
+// A version mismatch is the one issue where naming the expected number is not
+// enough: the developer is holding a file written against an older contract and
+// needs to know what changed, not that a digit differs. Each known predecessor
+// gets its migration; anything else is reported as unrecognised rather than
+// guessed at.
+const MIGRATIONS = {
+  1: 'v1 was the Markdown profile with numbered sections. Migrate by running /bootstrap, '
+   + 'which rewrites it as YAML blocks, and carry your old values across — the key NAMES '
+   + 'did not change, only their container. Skills no longer cite "section <n>".',
+};
+
 if (profile.SCHEMA_VERSION !== SCHEMA_VERSION) {
-  issue('SCHEMA_VERSION', `expected ${SCHEMA_VERSION}, found ${profile.SCHEMA_VERSION ?? 'nothing'}`);
+  const found = profile.SCHEMA_VERSION ?? 'nothing';
+  const migration = MIGRATIONS[found];
+  issue(
+    'SCHEMA_VERSION',
+    `expected ${SCHEMA_VERSION}, found ${found}. `
+    + (migration
+      ? `${migration} The full guide: ~/.agents/skills/sdd/bootstrap/references/profile-guide.md § "Schema versions".`
+      : 'No migration is known for that value — compare against contracts/sdd-profile.template.yaml, '
+      + 'or re-run /bootstrap to regenerate the profile from the current schema.'),
+  );
 }
 
 // ── 2. Structure: blocks and key names against the template ─────────────────

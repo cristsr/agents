@@ -9,6 +9,34 @@ the project, or when a skill reports a value it can't act on.
 
 ---
 
+## Schema versions
+
+`SCHEMA_VERSION` is the profile's contract with the validator, not a changelog:
+it moves only when a profile written against the old shape would be *misread*
+under the new one. Adding a key does not move it — an unknown key is a warning,
+and a missing one falls back. Renaming a block, moving a key between blocks, or
+changing what a value means does move it, because those are the changes a
+validator cannot detect and a skill would act on wrongly.
+
+| Version | Shape | Migrating from it |
+|---|---|---|
+| 1 | Markdown, numbered sections (`## 3. Stack`) | Run `/bootstrap`: it rewrites the file as YAML blocks. Key **names** are unchanged — only their container is. Skills no longer cite "section &lt;n&gt;", and `validate-skills.mjs` reports any that still do. |
+| 2 | YAML: `SCHEMA_VERSION` + named blocks + `ports` | Current. |
+
+`validate-profile.mjs` names the migration in the failure itself, so a stale
+profile reports what to do rather than which digit it expected:
+
+```bash
+node ~/.agents/scripts/validate-profile.mjs .agents/profile.yaml
+```
+
+**When bumping the version**, three things move together: the constant in
+`validate-profile.mjs`, the `SCHEMA_VERSION` line in the template, and a row in
+this table with its migration. A bump without the row leaves every project on
+the old version with a failure it cannot act on.
+
+---
+
 ## How the skills read a value
 
 The profile is read whole, once, at the start of a run: `Read .agents/profile.yaml`.
