@@ -70,7 +70,8 @@ Filtering, branching or state decisions inside a controller, cron or event handl
 `catch (e) {}`, `catch (e) { console.log(e) }`, `throw new Error('failed')`.
 → Failures disappear; incidents cannot be diagnosed; callers cannot react selectively.
 → Fix: typed exception hierarchy with `code`/`context`/`cause`; log through the formatter;
-re-throw what you cannot handle. See `errors-and-logging.md` (pack).
+re-throw what you cannot handle. See the `typescript` skill's `references/errors-and-logging.md`
+and the `hexagonal-architecture` skill's `references/exception-placement.md`.
 
 **Failed writes to an external system logged and ignored**
 `catchError(() => { logger.warn(...); return EMPTY; })` on an update/create call.

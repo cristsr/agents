@@ -1,0 +1,56 @@
+# Port adapters — typescript (language layer)
+#
+# The defaults any TypeScript project inherits, NestJS or not. A profile that
+# declares STACK_REFS at this pack starts from here and overrides ONLY what
+# differs, operation by operation: binding `TESTS.full` leaves `TESTS.module`
+# inherited.
+#
+# These are stack idioms, not project facts. Anything that depends on how THIS
+# project is wired — an nx target, a custom npm script, a CI entry point — belongs
+# in the profile, not here. That is why CI_GATES, DIAGRAM_CHECK and PROJECT_GRAPH
+# are left empty: every TS repo filters Jest the same way, and no two of them
+# run their gates alike. A NestJS project points STACK_REFS at this pack AND
+# `~/.agents/stacks/nestjs/`, whose (empty) ports.yaml adds the framework layer
+# without touching these adapters.
+#
+# TESTS.module is the TDD hot path — it runs on every red-green-refactor turn, so
+# it stays as narrow as the runner allows.
+#
+# CODE_SURVEY's graph adapter is the only one that returns call paths and blast
+# radius. It is an MCP tool: available when the codegraph server is in the session,
+# skipped otherwise. Declare `codegraph` under mcp.EXPECTED in the profile to use it.
+#
+# The catalog of ports is ~/.agents/PORTS.md.
+
+TESTS:
+  module:
+    - npx jest <module> --no-coverage
+  full:
+    - npx jest --no-coverage
+
+CI_GATES:
+  run: []
+
+CONTRACT_LINT:
+  run:
+    - npx js-yaml <file>
+
+CONTRACT_DIFF:
+  run:
+    - npx -y oasdiff breaking <old> <new>
+
+DIAGRAM_CHECK:
+  run: []
+
+API_CLIENT_EXPORT:
+  run:
+    - npx -y openapi-to-postmanv2 -s <input> -o <output> -p
+
+PROJECT_GRAPH:
+  run: []
+
+CODE_SURVEY:
+  run:
+    - mcp:mcp__codegraph__codegraph_explore
+    - agent:code-explorer?model=sonnet
+    - inline

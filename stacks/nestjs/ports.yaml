@@ -1,0 +1,14 @@
+# Port adapters — nestjs (framework layer)
+#
+# A framework pack contributes NO adapters of its own: the test runner, the
+# contract linter, the collection exporter and the code-survey depth all come
+# from the language pack this one is layered on (typescript). A project points
+# STACK_REFS at both:  [ ~/.agents/stacks/typescript/, ~/.agents/stacks/nestjs/ ]
+#
+# The later a pack sits in the list, the more specific it is — it overrides the
+# earlier ones per operation. If a NestJS project runs its tests differently
+# from the language pack's default (e.g. vitest instead of jest), it binds its
+# own TESTS operation in the profile, not here — this file is stack idiom, and
+# no two repos wire their Nest projects alike.
+#
+# The catalog of ports is ~/.agents/PORTS.md.

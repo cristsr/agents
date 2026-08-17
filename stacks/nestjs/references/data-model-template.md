@@ -65,4 +65,4 @@ CREATE TABLE table_name (
   column vs. public field) — flag the mismatch in `## Design Decisions`
   in `design.md` if intentional.
 - Headings in English (structural); prose in `ARTIFACT_LANGUAGE` (profile,
-  section 5); table and column names verbatim from the schema.
+  language block); table and column names verbatim from the schema.
