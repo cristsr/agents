@@ -12,6 +12,7 @@
 // Usage: node validate-skills.mjs
 
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
+import { discoverSkills, duplicateNames } from './lib/skills.mjs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -28,6 +29,10 @@ let issues = 0;
 const report = (m) => { console.log(m); issues++; };
 const readLines = (f) => readFileSync(f, 'utf8').split(/\r?\n/);
 const isFile = (p) => { try { return statSync(p).isFile(); } catch { return false; } };
+
+// The skill directories, at whatever depth the source tree nests them
+// (skills/sdd/pipeline/clarify/, skills/conventions/nestjs/, …).
+const skillDirs = () => discoverSkills(SKILLS);
 
 // Skill files, excluding the two meta skills (they teach the format, they don't
 // carry it) — same `-not -path '*/skill-creator/*' ...` the bash script used.
@@ -173,8 +178,12 @@ for (const f of skillFiles(SKILLS)) {
   const dir = dirname(f);
   const crossRanges = [];
   for (const m of text.matchAll(crossRe)) {
-    const target = join(SKILLS, m[1], m[2]);
-    if (!isFile(target)) report(`ISSUE [${f}]: references a file that does not exist in the '${m[1]}' skill: ${m[2]}`);
+    // The cited skill is located by NAME, wherever its category folder sits —
+    // prose says "the `nestjs` skill's `references/…`", never a path, so moving a
+    // skill between categories must not break a citation.
+    const cited = skillDirs().find((s) => s.name === m[1]);
+    const target = cited ? join(cited.dir, m[2]) : null;
+    if (!target || !isFile(target)) report(`ISSUE [${f}]: references a file that does not exist in the '${m[1]}' skill: ${m[2]}`);
     crossRanges.push([m.index, m.index + m[0].length]);
   }
   for (const m of text.matchAll(localRe)) {
@@ -211,11 +220,10 @@ const CHAT_EXEMPT = new Set(['typescript', 'nestjs', 'error-handling', 'hexagona
 if (!isFile(CHAT_CONVENTIONS)) {
   report(`ISSUE: missing shared ${CHAT_CONVENTIONS}`);
 } else {
-  for (const dir of readdirSync(SKILLS, { withFileTypes: true })) {
-    if (!dir.isDirectory()) continue;
-    if (dir.name === 'skill-creator' || dir.name === 'skill-evaluator') continue;
-    if (CHAT_EXEMPT.has(dir.name)) continue;
-    const f = join(SKILLS, dir.name, 'SKILL.md');
+  for (const { name, dir } of skillDirs()) {
+    if (name === 'skill-creator' || name === 'skill-evaluator') continue;
+    if (CHAT_EXEMPT.has(name)) continue;
+    const f = join(dir, 'SKILL.md');
     if (!isFile(f)) continue;
     const text = readFileSync(f, 'utf8');
     if (!/Announce at start/.test(text)) {
@@ -230,7 +238,17 @@ if (!isFile(CHAT_CONVENTIONS)) {
   }
 }
 
+// --- 6. Unique invocation names across categories ---
+// The source tree groups skills into folders; the installed tree is flat, so two
+// skills sharing a name in different categories would collide on install.
+for (const [a, b] of duplicateNames(skillDirs())) {
+  report(`ISSUE: duplicate skill name "${a.name}" — ${a.category}/ and ${b.category}/ would install to the same place`);
+}
+
 if (issues === 0) {
+  const all = skillDirs();
+  const byCategory = [...new Set(all.map((s) => s.category))].sort();
+  console.log(`note: ${all.length} skills in ${byCategory.length} categories (${byCategory.join(', ')})`);
   console.log(`OK: ${defined.size} profile keys, no issues.`);
   process.exit(0);
 } else {

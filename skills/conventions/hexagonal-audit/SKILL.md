@@ -61,7 +61,7 @@ never adopted produces findings nobody asked for, and the survey is the expensiv
   with its `file:line`, the rule broken, the concrete cost and the smallest fix, plus
   the score per dimension and the prioritized 3–5 plan
 - one or more `work/active/<story-id>/spec.md` following
-  `../spec/references/spec-template.md`, each with:
+  `../../sdd/spec/references/spec-template.md`, each with:
   - **at least one numbered AC** under `## Acceptance Criteria`, written as expected
     system behavior. This is a hard gate, not a stylistic note: `/clarify` stops on an
     item with no ACs, so an audit story without them is dead on arrival
@@ -133,7 +133,7 @@ the 13 dimensions, write findings, auditor's rules). Summary:
 
 1. **Map the terrain** (read-only): inventory of modules and layers; if the framework
    skill the profile's `SKILLS` declares provides a detector (e.g. the `nestjs` skill:
-   `~/.agents/skills/nestjs/references/audit-scan.sh <src>`), run it; otherwise map
+   `~/.agents/skills/conventions/nestjs/references/audit-scan.sh <src>`), run it; otherwise map
    with the language's `find`/grep. Every hit is a lead, not a
    finding — read the file before reporting.
 2. **Score 0–3 per dimension** (13 dimensions, total /39). Anything below 2 is a
@@ -149,7 +149,7 @@ With the final report, turn the findings into SDD pipeline work:
 
 1. **One story per audited module** (or per cluster of findings if the module has
    few): create `work/active/<story-id>/spec.md` with the structure of `/spec`'s
-   template (`../spec/references/spec-template.md`).
+   template (`../../sdd/spec/references/spec-template.md`).
 2. **The ID** is resolved with the profile's `STORY_ID_MODE` (sequential → next free
    number; name → slug; tracker-code → ask for the key).
 3. **Every HIGH/MEDIUM finding → one verifiable AC**, written as expected system
@@ -175,7 +175,7 @@ With the final report, turn the findings into SDD pipeline work:
 | A generated `spec.md` has no ACs | Every finding for that module was LOW | Don't leave the draft: fold the checklist into an existing story, or drop it — `/clarify` rejects an item with no ACs |
 | Too many findings | Unprioritized report | Only HIGH/MEDIUM generate ACs; LOW stay as a checklist |
 | The user wants you to apply the fixes | Mode confusion | That's story work: generate the `spec.md` files and let them go through `/plan` + `/build` — AUDIT never edits code |
-| The generated `spec.md` doesn't follow the template | Inconsistent format | Consult `../spec/references/spec-template.md` and the profile's `STORY_ID_MODE` |
+| The generated `spec.md` doesn't follow the template | Inconsistent format | Consult `../../sdd/spec/references/spec-template.md` and the profile's `STORY_ID_MODE` |
 
 ---
 

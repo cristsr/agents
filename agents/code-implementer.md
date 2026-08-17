@@ -22,7 +22,7 @@ mode: subagent
 
   · Name: `code-implementer` (formerly `implementation`). It is the subagent the
     /build skill uses to execute each parallel `[P]` group. If you rename it again,
-    update the `subagent_type` references in ~/.agents/skills/build/SKILL.md too.
+    update the `subagent_type` references in ~/.agents/skills/sdd/build/SKILL.md too.
 
   · Model: comes from the `tier` (fast), resolved per provider in targets.yaml
     (haiku in Claude Code, deepseek-v4-flash in OpenCode). Fast tier by design:

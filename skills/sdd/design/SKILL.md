@@ -224,7 +224,7 @@ opencode, the same agent in Claude Code) in **ANALYZE** mode. Pass:
 
 - the story id and the absolute path to `work/active/spec-<number>/`
 - the absolute path to the project's `.agents/profile.yaml`
-- a pointer that it must read `~/.agents/skills/design/SKILL.md` (this document)
+- a pointer that it must read `~/.agents/skills/sdd/design/SKILL.md` (this document)
   and follow the drafting PHASEs, and that any decision it cannot make is reported
   back — never silently guessed
 

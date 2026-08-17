@@ -25,7 +25,7 @@ cat <the stack's alias config>
 Then run the boundary scan if the framework skill provides a detector:
 
 ```bash
-bash <framework-skill-dir>/references/audit-scan.sh <src>   # e.g. ~/.agents/skills/nestjs/references/audit-scan.sh
+bash <framework-skill-dir>/references/audit-scan.sh <src>   # e.g. ~/.agents/skills/conventions/nestjs/references/audit-scan.sh
 ```
 
 If no detector exists for the stack, map manually with the language's equivalents.

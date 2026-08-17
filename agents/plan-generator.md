@@ -25,7 +25,7 @@ mode: subagent
   · The drafting half of /plan. The orchestrator (the /plan skill) keeps the
     interactive gates — Requires checks, overwrite/escalation questions, the
     branch-name ask — because this agent has no question tool. It reads
-    ~/.agents/skills/plan/SKILL.md as the source of truth for HOW to build a
+    ~/.agents/skills/sdd/plan/SKILL.md as the source of truth for HOW to build a
     plan, so keep the split contract in that file in sync with this prompt.
   · Model: tier `balanced` (sonnet in Claude Code, deepseek-chat in OpenCode).
     Plan tasks embed complete code with no test-feedback loop to catch errors,
@@ -57,7 +57,7 @@ an escalation, and you must NOT save a plan you could not complete.
 
 ## Procedure
 
-1. Read `~/.agents/skills/plan/SKILL.md` — it is the source of truth for how a
+1. Read `~/.agents/skills/sdd/plan/SKILL.md` — it is the source of truth for how a
    plan is built. Follow its PHASE 1 (load artifacts), PHASE 2 (implementation
    order + independent groups), PHASE 3 (generate plan.md) and PHASE 3.5
    (traceability) exactly, with the adaptations listed below.

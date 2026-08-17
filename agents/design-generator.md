@@ -25,7 +25,7 @@ mode: subagent
   · The drafting half of /design, symmetric to plan-generator. The orchestrator
     (the /design skill) keeps the interactive gates: the Requires checks, the PHASE 3
     questions (a subagent can't ask), and the PHASE 5 approval. It reads
-    ~/.agents/skills/design/SKILL.md as the source of truth for HOW to design.
+    ~/.agents/skills/sdd/design/SKILL.md as the source of truth for HOW to design.
   · Model: tier `balanced` (sonnet in Claude Code, deepseek-chat in OpenCode).
     Design shapes everything downstream, so `fast` is too aggressive; `reasoning`
     only if designs come out weak — prefer fixing input quality (/clarify) first.
@@ -55,7 +55,7 @@ as an escalation.
 
 ## Procedure
 
-1. Read `~/.agents/skills/design/SKILL.md` — it is the source of truth for how a
+1. Read `~/.agents/skills/sdd/design/SKILL.md` — it is the source of truth for how a
    design is built. Follow its PHASEs 1, 2, 3.5, 4 and 4.5 according to your mode,
    with the adaptations below.
 2. In **ANALYZE** mode: run PHASE 1 (load context) and PHASE 2 (analyze and identify
