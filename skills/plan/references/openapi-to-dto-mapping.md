@@ -36,5 +36,5 @@ class must trace back to a field in `work/active/spec-<number>/docs/<api-artifac
 - Never add a validator not implied by the schema (e.g. don't add length
   limits unless the contract specifies `maxLength`).
 - For the exact DTO syntax (decorators/annotations), see the stack pack
-  (`STACK_REFS`, e.g. `typescript-nestjs`) and the project's conventions
-  (`DTO_STYLE` in profile section 7).
+  (`STACK_REFS`, e.g. `[typescript, nestjs]`) and the project's conventions
+  (the DTO shape this very file defines).

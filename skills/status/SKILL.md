@@ -23,10 +23,11 @@ command comes next.
 
 ## Project profile (read first, always)
 
-Read `.agents/profile.md` at the root of the current project before anything else. If it
-doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
-`.agents/profile.md` and stop — without a profile you don't know this project's
-conventions.
+Read `.agents/profile.yaml` at the root of the current project before anything else.
+If it doesn't exist, tell the user to run `/bootstrap` and stop — without a profile you
+don't know this project's conventions. The file is a YAML map of named blocks; a key
+holding `null` is not configured, so use the fallback this skill declares for it —
+never a guessed value.
 
 Any path or id shown in this document is an example resolution; the profile's value
 wins. The keys this skill reads are listed under **Profile keys** in the `Contract`
@@ -132,6 +133,7 @@ skill reports the command, the user decides whether to run it.
 ---
 
 ## Output language
+**Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
 This skill writes no artifacts. **Chat interaction follows the user's language**
 (`OUTPUT_LANGUAGE` in the profile) — the report samples above are written in English;

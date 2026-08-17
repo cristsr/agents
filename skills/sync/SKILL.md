@@ -4,7 +4,7 @@ description: >
   Closes the documentation half of a story at the end of the pipeline:
   reconciles the design delta (OpenAPI contract + per-flow docs carrying their
   own inline Mermaid diagram) into the affected unit's living docs
-  (SYNC_MODE=replace; legacy mode promotes files),
+  (docs-as-code mode; legacy mode promotes files),
   appends design.md's "Design Decisions" section (if any) to the
   cumulative docs/decisions.md log, and reads the "Global Architecture
   Impact" section /design already left in design.md — if it says yes,
@@ -28,7 +28,7 @@ Close the documentation half of a story at the end of the pipeline: promote
 the documentation produced during `/design` into the module docs folder,
 append any design decisions to the cumulative `docs/decisions.md` log, read
 `design.md`'s own `## Global Architecture Impact` verdict and hand off to
-`/architecture` if it says the story touched global architecture, and archive
+`/docs` if it says the story touched global architecture, and archive
 the story workspace into `work/done/`. Sync doesn't detect anything itself
 anymore — `/design` already determined and documented it; sync only promotes.
 That's the whole scope — the git side (grouping and executing commits,
@@ -38,9 +38,9 @@ drafting the PR) is `/commit`'s job, meant to run right after this one.
 
 **Output:**
 
-- The design delta reconciled into the unit's living docs (`SYNC_MODE=replace`): canonical OpenAPI merged (+`API_DIFF_TOOL`) and `flows/*.md` replaced under `<unit>/flows/`, with their inline Mermaid diagrams validated by `MODEL_VALIDATE_CMD`. (In legacy `promote` mode: artifacts copied as is.)
+- The design delta reconciled into the unit's living docs (docs-as-code, `DESIGN_OUTPUT_MODE = full-flow`): canonical OpenAPI merged (classified by `CONTRACT_DIFF`) and `flows/*.md` replaced under `<unit>/flows/`, with their inline Mermaid diagrams validated by `DIAGRAM_CHECK`. (In legacy mode, `DESIGN_OUTPUT_MODE = full`: artifacts copied as is.)
 - `docs/decisions.md` (repo root) with a new entry if `design.md` had a "Design Decisions" section (or unchanged, if it didn't apply).
-- `docs/architecture/` updated by `/architecture` if the story touched global architecture (or unchanged, if it didn't apply).
+- `docs/architecture/` updated by `/docs` if the story touched global architecture (or unchanged, if it didn't apply).
 - The `work/active/spec-<number>/` folder moved to `work/done/spec-<number>/`.
 - A suggestion to run `/commit spec-<number>` as the next step.
 
@@ -52,10 +52,17 @@ gate check, but the git close-out lives in `/commit`.
 
 ## Project profile (read first, always)
 
-Read `.agents/profile.md` at the root of the current project before anything else. If it
-doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
-`.agents/profile.md` and stop — without a profile you don't know this project's
-conventions.
+Read `.agents/profile.yaml` at the root of the current project before anything else.
+If it doesn't exist, tell the user to run `/bootstrap` and stop — without a profile you
+don't know this project's conventions. The file is a YAML map of named blocks; a key
+holding `null` is not configured, so use the fallback this skill declares for it —
+never a guessed value.
+
+Tools come from the profile's `ports` block: this skill names the capability it
+needs — a port — and the block says which command, agent or MCP tool provides it
+here. Run the first adapter that resolves; when one resolves and then fails, report
+that failure instead of trying the next. A port with no usable adapter is **unbound**
+— see the `Degrades` row below.
 
 Any path, branch name or command shown in this document is an example resolution; the
 profile's value wins. The keys this skill reads are listed under **Profile keys** in
@@ -91,7 +98,7 @@ the first without the second — which is exactly what this gate catches.
 - `work/done/spec-<number>/` (Step 5) — the whole workspace folder moved intact, so
   `spec.md` and the `plan.md` that closed with `## AC Coverage` travel with it.
   `/commit` reads both from there
-- `docs/architecture/` refreshed **through `/architecture`**, never written here (Step 6)
+- `docs/architecture/` refreshed **through `/docs`**, never written here (Step 6)
 
 **Writes** — nothing outside this list
 
@@ -102,7 +109,7 @@ the first without the second — which is exactly what this gate catches.
 
 Not the project's source code (that's `/build` or `/hotfix`), not the story's own
 `spec.md`/`design.md` (that's `/refine`), and not `docs/architecture/` — that scope
-belongs strictly to `/architecture`, which sync invokes rather than replaces.
+belongs strictly to `/docs`, which sync invokes rather than replaces.
 
 **Never** — version control is managed by the user, same rule as `/build`. Sync
 doesn't even propose a commit plan anymore (that moved to `/commit`); it only reads
@@ -120,8 +127,8 @@ only because sync never touches anything git doesn't already track.
 **Escalates** — an unidentifiable destination module, an ambiguous unit, a
 duplicate-flow clash (Step 3), or a failed CI gate (Step 2). Ask; never guess.
 
-**Degrades** — `CI_GATES_CMD` at `—` → offer per-app gates or an explicit warning;
-`API_DIFF_TOOL` at `—` → manual diff; `MODEL_VALIDATE_CMD` at `—` → manual review.
+**Degrades** — `CI_GATES` unbound → offer per-app gates or an explicit warning;
+`CONTRACT_DIFF` unbound → manual diff; `DIAGRAM_CHECK` unbound → manual review.
 
 **Profile keys**
 
@@ -129,11 +136,11 @@ duplicate-flow clash (Step 3), or a failed CI gate (Step 2). Ask; never guess.
   workspace before and after the close, written throughout this document as
   `spec-<number>`, `work/active/spec-<number>/` and `work/done/spec-<number>/`
 - `WORKING_DIRECTORY`, `BASE_BRANCH` — the location and branch gates in `Requires`
-- `SYNC_MODE`, `API_CONTRACT_MODE`, `DESIGN_OUTPUT_MODE` — the decision table in Step 3
-- `DOCS_MODULE_ARTIFACTS`, `DOCS_MODULE_API`, `DOCS_UNIT_FLOWS`, `DOCS_UNIT_README`,
-  `DOCS_ARCHITECTURE` — where the living docs go (section 8)
-- `CI_GATES_CMD`, `API_DIFF_TOOL`, `MODEL_VALIDATE_CMD` — the pre-close gates (section 10)
-- `COMPONENT_TERM` and section 7 — the term for a deployable unit, and the stack
+- `API_CONTRACT_MODE`, `DESIGN_OUTPUT_MODE` — the decision table in Step 3
+- `DOCS_MODULE`, `DOCS_UNIT_FLOWS`, `DOCS_UNIT_README`,
+  `DOCS_ARCHITECTURE` — where the living docs go (docs block)
+- `CI_GATES`, `CONTRACT_DIFF`, `DIAGRAM_CHECK` (ports) — the pre-close gates
+- `COMPONENT_TERM` and the stack block — the term for a deployable unit, and the stack
 - `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
 
 ---
@@ -152,10 +159,9 @@ Read from `work/active/spec-<number>/`:
 2. `git status --porcelain` and `git diff --stat` (read-only) — inventory of
    what the story changed.
 3. Offer to run the same gates as CI before closing the story. **Ask first** —
-   it takes minutes. Run `CI_GATES_CMD` (section 10) scoped to the affected apps; a
-   typical resolution is `npx nx run-many -t lint,test,build --projects=<affected apps>`.
+   it takes minutes. Call the `CI_GATES.run` port with the affected apps as `<apps>`.
 
-   If `CI_GATES_CMD` is `—` (project with no declared command) → offer to run the
+   If the port is unbound (project with no declared gates) → offer to run the
    gates per app (individual lint/test/build) or continue the close-out with an
    explicit warning.
 
@@ -174,10 +180,10 @@ exception:
 |---|---|---|---|---|
 | OpenAPI contract | `API_CONTRACT_MODE` | `delta` (default) | merge the delta into the canonical `api.yaml` | reconcile |
 | OpenAPI contract | `API_CONTRACT_MODE` | `full` | copy the file as is | promote |
-| Flows / diagrams | `SYNC_MODE` | `replace` | replace the whole `flows/<slug>.md` | reconcile |
-| Flows / diagrams | `SYNC_MODE` | `promote` (default, and when unset) | copy the Markdown artifacts as is | promote |
+| Flows / diagrams | `DESIGN_OUTPUT_MODE` | `full-flow` | replace the whole `flows/<slug>.md` | reconcile |
+| Flows / diagrams | `DESIGN_OUTPUT_MODE` | `full` (default) | copy the Markdown artifacts as is | promote |
 
-### When `SYNC_MODE = replace` (docs-as-code with Mermaid — only if the profile declares it; the default is `promote`)
+### When `DESIGN_OUTPUT_MODE = full-flow` (docs-as-code with Mermaid — only if the profile declares it; the default is `full`)
 
 `/design` produces the **complete** `flows/<slug>.md`, with its `sequenceDiagram`
 inline. With no global model to merge, the flow is **replaced whole** in the living
@@ -207,13 +213,13 @@ of the `command`'s class.
 
 For each affected unit (identified in `design.md`; if ambiguous → ask, don't guess):
 
-1. **Canonical OpenAPI** (`DOCS_MODULE_API` = `apps/<app>/docs/<module>/api.yaml`):
+1. **Canonical OpenAPI** (convention under `DOCS_MODULE` — `<DOCS_MODULE>/<module>/api.yaml`):
    - Keep a copy of the previous canonical file (for the diff).
    - Merge `docs/api.delta.yaml`: add/replace each `path` and each `components.schemas`
      from the delta; keep everything the delta doesn't touch. Don't change the module's
      canonical `info.title`.
-   - Run `API_DIFF_TOOL` (section 10 — default `oasdiff`) between the previous
-     canonical file and the new one. If `API_DIFF_TOOL` is `—` → manual diff comparison.
+   - Call the `CONTRACT_DIFF.run` port with the previous canonical file as `<old>` and
+     the new one as `<new>`. If the port is unbound → manual diff comparison.
      Record the verdict in the PR body: **non-breaking** (in-place evolution) or
      **breaking** (→ flag that it warrants a `/vN` path version; don't version
      automatically).
@@ -232,23 +238,23 @@ For each affected unit (identified in `design.md`; if ambiguous → ask, don't g
    row) and, **if the story added or removed components**, the ` ```mermaid ` block of
    the component `flowchart`. Don't rewrite it whole on every story.
 
-4. **Validate the diagrams:** run `MODEL_VALIDATE_CMD` (section 10 — default
-   `npm run docs:validate`). It verifies every identifier in every Mermaid block names a
-   real symbol in the code. If it fails, **don't close the story**: the diagram names
-   something that doesn't exist, and that's exactly what the gate is there to catch. If
-   the key is `—` → manual review.
+4. **Validate the diagrams:** call the `DIAGRAM_CHECK.run` port. It verifies every
+   identifier in every Mermaid block names a real symbol in the code. If it fails,
+   **don't close the story**: the diagram names something that doesn't exist, and
+   that's exactly what the gate is there to catch. If the port is unbound → manual
+   review.
 
 The original delta stays in the story folder as a point-in-time record — it travels to
 `work/done/` in Step 5.
 
-### When `SYNC_MODE` is unset or `promote` (default — copy Markdown artifacts as is)
+### When `DESIGN_OUTPUT_MODE = full` (default — copy Markdown artifacts as is)
 
 For each file under `work/active/spec-<number>/docs/`:
 
 1. Identify the affected app and module from `design.md` (and `context.md` if
    needed). If it is ambiguous → ask the user, do not guess.
-2. Resolve the destination from `DOCS_MODULE_ARTIFACTS`:
-   - Artifact of one app's module → `apps/<app>/docs/<module>/<artifact>.md`
+2. Resolve the destination from `DOCS_MODULE` (folder pattern):
+   - Artifact of one app's module → `<DOCS_MODULE>/<module>/<artifact>.md`
    - Cross-cutting artifact (libs, more than one app) → `docs/<module>/<artifact>.md` at the repo root
 3. **Copy** (don't move) the artifact to its destination:
    - Destination does not exist → create it (create the folder tree as needed).
@@ -263,7 +269,7 @@ note it in the final summary.
 ## Step 4: Append to the decisions log
 
 `docs/decisions.md` (repo root — **not** `docs/architecture/`, that scope is
-strictly `/architecture`'s C4 diagrams) is a single cumulative, append-only
+strictly `/docs`'s C4 diagrams) is a single cumulative, append-only
 log of design decisions across **every** story, not just cross-cutting ones —
 a decision scoped to one module still belongs here.
 
@@ -353,12 +359,12 @@ not this skill's.
 User says: "/sync spec-0009"
 
 Actions:
-1. Read `.agents/profile.md` and verify `work/active/spec-0009/` with the plan
+1. Read `.agents/profile.yaml` and verify `work/active/spec-0009/` with the plan
    fully done (`[X]` on every task).
 2. `git branch --show-current` → `feat/spec-0009-transfers`; `git status
    --porcelain` → 14 files changed, all from the story.
-3. With the user's go-ahead, run `CI_GATES_CMD` (`npx nx run-many -t lint,test,build
-   --projects=finances`) → all green.
+3. With the user's go-ahead, call `CI_GATES.run` with `finances` as `<apps>` → all
+   green.
 4. Promote `docs/diagram.md` and `docs/api.yaml` to
    `apps/finances/docs/movement/` (design points to the `movement` module).
 5. `design.md` has a "Design Decisions" section → append a new entry at
@@ -390,9 +396,9 @@ Context: `/sync spec-0015` closes a story that added `apps/notifications`.
 
 Actions:
 1. Sync reads the section as-is — doesn't inspect `git diff` to confirm it.
-2. Invokes `/architecture spec-0015`, passing along the level, the change, and
+2. Invokes `/docs spec-0015`, passing along the level, the change, and
    the already-specified node/edge.
-3. `/architecture` applies them directly to `containers.md` without having
+3. `/docs` applies them directly to `containers.md` without having
    to re-analyze what changed.
 
 Result: `containers.md` updated without any skill having to re-derive the
@@ -429,14 +435,15 @@ next steps.
 | lint/test/build fails in Step 2 | Regression at close time | Stop — fix directly, or `/hotfix` if it traces back to a spec gap |
 | User asks to group/execute commits or draft the PR right here | Scope confusion after the skill split | Explain that's `/commit spec-<number>`, meant to run right after |
 | `design.md` has no "Global Architecture Impact" section | Story designed before this convention existed | Don't guess from the diff — ask the user directly whether the story touched global architecture |
-| The section says "Yes" but the node/edge isn't clear | `/design` didn't specify it in enough detail | Invoke `/architecture spec-<number>` anyway and let it ask for precision, or ask the user before invoking |
-| User asks to bootstrap `docs/architecture/` from here | Out of this skill's scope | Explain that's `/architecture` (with no arguments), not `/sync` |
+| The section says "Yes" but the node/edge isn't clear | `/design` didn't specify it in enough detail | Invoke `/docs spec-<number>` anyway and let it ask for precision, or ask the user before invoking |
+| User asks to bootstrap `docs/architecture/` from here | Out of this skill's scope | Explain that's `/docs` (with no arguments), not `/sync` |
 
 ---
 
 ## Output language
+**Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
 `OUTPUT_LANGUAGE` if the project doesn't declare it): the entries appended to
 `docs/decisions.md` and anything you write into the living docs. Promoted content
 keeps the language `/design` produced it in — never translate it on promotion.

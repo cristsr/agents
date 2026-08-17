@@ -4,9 +4,9 @@ description: >
   Enforces module-oriented hexagonal architecture (Ports and Adapters + DDD) in
   any codebase: layer boundaries, folder layout, naming, where each port lives,
   binding ports to adapters, and the exception hierarchy. Stack-agnostic — the
-  concrete syntax per stack lives in the STACK_REFS pack (e.g.
-  typescript-nestjs/architecture/). BUILD mode only: start a project, add a
-  module, wire adapters. To audit an existing codebase use /hexagonal-audit.
+  concrete syntax per framework lives in the framework skill the project declares
+  (e.g. `nestjs`). BUILD mode only: start a project,
+  add a module, wire adapters. To audit an existing codebase use /hexagonal-audit.
   Use when the user says "hexagonal architecture", "structure the project",
   "create a module", "where does this port go", "is this domain or application",
   "start the project with hexagonal", or when creating or editing a module,
@@ -36,22 +36,27 @@ are architectural debt, not style preferences.
 1. **Load the rules first:** `references/rules.md` — the single source of the
    hexagonal rules (dependency direction, canonical structure, layer topology,
    domain/application/infrastructure rules, wiring). Never skip it.
-2. **Resolve the stack:** from the profile (section 7): `LANGUAGE`, `FRAMEWORK`,
-   `DI_TOKENS`, `DTO_STYLE`, `MODULE_ROOT`, `IDENTIFIER_LANGUAGE`; and
-   `<STACK_REFS>` (section 7) for the per-stack concretion. If the project uses
-   NestJS/TypeScript, load from the pack:
-   - `<STACK_REFS>/architecture/module-blueprint.md` — project and module blueprint
-     (phases 0-4 with concrete syntax).
-   - `<STACK_REFS>/architecture/nestjs-binding.md` — DI tokens, wiring,
-     decorators, persistence (NestJS).
-   - `<STACK_REFS>/architecture/errors-and-logging.md` — exception hierarchy and
-     log formatter (TS implementation).
-   If `STACK_REFS` isn't defined or has no `architecture/`, use the generic rules
-   + the profile's conventions and ask about any syntax doubts.
+2. **Resolve the stack:** from the profile (stack block): `LANGUAGE`, `FRAMEWORK`,
+   `MODULE_ROOT`, `IDENTIFIER_LANGUAGE`, and `SKILLS`. This skill is stack-agnostic —
+   the rules never change; what changes is the **dialect** that expresses them, and
+   that comes from the framework skill the project declares in `stack.SKILLS`:
+   - NestJS project (`SKILLS` includes `nestjs`) → load it with the Skill tool and
+     use its references for the binding syntax:
+     - the `nestjs` skill's `references/nestjs-binding.md` — DI tokens, wiring,
+       decorators, persistence.
+     - the `nestjs` skill's `references/module-blueprint.md` — the Nest project/module
+       phases.
+     - the `typescript` skill's `references/errors-and-logging.md` — the exception
+       base form (`BaseException`, formatter); this skill's
+       `references/exception-placement.md` — the two families, where exceptions
+       live and where to catch.
+   - No framework skill declared (plain TS, Express, CLI, frontend) → the generic
+     rules + the profile's conventions apply; the DI/binding rules are simply N/A
+     and are not loaded. Ask about any syntax doubts.
 
-> Companion skills: `typescript` (syntax), `error-handling` (try/catch mechanics),
-> `design-principles` (SOLID/DRY/YAGNI). This skill governs **placement and
-> boundaries**. To audit: `/hexagonal-audit`.
+> Companion skills: the project's language skill (for TS: `typescript`),
+> `error-handling` (try/catch mechanics), `design-principles` (SOLID/DRY/YAGNI).
+> This skill governs **placement and boundaries**. To audit: `/hexagonal-audit`.
 
 ---
 
@@ -73,32 +78,26 @@ infrastructure  ──►  application  ──►  domain
 
 CRITICAL: One folder per bounded module at the source root. Never group by
 technical type (`controllers/`, `services/`) at the top level — group by
-**module**, then by **layer**. A layer root holds folders, not files. Full layout
-and the single-entity `domain/` exception in `references/rules.md`.
-
-```
-src/
-├── shared/                             # shared kernel — NOT a module for business logic
-└── <module>/                           # bounded context
-    ├── domain/         entities, VOs, repos (ports), domain services, exceptions
-    ├── application/    usecases/ ports/ dto/ mappers/ exceptions/ types/
-    ├── infrastructure/ adapters/ (driving + driven) · config/
-    └── <module>.module                 # composition root, at the module ROOT
-```
+**module**, then by **layer**. A layer root holds folders, not files. The full
+layout, the single-entity `domain/` exception and the barrel/alias rules are in
+`references/rules.md` — read it; don't rebuild the tree here.
 
 ---
 
 ## Phases (BUILD)
 
 Inside-out order (domain first) — that way the dependency direction is correct by
-construction. The per-stack blueprint details the concrete syntax
-(`<STACK_REFS>/architecture/module-blueprint.md` if it exists).
+construction. The framework dialect details the concrete syntax (the `nestjs` skill's
+`references/module-blueprint.md`, if the project declares a framework skill).
 
 ### Phase 0 — Bootstrap (new project only)
 1. Shared kernel before any feature module: types, base exceptions, value objects
    (uuid, date), application ports (event emitter).
-2. Exception hierarchy — see `<STACK_REFS>/architecture/errors-and-logging.md`.
-3. Per-module aliases (app + test config) — the stack's convention.
+2. Exception hierarchy — see `references/exception-placement.md` (the two families
+   + where to catch); the base form is the language skill's (for TS, the `typescript`
+   skill's `references/errors-and-logging.md`).
+3. Per-module aliases (app + test config) — the language skill's convention (for TS,
+   the `typescript` skill's `references/path-alias-setup.md`).
 
 ### Phase 1 — Domain
 1. Name the module (bounded context) and its aggregates.
@@ -118,7 +117,8 @@ construction. The per-stack blueprint details the concrete syntax
 2. External providers: retry, mapping before the error handler, read degrades /
    write throws a typed exception, config read in the constructor body.
 3. Thin driving adapters: controllers/schedulers/events/bootstrap only delegate;
-   those running outside a request CATCH and log.
+   the catch-and-log policy for those outside a request is
+   `references/exception-placement.md`.
 
 ### Phase 4 — Wiring (composition root)
 1. Every port bound to exactly one adapter in the module file.
@@ -131,23 +131,18 @@ construction. The per-stack blueprint details the concrete syntax
 
 ## Naming Quick Reference
 
-| Artifact | Convention |
-|----------|------------|
-| Entity | `<entity>` |
-| Repository (port) | `<entity>.repository` |
-| Data-source port | `<entity>-data-source.port` |
-| Use case | `<action>-<entity>.usecase` |
-| Input / Output DTO | `<name>.input.dto` / `<name>.output.dto` |
-| Module | `<module>.module` |
-
-Files kebab-case, classes PascalCase, enums SCREAMING_SNAKE (per stack). The exact
-suffixes come from the stack pack + `IDENTIFIER_LANGUAGE`.
+The full table — entities, enums, ports, services, use cases, DTOs, adapters,
+module — is in `references/rules.md` (single source). Its two lines that decide
+boundaries here: role suffixes identify the layer's artifacts, and the exact case
+rules come from the language/framework skills (`nestjs` on Nest projects) +
+`IDENTIFIER_LANGUAGE`.
 
 ---
 
 ## Common Issues
 
-**Error:** "Can't resolve dependencies of XUsecase (?)"
+**Error:** the DI container can't resolve a use case's dependencies (in NestJS:
+"Can't resolve dependencies of XUsecase (?)")
 - Cause: the port isn't usable as a DI token (in TS: an `interface`), or its
   binding is missing from the module.
 - Fix: declare the abstraction per the stack and bind it in the composition root.
@@ -173,6 +168,9 @@ suffixes come from the stack pack + `IDENTIFIER_LANGUAGE`.
 ## Example
 
 **User says:** "create a reports module that reads from Postgres and exposes an endpoint"
+
+Shown in TypeScript — the shape is identical in any language; only the file
+extensions and the binding syntax differ (per the language/framework skills).
 
 **Actions:**
 1. Announce, load `references/rules.md` + the stack's blueprint.

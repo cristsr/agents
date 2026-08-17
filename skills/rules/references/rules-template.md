@@ -22,10 +22,10 @@ design, implementation and code review. It is **normative** (it uses MUST / NEVE
 not descriptive. When this document and any other guide (`docs/`, comments, habit)
 conflict, **the constitution prevails**.
 
-The pipeline's skills consume it like this:
-- `/design` validates the **Quality Gates** before approving a contract.
-- `/plan` respects the articles when generating tasks.
-- Code review (human or `conventions-reviewer`) checks compliance.
+The constitution is enforced like this:
+- The **Quality Gates** are validated before a contract is approved.
+- The articles are respected when implementation tasks are generated.
+- Code review (human or automated) checks compliance.
 
 ---
 
@@ -38,8 +38,10 @@ on whether a change complies>.
 
 **Reason:** <why it's non-negotiable, 1 sentence>.
 
-**How it's verified:** <which gate/phase checks it: review · `/design` ·
-`/plan` · CI · test>.
+**How it's verified:** <the concrete gate that catches a violation: a CI job or
+linter by name, a `/design` phase, a script. "Code review" alone is the weakest gate
+— if that's all a rule can point to, either name a mechanical check or demote the
+rule to `docs/`>.
 
 <!-- Repeat "### Article N" for each principle. Aim for 6–10 total. -->
 
@@ -47,8 +49,9 @@ on whether a change complies>.
 
 ## Mandatory Quality Gates
 
-A binary checklist `/design` (and `/plan` where applicable) must pass before
-approving. Each gate is either met or explicitly documented as not applicable.
+A binary checklist the design phase (and the planning phase, where applicable) must
+pass before approving. Each gate is either met or explicitly documented as not
+applicable.
 
 - [ ] **Simplicity Gate** — <criterion: don't add layers/projects/abstractions
   without a present use case justifying them>.
@@ -69,15 +72,15 @@ approving. Each gate is either met or explicitly documented as not applicable.
 <!-- OPTIONAL: constraints on branching, commits, releases, environments that
      are non-negotiable but don't fit as an "Article". Remove if empty. -->
 
-- <e.g. Never run `/build` on `main`/`master`.>
+- <e.g. Never build directly on `main`/`master`.>
 - <e.g. Conventional commits mandatory: `type(SPEC-XXXX): description`.>
 
 ---
 
 ## Governance
 
-**Amendments:** any change to this document goes through `/constitution`
-(amend mode), with an updated version and the date in `last_amended`.
+**Amendments:** any change to this document goes through the amendment process, with
+an updated version and the date in `last_amended`.
 
 **Semantic versioning of the document:**
 - **MAJOR** — a principle is removed or redefined incompatibly.
@@ -99,7 +102,10 @@ and doesn't change on amendments; `last_amended` is always updated.
 
 **Articles:** each must be testable. If you can't write "How it's verified"
 concretely, the principle is too vague — reformulate or discard it. Prefer a few
-strong articles to many weak ones.
+strong articles to many weak ones. **"How it's verified" names a concrete gate** — a
+CI job, a linter, a `/design` phase, a script. A rule verified by nothing but code
+review is a style preference: either it gets a mechanical gate or it belongs in
+`docs/`, not in the constitution.
 
 **Quality Gates:** they are binary and `/design` applies them. Don't conflate a gate
 (a point-in-time check before approving) with an article (a permanent principle).
@@ -107,5 +113,9 @@ strong articles to many weak ones.
 **Workflow constraints:** only the non-negotiable. The "preferable" goes in `docs/`.
 
 **Language:** articles, reasons and verification notes in `ARTIFACT_LANGUAGE`
-(profile, section 5 — falls back to `OUTPUT_LANGUAGE`). Gate names stay in English
+(profile, language block — falls back to `OUTPUT_LANGUAGE`). Gate names stay in English
 (terms of art); identifiers and paths always English.
+
+**Formatting:** keep the constitution readable — a blank line after every heading,
+between every article, and before and after every list. One idea per bullet; never a
+bullet longer than ~3 lines.

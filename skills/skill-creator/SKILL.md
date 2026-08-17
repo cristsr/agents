@@ -285,13 +285,13 @@ Two rules that decide whether the block works:
 ### Profile keys inline, never a lookup table
 
 If the skill reads a profile or config file, **do not add a
-`| In this document | Key in profile.md |` translation table.** Two better pieces
+`| In this document | Key in profile.yaml |` translation table.** Two better pieces
 replace it: the `Profile keys` row of the `Contract` (what the skill reads) and the
 key written inline in the body, with the example in parentheses.
 
 ```diff
 - 1. Run the full test suite: cd <microservice> && npx jest --no-coverage
-+ 1. Run `FULL_TEST_CMD` for each affected <component> (e.g. `npx jest --no-coverage`)
++ 1. Check out `BASE_BRANCH` for each affected <component> (e.g. `develop`)
 ```
 
 The concrete example survives where it aids understanding, but it stops being the
@@ -396,7 +396,7 @@ If PHASE 2 Step 4 said **pipeline**, seven more. They map one-to-one onto
       (+ `Reverting` if it overwrites live artifacts)
 - [ ] **C2** — every key in `Profile keys` exists in the project's profile
       template, and every key the skill reads is declared
-- [ ] **C3** — no `| In this document | Key in profile.md |` table; keys inline
+- [ ] **C3** — no `| In this document | Key in profile.yaml |` table; keys inline
 - [ ] **C4** — no path, branch or command the project configures left hardcoded
       in a step
 - [ ] **C5** — no `## CRITICAL` heading the `Contract` already covers

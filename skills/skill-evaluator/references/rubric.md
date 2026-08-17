@@ -175,7 +175,7 @@ defect is only visible at the junction.
 |---|---|---|---|---|
 | C1 | `## Contract` after the Overview, with the rows that apply | IMPORTANT | Preconditions scattered across several `CRITICAL` sections | Consolidate into one block, as an index — reference the step where the detail already lives instead of copying it |
 | C2 | `Profile keys` complete and every key real | IMPORTANT | Declares a key the profile template doesn't define, or reads one it never declares | Contrast against the profile template. If a hand-maintained catalog disagrees, report it — don't fix it from here |
-| C3 | No `\| In this document \| Key in profile.md \|` table | MINOR | The translation table survives alongside the `Contract` | Delete it. `Profile keys` plus the key inline replaces it |
+| C3 | No `\| In this document \| Key in profile.yaml \|` table | MINOR | The translation table survives alongside the `Contract` | Delete it. `Profile keys` plus the key inline replaces it |
 | C4 | Normative literals replaced by their key | IMPORTANT | `git checkout develop` hardcoded while the profile declares `BASE_BRANCH` | Key inline, example in parentheses: `` `BASE_BRANCH` (`develop`) `` |
 | C5 | No `## CRITICAL` the `Contract` already covers | MINOR | `## CRITICAL: Output Language`, `## CRITICAL: read the profile first` | Demote to a plain heading. Reserve `CRITICAL` for the irreversible |
 | C6 | The junction holds in both directions | IMPORTANT | A `Requires` row nobody produces; a `Produces` nobody consumes | Name both skills. The fix usually belongs to the neighbor |
@@ -341,7 +341,7 @@ With the skill:
 ### Pipeline skills only
 - [ ] `## Contract` after the Overview, with the rows that apply
 - [ ] `Produces` in countable terms, not adjectives
-- [ ] No `| In this document | Key in profile.md |` table
+- [ ] No `| In this document | Key in profile.yaml |` table
 - [ ] Every key in `Profile keys` exists in the profile template
 - [ ] No `## CRITICAL` the `Contract` already covers
 - [ ] Junction verified in both directions with the neighboring skills

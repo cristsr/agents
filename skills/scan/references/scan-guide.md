@@ -1,13 +1,14 @@
 # Scan Guide (generic — stack-agnostic)
 
-Reference for `/scan` PHASE 3 (CodeGraph mode and fallback): use it to read the
-specific files the graph returns (or the subagent locates), with progressive
-disclosure — read only the sections needed per file type.
+Reference for the survey step of `/scan` (Step 3) and `/clarify` (R4), in both the
+CodeGraph mode and its fallback: use it to read the specific files the graph returns
+(or the subagent locates), with progressive disclosure — read only the sections needed
+per file type.
 
 The exact paths and conventions per file type come from the profile
-(section 7: `MODULE_ROOT`, `ORM`, `DI_TOKENS`, `DTO_STYLE`, `TEST_FRAMEWORK`)
-and from the stack pack (`STACK_REFS` — this file is the generic version;
-a per-stack pack may specify concrete patterns).
+(profile: `MODULE_ROOT`, `ORM`, `TEST_FRAMEWORK` · what to locate per file type: this guide)
+and from the stack packs (`STACK_REFS` — this file is the generic version;
+a specific pack, e.g. `nestjs`, may override it with concrete patterns).
 
 ---
 

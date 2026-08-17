@@ -8,7 +8,7 @@ description: >
   about TypeScript best practices, patterns, or conventions.
 metadata:
   author: styve
-  version: "1.3"
+  version: "1.4"
   tags: [typescript, patterns, conventions, guard-clauses, nullable, abstract-class, readonly, naming]
   category: code-quality
 ---
@@ -23,8 +23,18 @@ whenever writing or reviewing TypeScript code.
 For detailed decision guides, see:
 - `references/abstract-class-guide.md` — when to choose abstract class vs interface
 - `references/path-alias-setup.md` — configuring path aliases in tsconfig.json
+- `references/errors-and-logging.md` — the exception shape: `BaseException` with
+  `code`/`context`/`cause`, `format()`, `ErrorLogFormatter`
 
-> Error handling conventions are in the `error-handling` skill.
+> This skill governs the **language**, so it holds for any TypeScript project —
+> CLI, frontend or layered service alike. Three things live elsewhere by design:
+> the **catalogue of roles** (what a repository, a port, a use case is, and the
+> spelling of each suffix) is the `hexagonal-architecture` skill's
+> `references/rules.md`; the **framework forms** (decorators, DI, module wiring) are
+> the project's framework skill (for Nest, `nestjs`); try/catch **mechanics** are the
+> `error-handling` skill, and exception *placement* — which layer owns which
+> exception, where to catch — is the `hexagonal-architecture` skill's
+> `references/exception-placement.md`.
 
 ---
 
@@ -170,14 +180,18 @@ allowed.
 
 ```typescript
 // Correct
-import { UserService } from "@/services/user.service";
-import { Nullable } from "@/shared/types";
-import { CreateUserDto } from "@/dtos/create-user.dto";
+import { Nullable } from "@shared/types";
+import { EmailValidator } from "@shared/validation";
+import { UserProfile } from "@user/profile";
 
 // Wrong
-import { UserService } from "../../../services/user.service";
 import { Nullable } from "../../shared/types";
+import { EmailValidator } from "../../../shared/validation";
 ```
+
+The tree those aliases point at is the project architecture's call, not this skill's
+— in a layered project it is the `hexagonal-architecture` skill's
+`references/rules.md`. This skill only requires that the import go through an alias.
 
 See `references/path-alias-setup.md` for tsconfig configuration.
 
@@ -186,7 +200,8 @@ See `references/path-alias-setup.md` for tsconfig configuration.
 ## Readonly Immutability
 
 CRITICAL: Mark all class properties as `readonly` unless mutation is explicitly required.
-Mark constructor parameters as `readonly` in NestJS injectable classes.
+Constructor-injected dependencies are never reassigned, so they are `readonly` too —
+the framework skill (for Nest, `nestjs`) shows the decorated form.
 
 ```typescript
 // Correct: readonly everywhere mutation is not needed
@@ -198,12 +213,11 @@ class UserCreatedEvent {
   ) {}
 }
 
-// Correct: readonly in NestJS services (dependencies never reassigned)
-@Injectable()
-class CreateUserUseCase {
+// Correct: readonly on injected collaborators
+class UserNotifier {
   constructor(
-    private readonly userRepo: UserRepository,
     private readonly mailer: Mailer,
+    private readonly clock: Clock,
   ) {}
 }
 
@@ -242,29 +256,32 @@ type HttpStatus = typeof HTTP_STATUS[keyof typeof HTTP_STATUS]; // 200 | 201 | 4
 
 CRITICAL: Consistent naming makes code predictable. Follow these rules without exception.
 
-### Files — kebab-case, always with type suffix
+### Files — kebab-case, always with a type suffix
+
+The **form** is `<name>.<type>.ts`, kebab-case throughout, one suffix, lowercase
+extension:
 
 ```
-user.service.ts
-create-user.use-case.ts
-user.repository.ts
+email.validator.ts
 user-created.event.ts
 create-user.dto.ts
-user.entity.ts
-user.controller.ts
-user.module.ts
-user.service.spec.ts
+date.formatter.ts
+http-client.spec.ts
 ```
 
-### Classes — PascalCase, matching file suffix
+CRITICAL: *Which* type suffixes exist, and which artifact each one names, is not this
+skill's call. In a layered project the catalogue of roles (`.repository`, `.usecase`,
+`.port`, `.entity`, `.module`) is the `hexagonal-architecture` skill's
+`references/rules.md` — take the spelling of a role suffix from there and never
+invent a second one for the same artifact. This skill fixes only the spelling shape.
+
+### Classes — PascalCase, matching the file suffix
 
 ```typescript
-class UserService { }
-class CreateUserUseCase { }
-class UserRepository { }          // abstract port
-class TypeOrmUserRepository { }   // concrete adapter
-class UserCreatedEvent { }
-class CreateUserDto { }
+class EmailValidator { }     // email.validator.ts
+class UserCreatedEvent { }   // user-created.event.ts
+class CreateUserDto { }      // create-user.dto.ts
+class DateFormatter { }      // date.formatter.ts
 ```
 
 ### Booleans — always `is`, `has`, `can`, `should`
@@ -318,7 +335,7 @@ const defaultPaginationConfig = { page: 1, size: 20 }; // object, not a primitiv
 | Optional Chaining | Always `?.` for nullable | `user && user.profile` |
 | Nullable<T> | Never `T \| null` directly | `Promise<User \| null>` |
 | Abstract Class | For shared implementation | Interface with duplicated logic |
-| Path Aliases | Always `@/...` | `import from '../../../'` |
+| Path Aliases | Always through an alias | `import from '../../../'` |
 | Readonly | All stable properties | `userId: string` (mutable) |
 | Naming — Files | `kebab-case.type.ts` | `UserService.ts`, `userservice.ts` |
 | Naming — Booleans | `is/has/can/should` prefix | `active`, `permission`, `access` |
@@ -327,7 +344,7 @@ const defaultPaginationConfig = { page: 1, size: 20 }; // object, not a primitiv
 ## Common Issues
 
 **Error:** Using `T | null` instead of `Nullable<T>`
-- Fix: Import `Nullable` from `@/shared/types` and replace all direct unions
+- Fix: Import `Nullable` from `@shared/types` and replace all direct unions
 
 **Error:** Nested if-else making code hard to read
 - Fix: Invert the condition and return early (guard clause)

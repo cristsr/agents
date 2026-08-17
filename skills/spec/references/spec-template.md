@@ -35,8 +35,8 @@ origin: <tracker:<key> | audit:<reference> | manual>
      Insert [NEEDS CLARIFICATION: ...] markers inline where the input is silent
      or ambiguous about something that changes the implementation (response
      code, behavior on invalid/empty input, undefined business term, implied
-     edge case, contradiction). /spec only PLACES markers; /clarify resolves and
-     removes them. No markers if the item is fully specified. -->
+     edge case, contradiction). The markers are resolved and removed during
+     clarification. No markers if the item is fully specified. -->
 
 ## Business Rules
 
@@ -54,8 +54,9 @@ origin: <tracker:<key> | audit:<reference> | manual>
 
 ## Hotfixes
 
-<!-- OPTIONAL: A defect found AFTER /build already produced code, traced
-     back to a missing/ambiguous AC. Omit entirely if /hotfix was never run. -->
+<!-- OPTIONAL: A defect found after implementation already produced code,
+     traced back to a missing or ambiguous AC. Omit entirely if no hotfix
+     was ever applied. -->
 
 - **HOTFIX-N (AC-N):** <what was wrong or missing in the AC> → <correction applied to the AC> — implemented in `plan.md` Task HOTFIX-N.
 ```
@@ -173,11 +174,23 @@ rules not present in the input. Omit the section entirely if none were given.
 **Hotfixes:** Never written by `/spec` itself — only `/hotfix` appends to this
 section, after correcting/adding an AC for a defect found in already-built code.
 
+## Formatting
+
+Keep the artifact readable — the redaction is prose, not a dump:
+
+- A blank line **after every heading** and **before and after every list and code
+  fence**.
+- **One idea per bullet**, and never a bullet longer than ~3 lines.
+- Break walls of text: no more than ~4 consecutive bullets or bold-label lines
+  without a blank line between them.
+- When a point splits naturally in two, use a short blank-line-separated paragraph
+  instead of a single run-on paragraph.
+
 ## Language rules
 
 - Section headings: English. They are structural — `/clarify`, `/design`, `/plan`,
   `/sync` and `/hotfix` locate them by name.
-- Prose, ACs, business rules: `ARTIFACT_LANGUAGE` (profile, section 5 — falls back to
+- Prose, ACs, business rules: `ARTIFACT_LANGUAGE` (profile, language block — falls back to
   `OUTPUT_LANGUAGE`).
 - The `type` values (`feat`, `bug`, `debt`, `incident`, `chore`) are identifiers and
   never translated.

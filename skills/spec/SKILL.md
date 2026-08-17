@@ -35,10 +35,11 @@ is identical for a feature, a bug or a piece of technical debt.
 
 ## Project profile (read first, always)
 
-Read `.agents/profile.md` at the root of the current project before anything else. If it
-doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
-`.agents/profile.md` and stop — without a profile you don't know this project's
-conventions.
+Read `.agents/profile.yaml` at the root of the current project before anything else.
+If it doesn't exist, tell the user to run `/bootstrap` and stop — without a profile you
+don't know this project's conventions. The file is a YAML map of named blocks; a key
+holding `null` is not configured, so use the fallback this skill declares for it —
+never a guessed value.
 
 Any path, id, item type or tracker name shown in this document is an example
 resolution; the profile's value wins. The keys this skill reads are listed under
@@ -114,7 +115,7 @@ folder is already tracked by git, `git checkout -- work/active/<story-id>/spec.m
 restores it; if the item was created and never committed, there is no way back. That is
 exactly why the confirmation in Step 3 is mandatory.
 
-**Degrades** — the profile's section 3 with no intake mapping → the generic reading of
+**Degrades** — the intake block with no field mapping → the generic reading of
 the export in Step 1, Mode A; `STORY_ID_MODE` unset → `sequential`;
 `STORY_ID_LEGACY_PREFIXES` at `—` → only the current prefix counts toward the next free
 number.
@@ -126,7 +127,7 @@ number.
   throughout this document as `<story-id>` / `spec-<number>`
 - `WORKDIR_ACTIVE` — the story's workspace, written here as `work/active/<story-id>/`
 - `ITEM_TYPES` — the types this project classifies among (Step 2)
-- `TRACKER`, `INTAKE_FORMATS` and the intake mapping of section 3 — Mode A's extraction
+- `TRACKER`, `INTAKE_FORMATS` and the intake mapping of the intake block — Mode A's extraction
 - `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
 
 ---
@@ -147,11 +148,11 @@ typical resolution is a `.pdf` tracker export).
 Use the `Read` tool on the provided path. If it can't be read, stop and ask for the raw
 text instead — an unreadable export is not a reason to guess the fields.
 
-**A2 — Extract fields, mapping per the profile's intake table (section 3):**
+**A2 — Extract fields, mapping per the profile's intake mapping (intake block):**
 
 **The label for each field comes from the profile's intake table** — the project
 declares which heading of its export feeds each `spec.md` field, in its own tracker
-and its own language. If the profile's section 3 declares no mapping, fall back to
+and its own language. If the profile's intake block declares no mapping, fall back to
 this generic reading of the export:
 
 | spec.md field | Generic fallback (no mapping in the profile) |
@@ -184,7 +185,7 @@ Collect these inputs. Ask for any that are missing — one question at a time.
 See Step 2 below. It's inferred and confirmed; never asked flatly.
 
 **Input 2 — Number / ID**
-The ID mode comes from `STORY_ID_MODE` (profile, section 2):
+The ID mode comes from `STORY_ID_MODE` (profile, items block):
 
 - `sequential` (default): look for an ID or number in the input. If none comes,
   propose the **next free number**: list `work/active/` and `work/done/`, take the
@@ -235,7 +236,7 @@ to fill the mold).
 | Updating dependencies, tooling, configuration, with no behavior change | `chore` |
 
 The rows above are the default set; the types you may actually assign are the project's
-`ITEM_TYPES` (section 2). A project that trims the list classifies only among what it
+`ITEM_TYPES` (items block). A project that trims the list classifies only among what it
 declares — never assign a type the profile doesn't list.
 
 Confirm with `AskUserQuestion` (`header: "Type"`) **only if the inference isn't
@@ -355,8 +356,9 @@ After saving `work/active/<story-id>/spec.md`:
 ---
 
 ## Output language
+**Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
 `OUTPUT_LANGUAGE` if the project doesn't declare it). The framing block, the ACs and
 the business rules of `spec.md` are written in that language. Never translate them to
 English on your own: the language is the profile's decision, not this skill's.

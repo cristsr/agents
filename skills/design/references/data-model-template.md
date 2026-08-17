@@ -58,7 +58,8 @@ CREATE TABLE table_name (
   column vs. public field) — flag the mismatch in `## Design Decisions`
   in `design.md` if intentional.
 - The style of the "Schema definition" block (decorators, column naming) comes from
-  the project's stack (`STACK_REFS` / profile section 7: `ORM`, `DTO_STYLE`,
+  the project's stack (`ORM` in the profile; DTO shape from
+  `<STACK_REFS>/references/openapi-to-dto-mapping.md`,
   `IDENTIFIER_LANGUAGE`).
 - Headings in English (structural); prose in `ARTIFACT_LANGUAGE` (profile,
-  section 5); table and column names verbatim from the schema.
+  language block); table and column names verbatim from the schema.

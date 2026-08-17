@@ -19,16 +19,6 @@ description: >
 
 # rules
 
-## Project profile (read first, always)
-
-Read `.agents/profile.md` (at the root of the current project) to pick up
-`OUTPUT_LANGUAGE` (interaction language), `ARTIFACT_LANGUAGE` (the language
-`docs/rules.md` is written in) and `PROJECT_NAME`. The constitution it
-produces is the source that validates the rest of the flow: `/design` checks its
-quality gates and `/plan` respects it.
-
----
-
 ## Overview
 
 The **constitution** is a project's set of non-negotiable principles. Unlike
@@ -145,8 +135,10 @@ EARS/normative style:
 For each article capture three fields (see `references/rules-template.md`):
 - **Principle** (the testable MUST/SHALL rule).
 - **Reason** (why it's non-negotiable — 1 sentence).
-- **How it's verified** (which gate/phase checks it: review, `/design`,
-  `/plan`, CI, etc.).
+- **How it's verified** — the **concrete gate** that catches a violation: a CI job
+  or linter by name, a `/design` phase, a script. "Code review" alone is the weakest
+  gate — if that's all a rule can point to, either name a mechanical check or demote
+  the rule to `docs/`.
 
 ---
 
@@ -180,6 +172,16 @@ a frontend). Record only the active ones.
    merge the preserved articles with the new/edited ones, and write it all together —
    never write only the new section.
 4. Save to the path resolved in PHASE 1.
+5. Validate the form mechanically and fix what it reports:
+
+   ```bash
+   node ~/.agents/scripts/validate-rules.mjs <resolved path>
+   ```
+
+   It checks the front-matter, that each article carries its three fields with a
+   normative Principle, that the gates are binary, and that no article leans on code
+   review alone — the same contract `/healthcheck` applies. ISSUES block the handoff;
+   WARNINGS are judgment calls to review with the user.
 
 ---
 
@@ -209,9 +211,11 @@ Stop — don't start designing or planning.
 
 ---
 
-## CRITICAL: Output Language
+## Output language
 
-**`docs/rules.md` follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
+**Conversational output** follows `~/.agents/references/chat-conventions.md` — the six blocks (announce, progress, question, summary, stop, handoff).
+
+**`docs/rules.md` follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
 `OUTPUT_LANGUAGE` if the project doesn't declare it): articles, reasons and
 verification notes. Never translate them to English on your own.
 

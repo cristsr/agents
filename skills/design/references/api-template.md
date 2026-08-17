@@ -80,4 +80,4 @@ components:
 - **`required` defines mandatoriness** — any field not listed in `required` is interpreted as optional (the DTO mapping for the project's stack will mark it optional).
 - **Use `format` whenever it applies:** `uuid`, `date-time`, `email` — these map directly to the stack's validators (see the stack's `openapi-to-dto-mapping.md`).
 - **Use `enum` for closed value sets** instead of `type: string` with a description that enumerates options in free text.
-- **Write every `description` and `summary` in `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to `OUTPUT_LANGUAGE`); the contract's prose is part of the artifact. Paths, schema names and `operationId` stay in `IDENTIFIER_LANGUAGE`.
+- **Write every `description` and `summary` in `ARTIFACT_LANGUAGE`** (profile, language block — falls back to `OUTPUT_LANGUAGE`); the contract's prose is part of the artifact. Paths, schema names and `operationId` stay in `IDENTIFIER_LANGUAGE`.

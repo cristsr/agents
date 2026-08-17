@@ -3,13 +3,13 @@ name: clarify
 description: >
   Turns a raw spec.md into a design-ready pair (spec.md + context.md) in three
   separated phases (Research → Plan → Implement): R gathers everything at once —
-  ambiguities, authority sources, the affected module's inventory and code
-  precedent via the code graph, plus the one thing only the developer knows; P
-  decides every unknown with problem and terrain in full view, escalating only
-  what no source can determine (scope, business intent, irreversible choices,
-  rule conflicts); I writes the decision log, the precise ACs, and the context
-  file. Use when the user says "/clarify spec-XXXX", "clarify story", "resolve
-  ambiguities", "enrich the story", "analyze the story", "scan the context",
+  ambiguities, authority sources, the story's assets folder, the affected module's
+  inventory and code precedent via the code graph, plus the one thing only the
+  developer knows; P decides every unknown with problem and terrain in full view,
+  escalating only what no source can determine (scope, business intent, irreversible
+  choices, rule conflicts); I writes the decision log, the precise ACs, and the
+  context file. Use when the user says "/clarify spec-XXXX", "clarify story",
+  "resolve ambiguities", "enrich the story", "analyze the story", "scan the context",
   "survey the module", or has created spec.md with /spec. Add "--ask" to force
   the legacy question-by-question mode. Do NOT use to refresh context.md alone
   after a code change (use /scan), to correct artifacts once design/plan exist
@@ -24,12 +24,24 @@ Turns a raw `spec.md` into the design-ready pair — a precise `spec.md` plus a
 `context.md` holding the surveyed terrain — resolving on its own everything that has
 a determinable answer and consulting only what genuinely belongs to the developer.
 
+**The skill runs as two actors:**
+
+- **The orchestrator** — this skill, running in the main agent. It owns the
+  interactive gates: the item id, the component pre-resolution, the R5 and P4
+  questions, the handoff grep, and the legacy `--ask` mode. It does not load the
+  dossier or survey the code.
+- **The `clarify-resolver` subagent** — the heavy context work, in two delegations.
+  **RESOLVE** runs R+P (survey via the `CODE_SURVEY` port, decide every unknown,
+  write the dossier to disk) and returns the questions to ask; **IMPLEMENT**
+  receives the answers, reads the dossier, and writes `spec.md` and `context.md`.
+  It cannot ask the user anything: questions are returned, never guessed.
+
 It runs in **three strictly separated phases** (RPI). The separation is not
 cosmetic — each phase needs the complete result of the previous one:
 
 | Phase | Does | Does **not** do |
 |---|---|---|
-| **R — Research** | Gathers all evidence at once: ambiguities, authority sources, module inventory, code precedent, and what only the developer knows | Decides nothing, writes nothing |
+| **R — Research** | Gathers all evidence at once: ambiguities, authority sources, story assets, module inventory, code precedent, and what only the developer knows | Decides nothing, writes nothing |
 | **P — Plan** | Decides **every** unknown with the problem and the terrain in view, and escalates in a single batch what no source determines | Writes nothing to disk |
 | **I — Implement** | Writes the decision log, the precise ACs, and `context.md` | Decides nothing new |
 
@@ -60,10 +72,17 @@ written down.
 
 ## Project profile (read first, always)
 
-Read `.agents/profile.md` at the root of the current project before anything else. If it
-doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
-`.agents/profile.md` and stop — without a profile you don't know this project's
-conventions.
+Read `.agents/profile.yaml` at the root of the current project before anything else.
+If it doesn't exist, tell the user to run `/bootstrap` and stop — without a profile you
+don't know this project's conventions. The file is a YAML map of named blocks; a key
+holding `null` is not configured, so use the fallback this skill declares for it —
+never a guessed value.
+
+Tools come from the profile's `ports` block: this skill names the capability it
+needs — a port — and the block says which command, agent or MCP tool provides it
+here. Run the first adapter that resolves; when one resolves and then fails, report
+that failure instead of trying the next. A port with no usable adapter is **unbound**
+— see the `Degrades` row below.
 
 Any path, branch name, command or tool shown in this document is an example
 resolution; the profile's value wins. The keys this skill reads are listed under
@@ -83,13 +102,13 @@ the run at the start, not after the survey has been paid for.
 |---|---|---|
 | You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
 | An item id was given | the input carries an id matching `STORY_ID_PATTERN` | Ask: "Which item? (e.g. spec-1933)" |
-| `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find `work/active/spec-<number>/spec.md`. Run `/spec spec-<number>` first." (a legacy `hu.md` counts — see Step 2) |
+| `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find `work/active/spec-<number>/spec.md`. Run `/spec spec-<number>` first." (a legacy `hu.md` counts — see step 2) |
 | `spec.md` has acceptance criteria | the `## Acceptance Criteria` section holds at least one numbered AC | Stop: "`spec-<number>` has no acceptance criteria. There is nothing to clarify — run `/spec spec-<number>` again to write them." |
-| The item isn't already clarified | `## Ambiguity Resolution` present, **zero** `[NEEDS CLARIFICATION]` markers left, and `context.md` exists | Don't re-run: offer `/scan` (refresh the context) or `/refine` (adjust ACs) — see Step 4 |
+| The item isn't already clarified | `## Ambiguity Resolution` present, **zero** `[NEEDS CLARIFICATION]` markers left, and `context.md` exists | Don't re-run: offer `/scan` (refresh the context) or `/refine` (adjust ACs) — see orchestrator step 1 |
 
 **Produces** — this is what `/design` looks for
 
-- `spec.md` with **zero** `[NEEDS CLARIFICATION]` markers (the count in "Handoff" is
+- `spec.md` with **zero** `[NEEDS CLARIFICATION]` markers (the count in the handoff is
   the same gate `/design` re-runs before designing anything)
 - an `## Ambiguity Resolution` section in `spec.md` with one entry per unknown —
   decision, rationale, source and confidence — including the searches that came back
@@ -101,15 +120,20 @@ the run at the start, not after the survey has been paid for.
   for, per affected <component>, and a **detected gaps** section that is always
   present even when empty
 
-**Writes** — nothing outside this list
+**Writes** — nothing outside this list; the files are written by the
+`clarify-resolver` subagent, verified by the orchestrator
 
 - `work/active/spec-<number>/spec.md` — the ACs, `## Ambiguity Resolution`,
   `## Technical Context`
 - `work/active/spec-<number>/context.md` — regenerated whole on every run
+- `work/active/spec-<number>/.clarify-dossier.md` — **transient** working file: written
+  by the RESOLVE delegation, read and deleted by the IMPLEMENT delegation. Never a
+  pipeline artifact.
 
 Not `design.md` or `plan.md` (they don't exist yet at this stage), not the project's
-source code or its living docs, and not the authority sources (`docs/rules.md`,
-`CLAUDE.md`, `.agents/profile.md`) — those are read-only inputs here.
+source code or its living docs, not the story's `assets/` folder, and not the
+authority sources (`docs/rules.md`, `CLAUDE.md`, `.agents/profile.yaml`) — those are
+read-only inputs here.
 
 **Never**
 
@@ -123,25 +147,24 @@ source code or its living docs, and not the authority sources (`docs/rules.md`,
 
 **Escalates** — the four classes only: **scope**, **business intent**,
 **irreversible choices**, and **rule conflicts**. Everything else is decided against
-the source hierarchy and recorded with its confidence. They are asked in a **single
-`AskUserQuestion` call, at most 3 per run** (P3/P4); above that the item's scope
-isn't ready and the wrap-up says so. Two questions sit outside that batch and outside
-the budget: the affected <component>s when the catalog can't identify them (R3 — it
-can't be deferred, there is nothing to survey without one), and R5's conditional
-free-text question about unwritten constraints. With `--ask` there is no budget and
-no autonomy — every unknown is asked, one per turn.
+the source hierarchy and recorded with its confidence. The `clarify-resolver` subagent
+returns the candidates; the **orchestrator** asks them — at most 3 per run, in a
+**single `AskUserQuestion` call** (P3/P4); above that the item's scope isn't ready and
+the wrap-up says so. Two questions sit outside that budget: the affected <component>s
+when the catalog can't identify them (R3 — pre-resolved by the orchestrator, it can't
+be deferred), and R5's conditional free-text question about unwritten constraints.
+With `--ask` there is no budget and no autonomy — every unknown is asked, one per
+turn, and the whole run stays in the orchestrator.
 
 **Degrades**
 
-- `CODEGRAPH` at `no` (or no indexed graph on disk) → the **inventory** goes to the
-  `EXPLORER_SUBAGENT` (default `code-explorer`) with an explicit `model:` =
-  `EXPLORER_MODEL`, one call per <component>, in parallel; **precedent** queries are
-  not delegated — those unknowns fall back to level 4-5 sources and are recorded as
-  "no precedent" (R4 fallback).
-- `EXPLORER_SUBAGENT` at `none`, or a host with no subagents → survey inline with
-  Read/Grep, same scope, and say so in the wrap-up.
-- `DOCS_COMPONENTS_INDEX` missing or inconclusive → ask which <component>s the item
-  affects (R3).
+- `CODE_SURVEY` resolving to an adapter **without call paths** → the **inventory** is
+  unaffected, every adapter returns it; but **precedent** queries are not delegated —
+  those unknowns fall back to level 5-6 sources and are recorded as "no precedent"
+  (R4 fallback). Say in the wrap-up which depth you got.
+- `MODULE_ROOT` (stack block) inconclusive — its subdirectories don't map to
+  <component>s with certainty → ask which <component>s the item affects (orchestrator
+  step 2, R3).
 - A missing authority source (`docs/rules.md`, `CLAUDE.md`) → continue without it;
   the hierarchy just drops one level (R2).
 
@@ -151,65 +174,118 @@ no autonomy — every unknown is asked, one per turn.
   throughout this document as `spec-<number>` and `work/active/spec-<number>/`
 - `WORKING_DIRECTORY` — the first `Requires` row
 - `BASE_BRANCH` — the fresh-base check in R3
-- `COMPONENT_TERM` and section 7 — the term for a deployable unit, and the code
+- `COMPONENT_TERM` and the stack block — the term for a deployable unit, and the code
   artifacts to locate per module
 - `STACK_REFS` — `scan-guide.md` (progressive disclosure in R4) and
-  `context-template.md` (the shape of `context.md` in I5)
-- `DOCS_COMPONENTS_INDEX`, `DOCS_COMPONENT_README`, `DOCS_COMPONENT_ARCH`
-  (section 8) — identifying the affected <component>s and reading their docs (R3, R4)
-- `CODEGRAPH` (section 10), `EXPLORER_SUBAGENT` / `EXPLORER_MODEL` (section 9) — the
+  `context-template.md` (the shape of `context.md` in I5). It is a list of packs,
+  base → specific; each `<STACK_REFS>/<file>` is resolved across them most specific
+  first, falling back to this skill's local `references/`
+- `MODULE_ROOT` (stack block) — the folder where the code lives: its subdirectories
+  are the <component>s, and each component's docs (`<component>/README.md`,
+  `<component>/docs/`) feed R4
+- `CODE_SURVEY` (port) — the
   survey and its fallback
 - `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
 
 ---
 
-## Prerequisites
+## Orchestrator flow
 
-### Step 1 — Extract the item id and the mode
+Run these six steps. The drafting PHASEs below (R, P, I) are executed by the
+`clarify-resolver` subagent, which reads this document — the orchestrator does not
+perform them itself (except the legacy `--ask` mode, which stays fully in the
+orchestrator).
+
+### Step 1 — Gates and mode
 
 Extract `spec-<number>` from the input. If absent, ask:
 > "Which item? (e.g. spec-1933)"
 
-**Mode:** autonomous RPI by default. If the input includes `--ask`, run in legacy
-interactive mode (see `## Legacy mode` at the end).
-
-### Step 2 — Verify spec.md exists
-
-```bash
-[ -f work/active/spec-<number>/spec.md ] && echo "OK" || echo "MISSING"
-```
-
-Missing → stop, per the `Requires` row.
-
-> **Legacy items:** if there's an `hu.md` instead of a `spec.md`, it's the same
-> artifact under its former name — work on it in place, without renaming it.
-
-### Step 3 — Read spec.md
-
-Read the whole file. Extract and keep in memory:
-- `type` from the frontmatter (determines the framing block and the tone of the ACs)
-- Title and framing block
-- Complete, numbered list of ACs
-- Business Rules if present
-- **`[NEEDS CLARIFICATION: ...]` markers** inserted by `/spec`
-
-If `## Acceptance Criteria` is absent or empty, stop per the `Requires` row: the ACs
-are the only contract with the rest of the pipeline, and writing them is `/spec`'s
-job, not this skill's.
-
-### Step 4 — Verify existing state
-
+- If the input includes `--ask` → run the legacy interactive mode (see
+  `## Legacy mode` at the end) entirely in the orchestrator, and stop.
+- Verify `spec.md` exists (a legacy `hu.md` counts — work on it in place):
+  `[ -f work/active/spec-<number>/spec.md ]`; missing → stop per `Requires`.
+- Verify the `## Acceptance Criteria` section holds at least one numbered AC;
+  absent/empty → stop per `Requires`.
 - If `## Ambiguity Resolution` already exists **and no markers remain** and
   `context.md` exists → everything was completed earlier. Announce it and offer
   `/scan` (refresh context) or `/refine` (adjust ACs) instead of re-running.
-- If markers remain → run the full RPI cycle over the remaining ones only,
-  **appending** entries to the existing section (don't recreate it).
-- If `context.md` already exists → it gets regenerated at the end; say so in the
-  wrap-up.
+- If markers remain but the above state exists → note that the run will **append**
+  entries to the existing section, not recreate it. If `context.md` exists → it gets
+  regenerated at the end; say so in the wrap-up.
+
+### Step 2 — Pre-resolve the components and check the base (R3)
+
+1. Read `stack.MODULE_ROOT`, list its subdirectories as the <component>s (a `README.md`
+   there is the catalog), and apply them against `spec.md`'s content. If they can't be
+   identified with certainty, **ask now** (can't be deferred — without a component
+   there's nothing to survey):
+   > "Which <COMPONENT_TERM>(s) does this item affect? (e.g. `apps/ledger`)"
+2. Verify (read-only) each component sits on a fresh base:
+   `git -C <component> branch --show-current`, `git status --porcelain`,
+   `git fetch --dry-run`. If any is off `BASE_BRANCH`, dirty or behind → **warn and
+   continue** (you survey whatever is checked out); suggest `/prepare`.
+
+Pass the resolved component list to the delegation.
+
+### Step 3 — Delegate RESOLVE
+
+Spawn the `clarify-resolver` subagent (`subagent_type: "clarify-resolver"` in
+opencode, the same agent in Claude Code) in **RESOLVE** mode. Pass:
+
+- the story id and the absolute path to `work/active/spec-<number>/`
+- the resolved <component>s (from step 2)
+- the absolute path to the project's `.agents/profile.yaml`
+- a pointer that it must read `~/.agents/skills/clarify/SKILL.md` (this document)
+  and follow the drafting PHASEs, and that any question it cannot ask is returned in
+  its report — never silently guessed
+
+It writes the dossier to disk and returns the escalations (max 3, with recommended
+answers), the R5 question (if warranted), and its autonomous decisions. If it returns
+`BLOCKED`, handle its blocker with the user before continuing.
+
+### Step 4 — Ask the developer (one interaction round)
+
+- If the report carries an **R5** question → ask it as plain free text (the unwritten
+  constraints / technical debt question). Record the answer.
+- If it carries **escalations** → ask them all in a **single `AskUserQuestion` call**
+  (up to 3 questions together, never a loop). Each question uses the subagent's
+  recommended answer as the first option, labelled " (Recommended)"; `header` max 12
+  chars; the implicit "Other" covers custom answers — don't add one.
+
+If the report lists no R5 and no escalations → skip this step entirely.
+
+### Step 5 — Delegate IMPLEMENT
+
+Spawn the `clarify-resolver` subagent in **IMPLEMENT** mode. Pass, in addition to the
+step 3 inputs:
+
+- the R5 free-text answer (or `none`/`-`)
+- the selections for each escalation the user made
+
+The `clarify-resolver` subagent's own prompt already encodes the drafting contract
+(dossier handoff, R5 authority over the hierarchy, decision-log-first, EARS, context.md
+template, report format) — do not repeat it, just supply the answers and read the
+report.
+
+### Step 6 — Handoff and review
+
+1. Verify the handoff gate:
+   ```bash
+   grep -c 'NEEDS CLARIFICATION' work/active/spec-<number>/spec.md
+   ```
+   - Count `0` → "Ready to design. Once you've reviewed it, `/design spec-<number>`."
+   - Markers remain → `<N>` markers left — re-run `/clarify spec-<number>`.
+2. Render the review summary from the IMPLEMENT report (the low-confidence list first,
+   then the decided-with-a-source group), add the step 2 base warning and the R4 depth
+   note, and — if the escalation budget cut the list — the P3 warning.
+3. Stop — do not start the design.
 
 ---
 
-# PHASE R — Research
+## Drafting PHASE R — Research
+
+*Executed by the `clarify-resolver` subagent.*
 
 **Phase rule: collect evidence. Don't decide, don't write.**
 
@@ -245,59 +321,77 @@ Sort by impact (this sets the resolution order in P, it is not a cut):
 ### R2 — Load the static authority sources
 
 Read once, before touching the code: `docs/rules.md`, `CLAUDE.md`,
-`.agents/profile.md`. If any is missing, continue without it — it only lowers the
+`.agents/profile.yaml`. If any is missing, continue without it — it only lowers the
 hierarchy by one level.
 
 Consult `references/decision-authority.md` — source hierarchy, escalation test,
 confidence levels, and cases calibrated against real project items. **Read it here,
 once, not per unknown.**
 
-### R3 — Identify affected components and verify a fresh base
+### R2b — Read the story's assets (optional)
 
-1. Read the component catalog (`DOCS_COMPONENTS_INDEX`) and apply it against the
-   item's content. List **all** affected components — there may be more than one.
-
-   If they can't be identified with certainty, **ask now** (this can't be deferred:
-   without a component there's nothing to survey):
-   > "Which <COMPONENT_TERM>(s) does this item affect? (e.g. `apps/ledger`)"
-
-2. Verify (read-only, never mutate git) that each component sits on a fresh base:
+The story workspace may carry an `assets/` folder with material that grounds the
+clarification — mockups, screenshots, wireframes, a signed contract, a data export.
+Not every spec has one; check for it, and continue without comment when it's absent:
 
 ```bash
-git -C <component> branch --show-current
-git -C <component> status --porcelain
-git -C <component> fetch --dry-run 2>&1 | head -1
+[ -d work/active/spec-<number>/assets ] && find work/active/spec-<number>/assets -type f || echo "NO_ASSETS"
 ```
 
-If any is not on `BASE_BRANCH`, has uncommitted changes, or is behind the remote →
-**warn and continue** (you survey whatever is checked out):
-> "`<component>` is not on an up-to-date `<BASE_BRANCH>`. I'll survey the code as it
-> stands; if you want a fresh base, run `/prepare` and re-run this."
+When it exists:
+
+- List every file recursively and **read each one** with Read — images and PDFs
+  included, so mockups, screenshots and contracts are real evidence, not decoration.
+- Treat them as **level-3 authority (`story assets`)** in `decision-authority.md`: the
+  item's own concrete material outranks code precedent for *this* item's unknowns.
+  `docs/rules.md` (level 1) and `CLAUDE.md`/`profile.yaml` (level 2) still beat it.
+- An asset that **states** the answer (a signed contract, a finalized spec) is
+  high-confidence evidence; one that only **suggests** it (a mockup, a sketch) is
+  medium — the distinction is `decision-authority.md` §4.
+- Note what you couldn't parse (an opaque binary, a scanned PDF with no extractable
+  text) and carry that gap into the dossier — **never guess** what an unreadable
+  asset says.
+- Assets are **read-only evidence**: never modified, never copied wholesale into
+  `context.md`. Only the conclusions drawn from them — cited as `assets/<file>` —
+  go into the decision log.
+
+### R3 — Components and fresh base
+
+The **components** are pre-resolved by the orchestrator (orchestrator step 2) — use
+the list you were given; the base warning, if any, is already in your inputs. You do
+not ask, and you do not run git (you have no bash).
 
 ### R4 — Survey the code (one batch, in parallel)
 
-A single batch of graph queries, with **two classes of question**:
+Resolve the `CODE_SURVEY` port from the profile's `ports` block (the packs'
+`ports.yaml` first — base → specific, a later one overriding — the profile on top;
+first available adapter wins):
+
+| Adapter | How |
+|---|---|
+| `mcp:<tool>` | call that MCP tool directly |
+| `agent:<name>` | spawn it with the component name, the item's keywords, the instruction to read the component's docs and the `<STACK_REFS>` `scan-guide.md` (most specific pack wins), and to return verbatim citations |
+| `inline` | survey with your own Read/Grep/Glob |
+
+Fire **two classes of question** in the same response, in parallel:
 
 | Class | Question | How many |
 |---|---|---|
 | **Inventory** | "What's in module M?" — for `context.md` | One per affected component |
 | **Precedent** | "How did we solve X here before?" — for R1's unknowns | One per unknown that warrants it, cap **5** |
 
-**Fire them all in the same response**, in parallel. Only unknowns where "how did we
-solve this before?" is pertinent qualify for *precedent* — lengths, error names,
-formats, column conventions, port patterns. A business-intent unknown never qualifies.
-
-With `CODEGRAPH` at `yes`, one graph query (`codegraph_explore`) returns: symbols with
-verbatim source grouped by file, call paths, blast radius (who depends on what and
-which tests cover it), and framework routes. If it isn't, see the fallback below.
+Only unknowns where "how did we solve this before?" is pertinent qualify for
+*precedent* — lengths, error names, formats, column conventions, port patterns. A
+business-intent unknown never qualifies.
 
 With the results:
 
 1. Identify the key files among those returned and read **only those** with Read,
    applying the progressive disclosure from `<STACK_REFS>/references/scan-guide.md`
-   (default: `../scan/references/scan-guide.md`) — don't explore the whole tree.
-2. Review each component's `DOCS_COMPONENT_README` / `DOCS_COMPONENT_ARCH` and note
-   the **documentation gaps** found.
+   (if no pack in `STACK_REFS` provides it: `../scan/references/scan-guide.md`) — don't
+   explore the whole tree.
+2. Review each component's docs (`<component>/README.md`, `<component>/docs/` under
+   `MODULE_ROOT`) and note the **documentation gaps** found.
 3. Inventory everything `<STACK_REFS>/references/context-template.md` asks for, ready
    for phase I.
 
@@ -305,65 +399,53 @@ With the results:
 
 | Result | Verdict |
 |---|---|
-| One clear analogous case, with verbatim source | **Precedent** — level 3, medium confidence |
-| Several matching analogous cases | **Strong precedent** — level 3, medium-high confidence |
-| Several cases that **contradict each other** | **No precedent, an inconsistency** — drop to level 4 and record it |
-| No relevant results | **No precedent** — drop to level 4. That the repo has no convention here is information for `/design` |
+| One clear analogous case, with verbatim source | **Precedent** — level 4, medium confidence |
+| Several matching analogous cases | **Strong precedent** — level 4, medium-high confidence |
+| Several cases that **contradict each other** | **No precedent, an inconsistency** — drop to level 5 and record it |
+| No relevant results | **No precedent** — drop to level 5. That the repo has no convention here is information for `/design` |
 
 **If the module doesn't show up** → it's just another unknown (not a blocker): note it
 and carry it to P, where it gets escalated along with the rest.
 
-#### Fallback — CodeGraph unavailable
+#### Fallback — the survey came back without call paths
 
-If `CODEGRAPH` is `no`, or no indexed graph exists on disk (`.codegraph/`):
+When `CODE_SURVEY` resolves to an adapter that returns an inventory but no call paths:
 
-1. Suggest initializing it once (`codegraph init`) — after that it stays auto-synced.
-2. Meanwhile, delegate the **inventory** to the `EXPLORER_SUBAGENT` subagent
-   (default `code-explorer`), one call per component, **in parallel**, passing an
-   explicit `model:` = `EXPLORER_MODEL`. If `EXPLORER_SUBAGENT` is `none` — or the
-   host has no subagents — survey inline with Read/Grep instead, same scope, and note
-   it in the wrap-up. The prompt must include: component name,
-   item keywords, the instruction to read the component's docs, locate the module,
-   and the pack's `scan-guide.md` — which **overrides the agent's own generic table**.
-
-   **Explicitly ask for verbatim citations** (`<path>:<line>` + snippet) of
-   conventions that could serve as precedent: column lengths, error types, names, port
-   signatures. Without those, phase P can't cite a level-3 source and those unknowns
-   drop to level 4.
+1. If the project has a graph adapter declared but no index on disk, suggest building
+   it once — after that it stays auto-synced.
+2. The **inventory** still arrives, one call per component, **in parallel**. When the
+   adapter is an agent, the prompt must include: component name, item keywords, the
+   instruction to read the component's docs, locate the module, and the `<STACK_REFS>`
+   `scan-guide.md` — which **overrides the agent's own generic table**.
 3. **Precedent** queries are not delegated as searches of their own: without a graph
    they're expensive. You lean on whatever verbatim citations the inventory already
-   brought back; whatever remains uncovered is resolved with level 4-5 sources.
+   brought back; whatever remains uncovered is resolved with level 5-6 sources.
 
-### R5 — Ask the one thing only the developer knows (conditional)
+### R5 — The one thing only the developer knows (returned as a question)
 
 There are two classes of information that live in no file and no code: **unwritten
 constraints** and **known technical debt**. If either could change the resolution of
-an unknown, ask **now** — before deciding.
-
-Ask in plain text (free-form answer, not `AskUserQuestion`):
-
-> "I've surveyed <component(s)>. Is there anything **not written down anywhere** that
-> I should account for? Constraints ("don't touch table X", "don't break the current
-> contract"), technical debt in the affected area, or integrations that don't exist in
-> the code yet.
->
-> If there's nothing, answer `-` and I'll continue."
-
-**It is conditional:** if every unknown was covered by formal sources or by the
-survey, **ask nothing** and go straight to P.
+an unknown, return the free-text question in your report — the **orchestrator** asks
+it. It is **conditional:** if every unknown was covered by formal sources or by the
+survey, return `none`.
 
 ### Research dossier
 
-At the close of R, hold in memory: for each unknown its text, priority, consulted
-sources and **what was found and what wasn't**; the complete inventory per component;
-the documentation gaps; and the developer's answer if there was one. That dossier is
-the only input to phase P.
+At the close of R, write the dossier to `work/active/spec-<number>/.clarify-dossier.md`
+(a transient working file): for each unknown its text, priority, consulted sources,
+**what was found and what wasn't**, and — once P decides — its decision, rationale,
+source and confidence; the story's assets (or their absence) and what each one settled
+or suggested; the complete inventory per component (in `context-template.md` shape);
+the documentation gaps; and the R5 answer if there was one. That dossier is the only
+input to phase I.
 
 ---
 
-# PHASE P — Plan
+## Drafting PHASE P — Plan
 
-**Phase rule: decide everything. Write nothing to disk.**
+*Executed by the `clarify-resolver` subagent.*
+
+**Phase rule: decide everything. Write nothing to disk except the dossier.**
 
 ### P1 — Classify every unknown
 
@@ -371,9 +453,9 @@ Walk the complete list (the ones from the ACs and the ones that surfaced during 
 survey). For each, with the dossier in view:
 
 1. **Search the hierarchy** for the source that **determines** the answer:
-   `docs/rules.md` → `CLAUDE.md`/`profile.md` → code precedent (R4) → formal
-   standard → the item's own invariants. "Determines" = the answer follows from it,
-   not merely that it's compatible with it.
+   `docs/rules.md` → `CLAUDE.md`/`profile.yaml` → story assets (R2b) → code precedent
+   (R4) → formal standard → the item's own invariants. "Determines" = the answer
+   follows from it, not merely that it's compatible with it.
 2. **If one determines it** → autonomous decision; record decision, rationale, source
    and confidence (high/medium/low).
 3. **If none determines it** → apply the escalation test: does it fall under **scope**,
@@ -405,31 +487,28 @@ Over the **complete** candidate list, pick the highest-impact ones.
 **Budget: at most 3 escalations per run.** It's not a blind cut, it's a signal: if
 **more than 3** unknowns are about product intent or scope, the item isn't ready to be
 clarified. Escalate the 3 with the highest impact, resolve the rest at low confidence,
-and **say so explicitly in the wrap-up**:
+and **say so explicitly** in your report:
 
 > "<N> unknowns needed your judgment but the budget is 3. I resolved the others at low
 > confidence — it may be worth reviewing this item's scope before moving on."
 
-### P4 — Escalate in a single call
+### P4 — Return the escalation batch
 
-The selected ones are asked via `AskUserQuestion`, **all in a single call** (up to 3
-questions together). Never a one-per-turn loop.
-
-For each question:
-- `question`: the unknown stated directly, mentioning why it couldn't be resolved alone.
-- `header`: short label (max 12 characters) identifying the AC (e.g. "AC-2 scope").
-- `options`: 2-4 alternatives. The recommended one **first**, with `" (Recommended)"`
-  at the end of the `label`; its `description` carries the rationale in 1-2 sentences.
-- The implicit "Other" already covers custom answers — don't add an "Other" option.
+Put the selected ones in your report's "Escalations" list, each with a `question`, a
+short `header` (max 12 chars), and 2-4 `options` with the recommended one **first**
+(" (Recommended)") and its rationale in the `description`. The **orchestrator** asks
+them all in a **single `AskUserQuestion` call** — never a one-per-turn loop.
 
 ### Decision table
 
 At the close of P: per unknown → decision, rationale, source, confidence, and whether
-it was autonomous or consulted. **Nothing has been written yet.**
+it was autonomous or escalated — all written into the dossier.
 
 ---
 
-# PHASE I — Implement
+## Drafting PHASE I — Implement
+
+*Executed by the `clarify-resolver` subagent.*
 
 **Phase rule: apply what was decided. Decide nothing new.**
 
@@ -448,11 +527,11 @@ reconstruct; reapplying edits is trivial.
 - **AC-2 · autonomous (high):** Which HTTP code for an empty list? → **200 with an
   empty array**.
   *Rationale:* it's the REST standard for collections with no results; 404 is reserved
-  for a nonexistent resource. *Source:* HTTP convention (level 4).
+  for a nonexistent resource. *Source:* HTTP convention (level 5).
 
 - **AC-3 · autonomous (medium):** Max length of `Payee`? → **255**.
   *Rationale:* consistency with the analogous field that already exists.
-  *Source:* `apps/finances/.../transaction.entity.ts:merchant` (level 3).
+  *Source:* `apps/finances/.../transaction.entity.ts:merchant` (level 4).
 
 - **AC-4 · consulted:** `dryRun` on every write command or only where the case is
   clear? → **On all of them, no exceptions** (developer's decision).
@@ -500,59 +579,40 @@ the whole section.**
 
 ### I5 — Write `context.md`
 
-Pour R4's inventory into `<STACK_REFS>/references/context-template.md` (default:
-`../scan/references/context-template.md`) and save it at
+Pour the dossier's inventory into `<STACK_REFS>/references/context-template.md`
+(if no pack in `STACK_REFS` provides it: `../scan/references/context-template.md`)
+and save it at
 `work/active/spec-<number>/context.md`.
 
 Always include the **detected gaps** section: what wasn't found, the missing
 documentation, and the repo inconsistencies found in R4. `/design` and `/plan` depend
 on that list as much as on the inventory.
 
-### I6 — Batch review
+### I6 — Batch review (returned to the orchestrator)
 
-Show in the chat (not in the files), ordered by **ascending confidence** — the shaky
-ones on top, which is where the eye needs to land:
-
-```
-Clarified spec-<number>: <N> autonomous decisions, <M> consulted, <K> ACs in EARS.
-Survey: <C> component(s), <Q> graph queries, <S> precedents, <T> without precedent.
-
-⚠ Review these carefully (low confidence):
-  1. AC-6 — <question> → <decision>  ·  no precedent in the repo
-
-Decided with a firm source:
-  2. AC-2 — <question> → <decision>  ·  <source>
-  3. AC-3 — <question> → <decision>  ·  <source>
-
-context.md: <n> modules inventoried, <g> gaps detected.
-
-To revert any of them: "change 2 to <other decision>".
-```
-
-- If there were no low-confidence ones, omit the `⚠` group.
-- If the budget cut escalations, include P3's warning.
+Include in your report the review list, ordered by **ascending confidence** — the
+shaky ones on top, which is where the eye needs to land. The orchestrator renders it.
 
 ### Handoff
 
-```bash
-grep -c 'NEEDS CLARIFICATION' work/active/spec-<number>/spec.md
-```
+Your report states the `[NEEDS CLARIFICATION]` marker count remaining. The
+orchestrator re-runs the grep itself (`grep -c 'NEEDS CLARIFICATION'
+work/active/spec-<number>/spec.md`) before closing — count `0` → "Ready to design",
+else re-run `/clarify`.
 
-- Count `0` → "Ready to design. Once you've reviewed it, `/design spec-<number>`."
-- Markers remain → "<N> markers left. `/design` won't proceed until they're resolved —
-  re-run `/clarify spec-<number>`."
-
-Stop — do not start the design.
+Delete the dossier file (`work/active/spec-<number>/.clarify-dossier.md`) when the
+artifacts are written.
 
 ---
 
 ## Legacy mode (`--ask`)
 
-With `--ask` there is no RPI separation: every unknown is resolved with
-`AskUserQuestion`, one at a time, in a loop, with no budget and no auto-resolution;
-EARS is offered rather than applied; and the technical context is surveyed by asking
-(component, artifacts, patterns, constraints, integrations, technical debt), one per
-turn. The code inventory and `context.md` are produced all the same.
+Runs entirely in the **orchestrator** — no subagent. With `--ask` there is no RPI
+separation: every unknown is resolved with `AskUserQuestion`, one at a time, in a
+loop, with no budget and no auto-resolution; EARS is offered rather than applied; and
+the technical context is surveyed by asking (component, artifacts, patterns,
+constraints, integrations, technical debt), one per turn. The code inventory and
+`context.md` are produced all the same.
 
 Useful when the item touches terrain where you don't want anything decided out of your
 sight — typically a new domain or strong contractual implications.
@@ -560,8 +620,9 @@ sight — typically a new domain or strong contractual implications.
 ---
 
 ## Output language
+**Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
 `OUTPUT_LANGUAGE` if the project doesn't declare it): the ACs you rewrite in
 `spec.md`, the rationale of each entry in the decision log, and `context.md`'s
 inventory prose. Never translate them to English on your own.
@@ -583,16 +644,19 @@ user's language when that differs.
 |-------|-------|------------|
 | spec.md doesn't exist | `/spec` never ran | STOP: tell the user to run `/spec spec-<number>` first |
 | spec.md exists but has no ACs | `/spec` left the section empty | STOP: the ACs are the contract with the rest of the pipeline — run `/spec spec-<number>` again to write them |
-| `EXPLORER_SUBAGENT: none` and no graph | Project that delegates nothing | Survey inline with Read/Grep, same scope; note it in the wrap-up |
-| Component not identifiable | Item with no clear keywords | Ask in R3 — it can't be deferred, without a component there's nothing to survey |
+| `CODE_SURVEY` resolving to `inline` | Project that delegates nothing | The subagent surveys inline with Read/Grep, same scope; note it in the wrap-up |
+| Component not identifiable | Item with no clear keywords | Ask in orchestrator step 2 — it can't be deferred, without a component there's nothing to survey |
 | Module not found in the component | New module or under a different name | Not a blocker: it's just another unknown, escalated in P with the rest |
 | A new doubt appears in phase I | Phase R was incomplete | Resolve it with the hierarchy and mark it low confidence; don't open questions in I |
-| The graph returns contradictory results | The repo solved the same thing two ways | Not a precedent: drop to level 4 and record the inconsistency in `context.md` |
+| The graph returns contradictory results | The repo solved the same thing two ways | Not a precedent: drop to level 5 and record the inconsistency in `context.md` |
 | More than 3 unknowns qualify for escalation | Item with a lot of open product decisions | Escalate the 3 with the highest impact and warn that the scope may not be ready |
-| `CODEGRAPH: no` in the profile | Project without an indexed graph | Delegate the **inventory** to the explorer subagent; **precedents** are resolved with levels 4-5 |
+| `CODE_SURVEY` without call paths | Project without an indexed graph | The **inventory** arrives anyway; **precedents** are resolved with levels 4-5 |
 | Component off `BASE_BRANCH` | Base not prepared | Warn and continue — you survey whatever is checked out; suggest `/prepare` |
 | Only `context.md` needs refreshing | The code changed, the ACs didn't | Use `/scan spec-<number>` — don't re-clarify |
+| `assets/` has files that can't be read | Opaque binary, scanned PDF with no extractable text | List them in the wrap-up and carry the gap to the dossier — never guess what an unreadable asset says |
 | The user reverts several decisions in a row | Rubric miscalibrated for the domain | Apply the changes and suggest `--ask` for the next items in that area |
+| The RESOLVE delegation reports `BLOCKED` | It cannot even build the unknowns list (missing context, contradictory spec) | Show the blocker to the user; fix the input (`/refine`/`/spec`) and re-delegate |
+| The handoff grep is non-zero | IMPLEMENT left a resolved marker in place | Stop: the run isn't complete — re-run `/clarify spec-<number>` |
 
 ---
 
@@ -600,31 +664,33 @@ user's language when that differs.
 
 **Input:** `/clarify spec-1933`
 
-**Phase R:**
+**Orchestrator:**
+- Gates OK; `apps/ledger` identified from `MODULE_ROOT` + spec keywords; clean `develop`.
+
+**RESOLVE delegation (clarify-resolver):**
 - R1: 3 unknowns — AC-2 with no HTTP code, "service type" undefined, multi-value
   filter with no semantics (AND/OR).
 - R2: loads `rules.md`, `CLAUDE.md`, the profile and the rubric.
-- R3: identifies `apps/ledger`; it's on a clean `develop`.
 - R4: **three queries in a single batch** — one inventory (`apps/ledger` zones module)
   and two precedent (`"service type enum"`, `"list empty response"`). The first
   precedent query finds `ServiceType`; the second returns nothing.
-- R5: all three unknowns were covered by formal sources or are business ones →
-  **nothing is asked**.
+- P: AC-2 → level 5 REST convention (autonomous, high: 200 with empty array);
+  AC-1 "service type" → level 4 `ServiceType` (autonomous, medium); AC-1 AND/OR →
+  nothing determines it, changes what the operator sees → **escalation** (business
+  intent).
+- Returns: 1 escalation with "OR" recommended, no R5 question. Writes the dossier.
 
-**Phase P:**
+**Orchestrator:** one `AskUserQuestion` call. The user picks OR.
 
-| Unknown | Source | Result |
-|---|---|---|
-| AC-2 HTTP code | Level 4 — REST convention | Autonomous (high): 200 with an empty array |
-| AC-1 "service type" | Level 3 — `ServiceType` found in R4 | Autonomous (medium): the enum's values |
-| AC-1 AND or OR | Nothing determines it; it changes what the operator sees | **Escalate** — business intent |
+**IMPLEMENT delegation (clarify-resolver):** reads the dossier + the answer; writes
+the decision log first, then the ACs, EARS on AC-1, no `Technical Context` (the
+developer declared no constraints), `context.md` with the inventoried module and 1
+documentation gap; deletes the dossier.
 
-- P2: no interdependencies. P3: 1 candidate, within budget.
-- P4: one `AskUserQuestion` call. The user picks OR.
-
-**Phase I:** log first, then ACs, EARS on AC-1, no `Technical Context` (the developer
-declared no constraints), `context.md` with the inventoried module and 1 documentation
-gap, and the closing block.
+**Orchestrator:** `grep -c 'NEEDS CLARIFICATION'` → `0`. Review summary:
+> Clarified spec-1933: 2 autonomous decisions, 1 consulted, 1 AC in EARS.
+> Survey: 1 component, 3 graph queries, 1 precedent, 1 without precedent.
+> Ready to design. Once you've reviewed it, `/design spec-1933`.
 
 **Before (two skills):** `/clarify` with 4 looping questions and a narrow probe, then
 `/scan` re-exploring the same module with its own round of unknowns.

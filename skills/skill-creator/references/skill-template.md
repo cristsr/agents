@@ -218,7 +218,7 @@ If you see "Connection refused":
 | Unambiguous | "CRITICAL: verify the name isn't empty" | "Make sure to validate things properly" |
 | Concise | Bullets and numbered lists | Long paragraphs |
 | Progressive disclosure | Core in `SKILL.md`, detail in `references/` | Everything inline |
-| Config keys inline | ``Run `FULL_TEST_CMD` (e.g. `npx jest`)`` in the sentence itself | A `\| In this document \| Key in profile.md \|` table the reader must remember to consult |
+| Config keys inline | ``Check out `BASE_BRANCH` (e.g. `develop`)`` in the sentence itself | A `\| In this document \| Key in profile.yaml \|` table the reader must remember to consult |
 
 ---
 

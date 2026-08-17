@@ -59,5 +59,5 @@ an assumption as a requirement.
 
 - Section headings: English (they are structural — other skills read them by name)
 - Component names, classes, paths, identifiers, endpoints: `IDENTIFIER_LANGUAGE`
-- Descriptive bullet text: `ARTIFACT_LANGUAGE` (profile, section 5 — falls back to
+- Descriptive bullet text: `ARTIFACT_LANGUAGE` (profile, language block — falls back to
   `OUTPUT_LANGUAGE`)

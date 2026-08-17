@@ -41,10 +41,17 @@ only the user.
 
 ## Project profile (read first, always)
 
-Read `.agents/profile.md` at the root of the current project before anything else. If it
-doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
-`.agents/profile.md` and stop — without a profile you don't know this project's
-conventions.
+Read `.agents/profile.yaml` at the root of the current project before anything else.
+If it doesn't exist, tell the user to run `/bootstrap` and stop — without a profile you
+don't know this project's conventions. The file is a YAML map of named blocks; a key
+holding `null` is not configured, so use the fallback this skill declares for it —
+never a guessed value.
+
+Tools come from the profile's `ports` block: this skill names the capability it
+needs — a port — and the block says which command, agent or MCP tool provides it
+here. Run the first adapter that resolves; when one resolves and then fails, report
+that failure instead of trying the next. A port with no usable adapter is **unbound**
+— see the `Degrades` row below.
 
 Any path, branch name or command shown in this document is an example resolution; the
 profile's value wins. The keys this skill reads are listed under **Profile keys** in
@@ -109,7 +116,7 @@ which is precisely why `git push` sits in `Never`.
 staged by something before this run (Step 3), or an index that doesn't match the
 expected group after a `git add`. Ask; never guess and never commit "to save time".
 
-**Degrades** — if `/sync` skipped the gates or `CI_GATES_CMD` is `—`, the PR body's
+**Degrades** — if `/sync` skipped the gates or `CI_GATES` is unbound, the PR body's
 Testing section says the gates were not run. Never report a pass you didn't see.
 
 **Profile keys**
@@ -118,7 +125,7 @@ Testing section says the gates were not run. Never report a pass you didn't see.
   written throughout this document as `spec-<number>` and `work/done/spec-<number>/`
 - `WORKDIR_ACTIVE` — only to tell "not synced yet" from "wrong story number" in `Requires`
 - `WORKING_DIRECTORY`, `BASE_BRANCH` — the two gates in `Requires`, and the PR's base
-- `CI_GATES_CMD` — named (not run) in the PR body's Testing section (Step 4)
+- `CI_GATES` (port) — named (not run) in the PR body's Testing section (Step 4)
 - `OUTPUT_LANGUAGE` — see "Output language"
 
 ---
@@ -143,7 +150,7 @@ git log --oneline -10
   doubt, ask the user — don't assume.
 - **Always use conventional commits**, regardless of past repo style. Every
   message is `type(scope): description` — imperative mood, no period at end,
-  description in **English** (profile, section 5: the git surface is English
+  description in **English** (profile, language block: the git surface is English
   regardless of `ARTIFACT_LANGUAGE`). Scopes match the module/package name
   (e.g. `finances`, `ledger`, `core`, `shared`). See
   [conventionalcommits.org](https://www.conventionalcommits.org/).
@@ -221,7 +228,7 @@ e.g. `feat(movement): spec-0009 add transfers between own accounts`.
 - Story archived in `work/done/spec-<number>/` (via /sync)
 
 ## Testing
-- `CI_GATES_CMD` (tests) ✓ (result from /sync Step 2) — or "not run", if /sync
+- `CI_GATES` (tests) ✓ (result from /sync Step 2) — or "not run", if /sync
   skipped the gates or the key is `—`
 
 ## Migrations
@@ -299,10 +306,11 @@ commands by hand.
 ---
 
 ## Output language
+**Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
 **Commit messages and the PR are written in English** — always, and deliberately
 independent of `ARTIFACT_LANGUAGE`: git history and the PR are the repo's shared
-record, read outside the project. The profile's section 5 states this exception
+record, read outside the project. The profile's language block states this exception
 explicitly, so it isn't a decision this skill makes on its own.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).

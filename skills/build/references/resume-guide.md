@@ -27,7 +27,7 @@ Categorize every task:
 Before resuming, always report:
 
 > "I found N tasks already completed:
-> - Task 0: Prepare the branch [X]
+> - Task 0: Verify the working branch [X]
 > - Task 1: TypeORM entity [X]
 > - ...
 >

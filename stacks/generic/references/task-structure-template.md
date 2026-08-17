@@ -29,11 +29,11 @@ describe('ClassName', () => {
 
 **Step 2: Run it and confirm it fails**
 
-> Command from the profile: `MODULE_TEST_CMD` (section 10) — run it against the specific spec.
+> The command comes from the `TESTS.module` port — run it against the specific spec.
 
 ```bash
 cd <component>
-<MODULE_TEST_CMD or equivalent against the spec>
+<TESTS.module adapter, against the spec>
 cd ..
 ```
 Expected: FAIL — "Cannot find module" or "X is not a function"
@@ -49,7 +49,7 @@ In `<component>/<path>/<file>.<ext>`:
 **Step 4: Run it and confirm it passes**
 
 ```bash
-<MODULE_TEST_CMD or equivalent against the spec>
+<TESTS.module adapter, against the spec>
 ```
 Expected: PASS
 ```
@@ -73,10 +73,10 @@ header belonging to those groups with a trailing `[P]`:
 ```
 
 `[P]` means: this task has no dependency on tasks from a *different* `[P]`
-group in the same plan. `/build` may batch the file operations (Edit/Write)
-and test runs of tasks from different `[P]` groups using parallel tool calls
-within the same response, instead of strictly one-at-a-time. Tasks within the
-*same* group still execute in their written order.
+group in the same plan. `/build` executes the groups concurrently, delegating
+each one to its own `code-implementer` subagent (one subagent per group,
+launched in parallel), and re-verifies each group's tests before marking its
+tasks `[X]`. Tasks within the *same* group still execute in their written order.
 
 Do not mark tasks `[P]` if there is any chance one group's code imports or
 depends on the other's output.
@@ -85,5 +85,5 @@ depends on the other's output.
 
 - `Task N` and `Step N` are structural — `/build` parses them, always English.
   Task titles, step descriptions and expected outputs: `ARTIFACT_LANGUAGE`
-  (profile, section 5).
+  (profile, language block).
 - Code, paths and commands: verbatim.

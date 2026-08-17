@@ -2,8 +2,8 @@
 
 Reference for `/hexagonal-audit`. Output is a **findings report**, not a refactor.
 Do not change code unless the user explicitly asks for the fixes to be applied.
-The concrete syntax per stack (detectors, examples) lives in the stack pack
-(`<STACK_REFS>/architecture/audit-smells.md`, `audit-scan.sh` for TS/NestJS).
+The concrete syntax per stack (detectors, examples) lives in the framework skill's
+references (the `nestjs` skill's `references/audit-smells.md`, plus its `audit-scan.sh`).
 
 ---
 
@@ -22,15 +22,15 @@ find <src> -type f <language file extensions> -not -path "*/node_modules/*" | so
 cat <the stack's alias config>
 ```
 
-Then run the boundary scan if the stack pack provides a detector:
+Then run the boundary scan if the framework skill provides a detector:
 
 ```bash
-bash <STACK_REFS>/architecture/audit-scan.sh <src>     # TS/NestJS pack
+bash <framework-skill-dir>/references/audit-scan.sh <src>   # e.g. ~/.agents/skills/nestjs/references/audit-scan.sh
 ```
 
 If no detector exists for the stack, map manually with the language's equivalents.
 It prints one section per detector, grouped HIGH / MEDIUM / LOW / WIRING, and maps
-directly onto the smell catalog (the pack's `audit-smells.md`).
+directly onto the smell catalog (the framework skill's `audit-smells.md`).
 
 Four of its sections read the **shape** of the tree rather than the contents of
 files — loose files at a layer root, files at a module root, the role folders each
@@ -103,11 +103,12 @@ architectural gain to diff size, in the order they should be done.
 
 The stack-neutral smells are listed in `../hexagonal-architecture/references/rules.md`
 (violation smells per rule). The stack-specific catalog — concrete detectors,
-syntax examples, framework traps — lives in `<STACK_REFS>/architecture/audit-smells.md`.
+syntax examples, framework traps — lives in the framework skill's audit catalog
+(`audit-smells.md`).
 
 ## Report template
 
-Write the report's prose in **`ARTIFACT_LANGUAGE`** (profile, section 5 — falls back
+Write the report's prose in **`ARTIFACT_LANGUAGE`** (profile, language block — falls back
 to `OUTPUT_LANGUAGE`; see the Output Language rule in `SKILL.md`). The template below
 is English scaffolding: keep the headings, and keep file paths, rule names, severities
 and code in English.

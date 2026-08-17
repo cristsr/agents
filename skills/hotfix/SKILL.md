@@ -17,27 +17,6 @@ description: >
 
 # hotfix
 
-## Project profile (read first, always)
-
-Read `.agents/profile.md` at the root of the current project before anything else. If it
-doesn't exist, tell the user to copy `~/.agents/sdd-profile.template.md` to
-`.agents/profile.md` and stop — without a profile you don't know this project's
-conventions. Then verify `pwd` matches `WORKING_DIRECTORY` (absolute path) and `cd`
-there if it doesn't, before running any command.
-
-**The literals in this document are only an example resolution.** The real values come
-from the project's `profile.md`; if they differ, the profile wins:
-
-| In this document | Key in profile.md |
-|---|---|
-| `spec-<number>` | `STORY_ID_PATTERN` |
-| `work/active/spec-<number>/` | `WORKDIR_ACTIVE` |
-| "microservice" in the prose | `COMPONENT_TERM` (section 7) — read the term from the profile |
-| Jest / `*.spec.ts` | `TEST_FRAMEWORK` |
-| NestJS · TypeORM | section 7 "Stack and architecture" |
-
----
-
 ## Overview
 
 Bridge between `/refine` (which corrects artifacts) and `/build` (which executes
@@ -50,49 +29,127 @@ existing `[X]`s) or `/refine` (which touches neither code nor plan.md), this ski
 1. Corrects/adds the AC in `spec.md`
 2. Appends ONE targeted `Task HOTFIX-N` to the end of `plan.md`
 3. Executes only that task, with TDD discipline
-4. Updates the AC → Task traceability
+4. Updates the AC → Task traceability and the plan's `## AC Coverage`
 
 **Announce at start:** "Applying a hotfix on spec-<number>."
 
-**Output:** `spec.md` (AC corrected/added + a `## Hotfixes` section),
-`plan.md` (HOTFIX-N task appended and marked `[X]`), corrected code.
+---
+
+## Project profile (read first, always)
+
+Read `.agents/profile.yaml` at the root of the current project before anything else.
+If it doesn't exist, tell the user to run `/bootstrap` and stop — without a profile you
+don't know this project's conventions. The file is a YAML map of named blocks; a key
+holding `null` is not configured, so use the fallback this skill declares for it —
+never a guessed value.
+
+Tools come from the profile's `ports` block: this skill names the capability it
+needs — a port — and the block says which command, agent or MCP tool provides it
+here. Run the first adapter that resolves; when one resolves and then fails, report
+that failure instead of trying the next. A port with no usable adapter is **unbound**
+— see the `Degrades` row below.
+
+Any path, branch name or command shown in this document is an example resolution; the
+profile's value wins. The keys this skill reads are listed under **Profile keys** in
+the `Contract` below.
 
 ---
 
-## CRITICAL: Verify this is actually a post-build case
+## Contract
 
-```bash
-[ -f work/active/spec-<number>/plan.md ] || echo "MISSING: plan.md"
-grep -c '\[X\]' work/active/spec-<number>/plan.md 2>/dev/null || echo 0
-```
+What this skill needs, what it leaves behind, and what it may not do. **Check every
+`Requires` row before PHASE 1** — a hotfix on a story that was never built, or that is
+already closed, is the wrong tool, and the cost of finding out afterwards is an edited
+`spec.md`.
 
-- If `plan.md` doesn't exist → STOP:
-  "Nothing has been built for spec-<number> yet. Use `/refine` to correct the relevant
-  artifact and continue with `/plan` and `/build` normally — `/hotfix` is only for
-  post-build defects."
+`<flow-artifact>` = `docs/diagram.md` if `DESIGN_OUTPUT_MODE = full` (the default), or
+`docs/flows/*.md` if `full-flow`. `<api-artifact>` = `docs/api.delta.yaml` if
+`API_CONTRACT_MODE = delta` (the default), otherwise `docs/api.yaml`. Both are read
+only for the coherence warning in PHASE 6.
 
-- If `plan.md` exists but has NO `[X]` task → STOP:
-  "The plan hasn't been executed yet (`/build` ran no tasks). Fix it with `/refine`
-  and follow the normal flow — no `/hotfix` needed yet."
+**Requires**
 
----
+| Condition | Check | If it fails |
+|---|---|---|
+| You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
+| The story is still open | `work/active/spec-<number>/` exists | If it's under `work/done/spec-<number>/`, `/sync` already closed and archived it: stop and ask whether to reopen the workspace (move it back) or open a new item — never hotfix inside `work/done/` |
+| `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: there are no ACs to correct, which is the whole premise of a hotfix |
+| `plan.md` exists | `[ -f work/active/spec-<number>/plan.md ]` | Stop: "Nothing has been built for spec-<number> yet. Use `/refine` to correct the relevant artifact and continue with `/plan` and `/build` normally — `/hotfix` is only for post-build defects." |
+| It really is post-build | `grep -c '\[X\]' work/active/spec-<number>/plan.md` ≥ 1 | Stop: "The plan hasn't been executed yet (`/build` ran no tasks). Fix it with `/refine` and follow the normal flow — no `/hotfix` needed yet." |
+| Not on a base branch | `git branch --show-current` ∉ {`main`, `master`, `BASE_BRANCH`} | Stop: "You're on `<branch>`, a base branch. Switch to the story's working branch before continuing." |
 
-## CRITICAL: Never execute on main or master
+The branch row is strict here, as in `/build`'s: the working branch is created by
+`/prepare`, not by the plan — `Task 0` only verifies it — so being on the base branch
+has no legitimate reading.
 
-```bash
-git branch --show-current
-```
+**Produces** — what `/sync` will read when the story closes
 
-If the result is `main` or `master` → stop:
-"You're on the `main`/`master` branch. Switch to the story's working branch before
-continuing."
+- `spec.md` with the AC corrected or added, and a `## Hotfixes` entry for `HOTFIX-N`
+- `plan.md` with `### Task HOTFIX-N: … [X]` appended under `## Hotfixes`, the
+  "AC → Task traceability" row updated, and `## AC Coverage` carrying **one line per
+  AC in `spec.md`** — including the corrected or newly added one, with a concrete test
+  reference and no `✗`. `/sync` gates on exactly that; a hotfix that adds an AC without
+  its coverage line leaves the story unclosable
+- the affected module's suite green, regression test included
 
----
+**Writes** — nothing outside this list
 
-## CRITICAL: Never execute commits
+- `work/active/spec-<number>/spec.md` — the AC and the `## Hotfixes` section only
+- `work/active/spec-<number>/plan.md` — the `HOTFIX-N` task, its `[X]`, the
+  traceability row and the `## AC Coverage` line
+- the project's source and test files the single hotfix task names
 
-Never run `git add`, `git commit`, or `git push`. Version control is managed by the
-user.
+Not `context.md`, `design.md` or anything under the story's `docs/` (that's `/refine`,
+and PHASE 6 warns instead of editing), and not the unit's living docs (that's `/sync`).
+
+**Never**
+
+- **Allowed (read-only):** reading any project file, `git branch --show-current`,
+  `git status`, `git diff`.
+- **Forbidden:** `git add`, `git commit`, `git push` and any other state-changing git
+  command. Version control is managed by the user.
+- **Forbidden:** regenerating `plan.md`, renumbering existing tasks, or clearing
+  another task's `[X]`. A hotfix only ever *appends*.
+- **Forbidden:** more than one `Task HOTFIX-N` per invocation. Two defects are two
+  hotfixes; a defect that needs several tasks is not a hotfix (see `Escalates`).
+
+**Escalates**
+
+- The gap implies a new <component>, endpoint or table (PHASE 1, size check): the story
+  was badly sized — ask, and recommend `/refine` + a full `/plan` instead.
+- The corrected AC contradicts another existing AC: show both, confirm before applying.
+- The AC wording itself: always confirmed with `AskUserQuestion` before `spec.md` is
+  touched (PHASE 1, step 4).
+- The story is already archived under `work/done/` (see `Requires`).
+
+**Degrades**
+
+- `TESTS.module` unbound → the <component>'s full suite (`TESTS.full`).
+- `STACK_REFS` unset → the local (generic) `references/` of `/spec` and `/plan` for the
+  AC and task templates. When set, each `<STACK_REFS>/<file>` resolves across the listed
+  packs most specific first, then to the same local `references/`.
+- `conventions-reviewer` unavailable → note it in the close-out summary; never block
+  the hotfix on it.
+
+**Reverting** — both artifacts this skill overwrites are tracked by git on the story's
+working branch: `git checkout -- work/active/spec-<number>/spec.md` (or `plan.md`)
+restores the committed version, and the code change is the single task's diff. Before
+the story's first commit there is nothing to restore.
+
+**Profile keys**
+
+- `STORY_ID_PATTERN`, `WORKDIR_ACTIVE`, `WORKDIR_DONE` — the story's id and workspace,
+  written throughout this document as `spec-<number>` and `work/active/spec-<number>/`
+- `WORKING_DIRECTORY`, `BASE_BRANCH` — the location and branch gates in `Requires`
+- `TEST_FRAMEWORK` — the shape of the test files, for the TDD cycle in
+  PHASE 5
+- `API_CONTRACT_MODE`, `DESIGN_OUTPUT_MODE` — which contract and flow artifacts PHASE 6
+  checks for misalignment
+- `STACK_REFS` and the stack block (`COMPONENT_TERM`, `LANGUAGE`, `FRAMEWORK`, `ORM`,
+  `MODULE_ROOT`) — the task template (resolved across the listed packs, most specific
+  first, generic fallback) and the term for a deployable unit
+- `STORY_ID_LEGACY_PREFIXES` — reading items created under an older id prefix
+- `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
 
 ---
 
@@ -128,7 +185,7 @@ user.
 
 ### Size check (important)
 
-If the missing AC implies a new microservice, a new endpoint, or a new table — that's
+If the missing AC implies a new <component>, a new endpoint, or a new table — that's
 **not a hotfix**, it's a badly sized story. Use `AskUserQuestion`:
 - `question`: "This exceeds a hotfix's scope (it implies <reason>). How do we proceed?"
 - `header`: "Scope"
@@ -166,10 +223,10 @@ hotfix flow.
 2. If the AC already existed: identify which Task(s) cover it — those are the files
    most likely to be touched.
 3. Read `work/active/spec-<number>/context.md` to confirm the exact file paths of the
-   affected microservice.
+   affected <component>.
 4. If the AC is new (no prior tasks): the file to modify is the one that already
    implements the closest related behavior — identify it by reading the affected
-   microservice's code.
+   <component>'s code.
 
 ---
 
@@ -177,8 +234,9 @@ hotfix flow.
 
 Append to the end of `plan.md`, under a `## Hotfixes` header (create it if it doesn't
 exist), a task with the same structure `docs/architecture` already defines for normal
-tasks — consult `<STACK_REFS>/references/task-structure-template.md` (default: the
-local `../plan/references/task-structure-template.md` — generic) — but numbered
+tasks — consult `<STACK_REFS>/references/task-structure-template.md` (if no pack in
+`STACK_REFS` provides it: the local `../plan/references/task-structure-template.md` —
+generic) — but numbered
 `HOTFIX-N` instead of a sequential task number:
 
 ```markdown
@@ -212,26 +270,33 @@ Same TDD discipline as `/build` Step 2, but scoped to this single task:
 2. Regression test → confirm it fails → implement the minimum fix →
    confirm it passes
 3. Mark `### Task HOTFIX-N: ... [X]` in `plan.md`
-4. Run the affected module's full suite — the profile's `MODULE_TEST_CMD`
-   (section 10 — default):
-
-```bash
-cd <microservice>
-npx jest src/modules/<module>/ --no-coverage
-cd ..
-```
+4. Call the `TESTS.module` port for the affected module, from the <component>'s
+   directory and returning to the working directory afterwards. If the port is
+   unbound, call `TESTS.full` for the <component> instead.
 
 Expected: PASS — including the new regression test and all existing ones (verify the
 fix didn't break anything that was already passing).
+
+5. **Update `## AC Coverage` in `plan.md`.** `/build` left one line per AC there and
+   `/sync` gates on it: add the line if the AC is new, or replace it if the AC's
+   wording changed, pointing at the regression test just written:
+
+   ```markdown
+   AC-N: <short text> — ✓ <component>/.../file.spec.ts::<test name>
+   ```
+
+   Same rule as `/build`: one line per AC in `spec.md`, no more and no fewer, and no
+   `✗`. If the plan has no `## AC Coverage` section at all, it predates the convention
+   — leave it alone rather than writing a partial one, and say so in the close-out
+   summary.
 
 ---
 
 ## PHASE 6: Coherence check + close
 
-1. If the defect also means `<api-artifact>` (the contract: `api.delta.yaml` or
-   `api.yaml` per `API_CONTRACT_MODE`), `docs/diagram.md` or `docs/data-model.md` are
-   now misaligned (e.g. the corrected AC changes a response code or a contract field)
-   → warn, do NOT correct them automatically:
+1. If the defect also means `<api-artifact>`, `<flow-artifact>` or
+   `docs/data-model.md` are now misaligned (e.g. the corrected AC changes a response
+   code or a contract field) → warn, do NOT correct them automatically:
    > "⚠️ This fix also affects the contract. Run `/refine api spec-<number>`
    > (or `diagram`/`data-model` as appropriate) to keep it aligned."
 
@@ -242,6 +307,7 @@ fix didn't break anything that was already passing).
    - AC corrected/added
    - Files modified
    - Test results for the affected module
+   - The `## AC Coverage` line written (or the note that the plan has no such section)
    - Contract warnings (if any)
    - Conventions findings (if any)
 
@@ -261,8 +327,10 @@ fix didn't break anything that was already passing).
 | plan.md with no `[X]` task | `/build` hasn't run yet | Redirect to `/refine` — no hotfix needed |
 | The gap implies a new service/endpoint/table | Badly sized story, not a targeted defect | Recommend `/refine spec` + a full `/plan` instead of a hotfix |
 | The corrected AC contradicts another existing AC | The original AC had a different intent than the one reported | Show both ACs, confirm with the user before applying |
-| The fix requires touching `api.yaml`/`diagram.md`/`data-model.md` | The gap was contractual, not just wording | Warn at close, don't correct automatically — use `/refine` for those files |
+| The fix requires touching the contract, the flow artifact or `data-model.md` | The gap was contractual, not just wording | Warn at close, don't correct automatically — use `/refine` for those files |
 | The module's tests fail after the fix | The fix broke behavior already covered | Don't mark `[X]`, adjust the fix until the whole suite passes |
+| The story is already in `work/done/` | `/sync` closed it before the defect surfaced | Ask before anything: reopen the workspace (move it back to `work/active/`) or open a new item |
+| `/sync` then rejects the close for an uncovered AC | the hotfix added an AC without its `## AC Coverage` line | Add the line in PHASE 5, step 5 — one per AC, with a real test reference |
 
 ---
 
@@ -284,21 +352,22 @@ fix didn't break anything that was already passing).
    ```
 5. PHASE 3: the AC→Task table says AC-2 → Task 3 (domain port) and Task 5 (controller). The file to touch is the controller.
 6. PHASE 4: appends `### Task HOTFIX-1: Fix the response code for an empty list` with a regression test hitting the endpoint with no results and expecting `200` + `[]`. Updates AC-2's row in the traceability table to include `Task HOTFIX-1`.
-7. PHASE 5: test fails (returns 404) → fixes the controller → test passes. Full module suite: PASS.
-8. PHASE 6: status 200 was already documented in `api.yaml`, only the code didn't honor it — no contract impact. Closes with:
+7. PHASE 5: test fails (returns 404) → fixes the controller → test passes. Module suite (`TESTS.module`): PASS. Replaces AC-2's line in `## AC Coverage` so it points at the new regression test.
+8. PHASE 6: status 200 was already documented in the contract, only the code didn't honor it — no contract impact. Closes with:
    > "Hotfix applied. `spec.md` and `plan.md` updated with HOTFIX-1. Review the changes and tell me if anything needs adjusting."
 
 ---
 
-## CRITICAL: Output Language
+## Output language
+**Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, section 5 — falls back to
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
 `OUTPUT_LANGUAGE` if the project doesn't declare it): the corrected AC, the body of
 the `## Hotfixes` entry and the steps of the `Task HOTFIX-N` block. Match the language
 the item's artifacts are already written in; never translate them.
 
-`## Hotfixes` and `Task HOTFIX-N` are structural names — always English, as are paths,
-classes and any other identifier (`IDENTIFIER_LANGUAGE`).
+`## Hotfixes`, `Task HOTFIX-N` and `## AC Coverage` are structural names — always
+English, as are paths, classes and any other identifier (`IDENTIFIER_LANGUAGE`).
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The message samples in this document are written in English; render them in the

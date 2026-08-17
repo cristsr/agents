@@ -22,10 +22,11 @@ merely compatible with it.
 | # | Source | What it is | How it's cited |
 |---|---|---|---|
 | 1 | **Project rules** | `docs/rules.md` — non-negotiable principles | `rules.md §<section>` |
-| 2 | **Project configuration** | `CLAUDE.md`, `.agents/profile.md` — stack, conventions, project phase | `CLAUDE.md` / `profile.md §<n>` |
-| 3 | **Code precedent** | An equivalent decision already made in the repo | `<path>:<symbol>` |
-| 4 | **Formal standard** | RFC, HTTP spec, convention of the framework declared in the profile | `RFC <n>` / `<framework> <convention>` |
-| 5 | **The item's own invariants** | Another AC or business rule in `spec.md` that already pins the answer | `AC-<n>` / `Rule <n>` |
+| 2 | **Project configuration** | `CLAUDE.md`, `.agents/profile.yaml` — stack, conventions, project phase | `CLAUDE.md` / `profile.yaml <block>` |
+| 3 | **Story assets** | The item's own concrete material — `assets/` under the story workspace: mockups, screenshots, wireframes, signed contracts, data exports | `assets/<file>` |
+| 4 | **Code precedent** | An equivalent decision already made in the repo | `<path>:<symbol>` |
+| 5 | **Formal standard** | RFC, HTTP spec, convention of the framework declared in the profile | `RFC <n>` / `<framework> <convention>` |
+| 6 | **The item's own invariants** | Another AC or business rule in `spec.md` that already pins the answer | `AC-<n>` / `Rule <n>` |
 
 If **none** determines the answer → move to the escalation test (§3).
 
@@ -34,26 +35,26 @@ If **none** determines the answer → move to the escalation test (§3).
 - **A higher level beats a lower one.** If `rules.md` contradicts a code precedent,
   `rules.md` wins — and the conflict is noted as an observation in the log.
 - **An isolated precedent is not authority.** If the repo solved the same thing two
-  different ways, there is no precedent: there's an inconsistency. Drop to level 4,
+  different ways, there is no precedent: there's an inconsistency. Drop to level 5,
   and if that doesn't resolve it either, escalate as a scope decision.
 - **"Compatible with" is not "determined by".** That a standard permits the chosen
   option isn't enough if it permits the alternative just as well.
 
 ---
 
-## 2. Code probing (level 3) — happens in R3, not here
+## 2. Code probing (level 4) — happens in R3, not here
 
-Level-3 evidence is collected **entirely in phase R3**, in a single batch of parallel
+Level-4 evidence is collected **entirely in phase R3**, in a single batch of parallel
 queries capped at 5. This rubric only says how to **interpret** what R3 brought back:
 
 | R3 result | Verdict |
 |---|---|
-| One clear analogous case, with verbatim source | **Precedent** — level 3, medium confidence |
-| Several matching analogous cases | **Strong precedent** — level 3, medium-high confidence |
-| Several cases that contradict each other | **No precedent, an inconsistency** — drop to level 4 and record it |
-| No relevant results | **No precedent** — drop to level 4 and record it as a signal for `/scan` |
+| One clear analogous case, with verbatim source | **Precedent** — level 4, medium confidence |
+| Several matching analogous cases | **Strong precedent** — level 4, medium-high confidence |
+| Several cases that contradict each other | **No precedent, an inconsistency** — drop to level 5 and record it |
+| No relevant results | **No precedent** — drop to level 5 and record it as a signal for `/scan` |
 
-If `CODEGRAPH` is `no` in the profile, R3 doesn't run and level 3 simply doesn't exist
+If `CODE_SURVEY` resolves without call paths, level 4 simply doesn't exist
 for that run.
 
 ---
@@ -106,8 +107,8 @@ final review block (low ones first, so the eye lands there).
 
 | Level | When | Example |
 |---|---|---|
-| **high** | Level 1-2 source, or a formal standard with objective verification | JCS RFC 8785 (it ships official test vectors) |
-| **medium** | A single clear precedent in the repo, or an unambiguous framework convention | `varchar(255)` for consistency with an analogous field |
+| **high** | Level 1-2 source, a formal standard with objective verification, or a story asset that pins the answer unambiguously (e.g. a signed contract) | JCS RFC 8785 (it ships official test vectors) |
+| **medium** | A single clear precedent in the repo, an unambiguous framework convention, or a story asset that suggests the answer without stating it (e.g. a mockup) | `varchar(255)` for consistency with an analogous field |
 | **low** | No source determined it; the best alternative was chosen by reasoning, or the unknown qualified for escalation but exceeded the budget | Operational policy chosen by judgment |
 
 Every **low**-confidence decision is listed prominently in the wrap-up.
@@ -120,16 +121,16 @@ The boundary, using decisions already made in `work/done/`:
 
 | Case | Resolution | Verdict |
 |---|---|---|
-| spec-0009 · which `NODE_ENV` value means "production"? | `NODE_ENV === 'production'` | **Autonomous, high** — universal ecosystem standard (level 4) |
-| spec-0001 · max length of `Payee` | `255` | **Autonomous, medium** — precedent: `merchant` field in `apps/finances` (level 3) |
-| spec-0024 · canonicalization algorithm | JCS (RFC 8785) | **Autonomous, high** — RFC with official vectors; correctness is verifiable (level 4) |
+| spec-0009 · which `NODE_ENV` value means "production"? | `NODE_ENV === 'production'` | **Autonomous, high** — universal ecosystem standard (level 5) |
+| spec-0001 · max length of `Payee` | `255` | **Autonomous, medium** — precedent: `merchant` field in `apps/finances` (level 4) |
+| spec-0024 · canonicalization algorithm | JCS (RFC 8785) | **Autonomous, high** — RFC with official vectors; correctness is verifiable (level 5) |
 | spec-0024 · `NOT NULL` from day one? | Yes, rewriting the migration | **Autonomous, high** — `CLAUDE.md` allows rewriting migrations on a clean base (level 2) |
-| spec-0024 · stop at the first break or report them all? | Walks everything, exit `1` if any occurred | **Autonomous, high** — CLI/CI convention (level 4) |
-| spec-0024 · define the hash input by exclusion | Full payload + envelope, minus `recorded_at` and `global_position` | **Autonomous, medium** — follows from the AC's invariant: a new field can't fall outside the hash unnoticed (level 5) |
-| spec-0002 · `append` with an empty batch | Silent no-op | **Autonomous, medium** — follows from the item's invariants (level 5) |
-| spec-0005 · retry with a different `external_ref` | `LEDGER_ALREADY_INITIALIZED` exception | **Autonomous, medium** — typed-error pattern already established (level 3) |
-| spec-0025 · transient PostgreSQL codes | Only `40P01` and `40001` | **Autonomous, high** — they're the engine's canonical ones (level 4) |
-| spec-0025 · `dryRun` in the body or as a query param? | Body field with `class-validator` | **Autonomous, high** — profile's `DTO_STYLE` (level 2) |
+| spec-0024 · stop at the first break or report them all? | Walks everything, exit `1` if any occurred | **Autonomous, high** — CLI/CI convention (level 5) |
+| spec-0024 · define the hash input by exclusion | Full payload + envelope, minus `recorded_at` and `global_position` | **Autonomous, medium** — follows from the AC's invariant: a new field can't fall outside the hash unnoticed (level 6) |
+| spec-0002 · `append` with an empty batch | Silent no-op | **Autonomous, medium** — follows from the item's invariants (level 6) |
+| spec-0005 · retry with a different `external_ref` | `LEDGER_ALREADY_INITIALIZED` exception | **Autonomous, medium** — typed-error pattern already established (level 4) |
+| spec-0025 · transient PostgreSQL codes | Only `40P01` and `40001` | **Autonomous, high** — they're the engine's canonical ones (level 5) |
+| spec-0025 · `dryRun` in the body or as a query param? | Body field with `class-validator` | **Autonomous, high** — the stack pack's DTO mapping reference (level 2) |
 | spec-0025 · **`dryRun` on every write command?** | On all of them, no exceptions | **ESCALATE** — *scope* category: it defines the item's cross-cutting surface |
 | spec-0025 · **how many retries and with what backoff?** | 3 attempts, exponential with jitter | **ESCALATE** — operational policy with a latency/resilience trade-off no source determines |
 

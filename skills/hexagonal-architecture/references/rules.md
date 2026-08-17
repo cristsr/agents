@@ -2,12 +2,14 @@
 
 This file is the single source of the hexagonal rules. Both `hexagonal-architecture`
 (BUILD) and `hexagonal-audit` (AUDIT) load it. Never duplicate these rules elsewhere;
-the concrete syntax per stack lives in `<STACK_REFS>/architecture/` (e.g.
-`module-blueprint.md`, `errors-and-logging.md`, `nestjs-binding.md`, `audit-scan.sh`).
+the concrete syntax per stack lives in the framework skill's references (e.g. the
+`nestjs` skill's `references/module-blueprint.md` and the `nestjs` skill's
+`references/nestjs-binding.md`).
 
 > Per-stack resolution: wherever a rule says "abstraction", "DI token" or "naming",
-> the concretion comes from the stack pack and the profile's keys (section 7:
-> `DI_TOKENS`, `DTO_STYLE`, `IDENTIFIER_LANGUAGE`).
+> the concretion comes from the framework skill the project's `stack.SKILLS` declares
+> and the profile's keys (stack block: `IDENTIFIER_LANGUAGE`; the binding and DTO
+> syntax from the framework skill's references).
 
 ## The Non-Negotiable Rule: Dependency Direction
 
@@ -116,7 +118,8 @@ Rules:
 CRITICAL: Never declare a port as an abstraction that vanishes at runtime (an
 `interface` in TS, a non-instantiable contract elsewhere) if it must be a DI token.
 Use the stack's convention for runtime token + contract (TS: `abstract class`;
-others: trait/interface + DI map, protocol, …). See `<STACK_REFS>/architecture/`.
+others: trait/interface + DI map, protocol, …). See the framework skill's references
+(`nestjs` for Nest projects).
 
 Port method naming:
 
@@ -178,13 +181,15 @@ Rules:
   Body).
 - Outputs are `void` or output DTOs from an application mapper — never domain
   entities to HTTP.
-- Branch over enums with exhaustive matching, so a new enum member breaks the build.
+- Branch over enums so a **new member breaks the build** instead of being silently
+  ignored (the exhaustive-branching idiom is the language skill's; the rule here is
+  the correctness guarantee).
 - When iterating a batch, decide explicitly whether one failure aborts the run. If
   it should not, wrap each item and continue.
 
 ### DTOs and mappers
 
-Input/output DTOs with validation, per the stack's `DTO_STYLE`. Dates cross the
+Input/output DTOs with validation, per the framework skill's DTO reference. Dates cross the
 boundary as ISO strings, ids as plain strings.
 
 Application mapper: one direction only, domain → transport. Persistence and external
@@ -212,8 +217,8 @@ CRITICAL: Controllers, schedulers, event handlers and bootstraps contain **zero*
 business logic. They translate an external trigger into `usecase.execute(...)` and
 nothing else.
 
-Every driving adapter that runs **outside a request** (scheduler, event handler,
-bootstrap) MUST catch and log — an unhandled rejection there takes the process down.
+The catch-and-log policy for adapters running outside a request is in
+`exception-placement.md` (same folder — the "Where to catch" table).
 
 ### Persistence entities are not domain entities
 
@@ -272,7 +277,7 @@ implementation. Nothing else may name a concrete adapter.
 
 Files kebab-case (per stack), classes PascalCase (per stack), enum members
 SCREAMING_SNAKE with identical string values, exception codes SCREAMING_SNAKE.
-The exact suffixes and case rules come from the stack pack + `IDENTIFIER_LANGUAGE`.
+The exact suffixes and case rules come from the framework skill + `IDENTIFIER_LANGUAGE`.
 
 ## The ten rules
 

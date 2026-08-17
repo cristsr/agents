@@ -214,7 +214,7 @@ alone shows nothing wrong.
 |---|---|---|
 | C1 | A `## Contract` block after the Overview, with the rows that apply (`Requires`, `Produces`, `Writes`, `Never`, `Escalates`, `Degrades`, `Profile keys`, + `Reverting` if it overwrites live artifacts) | The block is absent, or scattered back across several `CRITICAL` sections |
 | C2 | Every key in `Profile keys` exists in the project's profile template, and the skill declares all the ones it actually reads | A key is invented, missing, or the catalog and the skill disagree |
-| C3 | No `\| In this document \| Key in profile.md \|` translation table | The table is still there |
+| C3 | No `\| In this document \| Key in profile.yaml \|` translation table | The table is still there |
 | C4 | Normative literals replaced by their key | A path, branch or command the project configures is hardcoded in a step |
 | C5 | No `## CRITICAL` heading the `Contract` already covers | `CRITICAL` used for language conventions, read paths or ordinary preconditions |
 | C6 | The handoff holds: the previous skill's `Produces` covers this one's `Requires` | This skill requires something nobody produces, or produces something nobody consumes |
@@ -369,7 +369,7 @@ whatever language the rest of the file is in.
 **Flow:**
 1. PHASE 1: resolves the symlink to `~/.agents/skills/report-builder`. Finds
    `SKILL.md` (6,200 words), `references/` (2 files), `README.md`. Step 4:
-   **pipeline** — it reads `.agents/profile.md` and writes into `work/`.
+   **pipeline** — it reads `.agents/profile.yaml` and writes into `work/`.
 2. PHASE 2: B10 fails → there's a `README.md` inside the folder. B1–B9 OK.
 3. PHASE 3: D2 and D6 fail → `description: Generates reports.` No trigger phrases.
    Diagnosis: **under-triggering**.

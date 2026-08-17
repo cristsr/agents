@@ -35,20 +35,20 @@ the whole module, not just the delta) is in `docs/component.md`>.
 
 ## Global Architecture Impact
 
-<!-- ALWAYS present, never conditional — it's what lets /sync promote
-     without having to re-detect anything from a git diff. -->
+<!-- ALWAYS present, never conditional — it records the impact explicitly so
+     the change can be promoted without re-detecting anything from a git diff. -->
 
 **Does it touch global architecture?** Yes / No.
 
 <!-- If Yes: name exactly what changes and at which C4 level, with the
-     concrete node/edge to add or remove — /sync and /architecture apply it
-     verbatim, they don't re-infer it.
+     concrete node/edge to add or remove — it is applied verbatim downstream,
+     never re-inferred.
      If No: one sentence confirming the scope is internal to the module. -->
 
 - **Level:** Context (Level 1) / Container (Level 2) / N/A
 - **Change:** <new app/microservice | new module | new external
   integration | removed integration | new actor | none>
-- **Concrete node/edge:** <what /architecture must add/remove, or
+- **Concrete node/edge:** <the node/edge to add/remove, or
   "N/A" if the answer was No>
 
 ## Contracts per Service
@@ -95,10 +95,20 @@ New entity(ies): `table_name`.
 - **<Gate/Article violated>:** <why the exception is made> — approved by the user.
 ```
 
+## Formatting
+
+Keep the artifact readable — the redaction is prose, not a dump:
+
+- A blank line **after every heading** and **before and after every list, table
+  and code fence**.
+- **One idea per bullet**, and never a bullet longer than ~3 lines.
+- Break walls of text: no more than ~4 consecutive bullets or bold-label lines
+  without a blank line between them.
+
 ## Language rules
 
 - Section headings: English. They are structural — `/sync` reads
   `## Global Architecture Impact` and `## Design Decisions` by name.
 - Prose, justifications, business descriptions: `ARTIFACT_LANGUAGE` (profile,
-  section 5 — falls back to `OUTPUT_LANGUAGE`).
+  language block — falls back to `OUTPUT_LANGUAGE`).
 - Class names, paths, endpoints, table names: verbatim from the code.

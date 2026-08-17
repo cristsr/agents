@@ -92,7 +92,7 @@ best.
 ## Language rules
 
 - Frontmatter keys and headings: English (structural — the pipeline reads them by
-  name). Prose and diagram labels: `ARTIFACT_LANGUAGE` (profile, section 5 — falls
+  name). Prose and diagram labels: `ARTIFACT_LANGUAGE` (profile, language block — falls
   back to `OUTPUT_LANGUAGE`).
 - `use_case`, `module`, `entrypoint`, `command` and every identifier in the diagram:
   verbatim from the code — never translated.
