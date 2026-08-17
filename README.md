@@ -24,6 +24,19 @@ Both sync commands have a `:check` / `--dry-run` twin that shows what would chan
 without writing. Then, from a project: `/bootstrap` to create its profile, and
 `/healthcheck` to verify everything holds together.
 
+```bash
+npm test                    # the parsers, the gates and the ecosystem's own consistency
+npm run skills:check        # the ecosystem alone
+```
+
+`npm test` runs on every push and pull request, on Linux and Windows both
+(`.github/workflows/checks.yml`) — the scripts resolve paths and emit shell
+strings for hooks, and those differ between the two. The suite covers the
+artifact parsers (`scripts/lib/`), the gates end to end over throwaway story
+workspaces, the read-only guard, and one integration test asserting this repo
+passes its own validator: the whole point is that a rename goes red here rather
+than being discovered by a skill following a dead reference.
+
 ## Flow
 
 ```
@@ -174,9 +187,18 @@ skills/       sdd/ (the pipeline) · conventions/ (loaded via stack.SKILLS) · m
 agents/       provider-agnostic subagents + targets.yaml (native formats)
 stacks/       generic · typescript · nestjs — ports.yaml + artifact templates
 scripts/      the validators and the sync tools
+  lib/        the parsers they share (story, profile, skills, prose)
+  hooks/      the guard scripts targets.yaml wires into each provider
+  test/       node:test suites — `npm test`
 contracts/    PORTS.md · sdd-profile.template.yaml
 references/   chat-conventions.md, shared by every skill
 ```
+
+A guard script lives in `scripts/hooks/` and is referenced from `targets.yaml`
+through `{AGENTS_ROOT}`, which `sync-agents.mjs` resolves to this repo's absolute
+path at emit time. That indirection is the whole point: a literal path there
+works on the machine that wrote it and silently disables the guard everywhere
+else — and a control that fails to start is worse than one that isn't declared.
 
 The source tree groups skills by **who owns the knowledge**; the installed tree is
 flat and generated, so **skill names must be unique across categories**. Both Claude

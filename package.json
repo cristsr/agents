@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Ecosistema SDD: skills, agentes agnósticos y packs por stack",
   "scripts": {
+    "test": "node --test \"scripts/test/*.test.mjs\"",
     "agents:sync": "node scripts/sync-agents.mjs",
     "agents:check": "node scripts/sync-agents.mjs --dry-run",
     "skills:check": "node scripts/validate-skills.mjs",

@@ -1,0 +1,43 @@
+# The gates, run automatically.
+#
+# Everything here was already available as an npm script and therefore depended
+# on someone remembering to run it. What CI adds is not a new check — it is the
+# guarantee that the existing ones ran at all.
+#
+# Both operating systems, deliberately: the scripts resolve paths, walk trees
+# and emit shell strings for hooks, and every one of those behaves differently
+# on Windows. The ecosystem is authored on Windows and read on Linux, so a green
+# run has to mean both.
+name: checks
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The parsers behind every gate, plus the ecosystem's own consistency
+      # (scripts/test/ecosystem.test.mjs runs validate-skills end to end).
+      - name: Unit and integration tests
+        run: npm test
+
+      # Run explicitly as well, so a failure names the ecosystem rather than a
+      # test file: this is the check a contributor is told to run locally.
+      - name: Ecosystem consistency
+        run: npm run skills:check
