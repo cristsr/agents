@@ -7,7 +7,9 @@
   "scripts": {
     "agents:sync": "node scripts/sync-agents.mjs",
     "agents:check": "node scripts/sync-agents.mjs --dry-run",
-    "skills:check": "bash scripts/validate-skills.sh"
+    "skills:check": "node scripts/validate-skills.mjs",
+    "profile:check": "node scripts/validate-profile.mjs",
+    "rules:check": "node scripts/validate-rules.mjs"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"
