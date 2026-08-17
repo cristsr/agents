@@ -191,7 +191,11 @@ is a one-line change.
 
 ## CRITICAL: Output Language
 
-Code, identifiers, paths and file names in English (or `IDENTIFIER_LANGUAGE`).
+Code, identifiers, paths, file names, comments and test names follow
+`IDENTIFIER_LANGUAGE` (profile, language block) — read the key. The layer and role
+**suffixes** this skill defines (`.use-case.ts`, `.repository.ts`, `Port`, `Adapter`)
+are its vocabulary and stay as written, whatever language the names around them are
+in.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The message samples in this document are written in English; render them in the

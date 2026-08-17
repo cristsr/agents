@@ -284,7 +284,9 @@ With every <component> on a fresh `BASE_BRANCH`:
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-This skill writes only the branch name (an identifier, always `IDENTIFIER_LANGUAGE`).
+This skill writes only the branch name. A branch is git surface — history read
+outside the project — so its description stays English regardless of the language
+keys, exactly as `/commit` treats commit messages and the PR.
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile) —
 the message samples above are written in English; render them in the user's language
 when that differs.

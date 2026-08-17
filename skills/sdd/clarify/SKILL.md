@@ -770,12 +770,15 @@ sight — typically a new domain or strong contractual implications.
 `spec.md`, the rationale of each entry in the decision log, and `context.md`'s
 inventory prose. Never translate them to English on your own.
 
-Two things stay in English regardless of that key: the **section headings**
-(`## Acceptance Criteria`, `## Ambiguity Resolution`, `## Technical Context`,
-`## Build Mode Rationale` — other skills and the validator read them by name) and the
-**identifiers** quoted from the code — paths, classes, fields, endpoints
-(`IDENTIFIER_LANGUAGE`). The front-matter keys and values (`type`, `origin`,
-`build_mode: evidence`) are identifiers too — never translated.
+The **section headings** stay English regardless of that key (`## Acceptance
+Criteria`, `## Ambiguity Resolution`, `## Technical Context`, `## Build Mode
+Rationale` — other skills and the validator read them by name), and so do the
+front-matter keys and their enum values (`type`, `origin`, `build_mode: evidence`),
+which are matched verbatim.
+
+The **identifiers** quoted from the code — paths, classes, fields, endpoints —
+follow `IDENTIFIER_LANGUAGE` (profile, language block). Quote them exactly as the
+code spells them; this skill has no language of its own to convert them into.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The message samples in this document are written in English; render them in the

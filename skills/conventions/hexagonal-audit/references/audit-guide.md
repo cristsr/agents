@@ -110,8 +110,9 @@ syntax examples, framework traps — lives in the framework skill's audit catalo
 
 Write the report's prose in **`ARTIFACT_LANGUAGE`** (profile, language block — falls back
 to `OUTPUT_LANGUAGE`; see the Output Language rule in `SKILL.md`). The template below
-is English scaffolding: keep the headings, and keep file paths, rule names, severities
-and code in English.
+is English scaffolding: keep the headings, the rule names and the severities as they
+are written here. File paths and code are quoted verbatim from the codebase, whose
+language is `IDENTIFIER_LANGUAGE`'s decision — never translated into this template's.
 
 ```markdown
 # Architecture Audit — <project>

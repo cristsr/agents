@@ -363,10 +363,14 @@ After saving `work/active/<story-id>/spec.md`:
 the business rules of `spec.md` are written in that language. Never translate them to
 English on your own: the language is the profile's decision, not this skill's.
 
-Two things stay in English regardless of that key: the **section headings** (other
-skills locate them by name) and the **identifiers** — the `type` field's values
-(the project's `ITEM_TYPES`, e.g. `feat`, `bug`, `debt`), the item ID and any path or
-symbol (`IDENTIFIER_LANGUAGE`).
+Two things stay verbatim regardless of that key: the **section headings**, always
+English because other skills locate them by name, and the **`type` field's values**,
+copied exactly as the profile's `ITEM_TYPES` declares them (e.g. `feat`, `bug`,
+`debt`) — they are matched, not read.
+
+The item ID and any path or symbol you quote are **identifiers**: they follow
+`IDENTIFIER_LANGUAGE` (profile, language block), which decides the code's language
+on its own — this skill has no default to fall back on.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The message samples in this document are written in English; render them in the

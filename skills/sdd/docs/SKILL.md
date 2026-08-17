@@ -331,8 +331,10 @@ untouched because the change didn't belong there.
 the diagrams. Never translate them to English on your own.
 
 The section name this skill reads in `design.md` (`## Global Architecture Impact`) is
-a structural contract with `/design` — always English, as are the node **IDs**, app
-and service names, and any other identifier (`IDENTIFIER_LANGUAGE`).
+a structural contract with `/design` — always English. The node **IDs**, app and
+service names and any other identifier follow `IDENTIFIER_LANGUAGE` (profile,
+language block) and are quoted verbatim from the code they name — that key is what
+decides their language, not this document's.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The message samples in this document are written in English; render them in the

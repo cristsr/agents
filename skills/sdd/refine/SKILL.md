@@ -487,8 +487,9 @@ Stop — do not start planning or building.
 `OUTPUT_LANGUAGE`). A refinement never switches an artifact's language: write the
 correction in the language the surrounding text is already in.
 
-Section headings are structural and stay in English, as do paths, classes and any
-other identifier (`IDENTIFIER_LANGUAGE`).
+Section headings are structural and stay in English. Paths, classes and any other
+identifier follow `IDENTIFIER_LANGUAGE` (profile, language block) — a separate
+axis with its own key, not a second name for English.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The message samples in this document are written in English; render them in the

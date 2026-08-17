@@ -485,6 +485,13 @@ if (Array.isArray(evidenceTypes) && evidenceTypes.length) {
   }
 }
 
+// The code's language axis has no default anywhere: the skills read this key and
+// nothing else, so a null here leaves comments, test names and identifiers
+// undeclared — and whoever writes the code picks a language per file.
+if (!isSet(get('language.IDENTIFIER_LANGUAGE'))) {
+  warn('language.IDENTIFIER_LANGUAGE', 'not declared — no skill carries a default for the code surface (identifiers, comments, test names)');
+}
+
 const survey = get('ports.CODE_SURVEY.run');
 if (Array.isArray(survey) && survey.length === 1 && survey[0] === 'inline') {
   warn('ports.CODE_SURVEY', 'only inline — surveys will be slower and spend the main context');

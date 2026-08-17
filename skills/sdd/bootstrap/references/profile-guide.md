@@ -126,7 +126,9 @@ reason:
 2. **Identifiers are names, not sentences.** Paths, class names, fields, endpoints,
    YAML and frontmatter keys, error codes, table and column names are matched
    verbatim. Whether a team names things in English or another language is
-   `IDENTIFIER_LANGUAGE`'s decision (normally English).
+   `IDENTIFIER_LANGUAGE`'s decision, and only that key's — no skill carries a
+   default for the code surface, so a project that leaves it null leaves each skill
+   guessing per file. Set it to what the codebase already does.
 2b. **Code comments and test names go with the code**, so they follow
    `IDENTIFIER_LANGUAGE` too, not `ARTIFACT_LANGUAGE`. A comment sits one line
    above the symbol it explains and a test name *is* the sentence a symbol makes:

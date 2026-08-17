@@ -282,9 +282,11 @@ Actions:
 **Forge produces no artifacts of its own** — they come from `/plan`, `/build` and
 `/sync`, each of which already resolves `ARTIFACT_LANGUAGE` (profile, language block).
 Don't override it from here. Structural names those stages write (`Task N`,
-`## AC Coverage`) stay English, as do paths and identifiers (`IDENTIFIER_LANGUAGE`).
+`## AC Coverage`) stay English; paths, identifiers and the code `/build` writes
+follow `IDENTIFIER_LANGUAGE` (profile, language block), resolved by each stage —
+don't override that from here either.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The consolidated report samples in this document are written in English; render them
-in the user's language when that differs. Frontmatter, field names, paths and code are
-always English.
+in the user's language when that differs. Frontmatter keys and structural field names
+are English; their values are quoted verbatim from the artifacts.

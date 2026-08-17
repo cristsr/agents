@@ -187,8 +187,10 @@ With the final report, turn the findings into SDD pipeline work:
 `spec.md` drafts and the finding descriptions of the report saved under
 `docs/audits/`. Never translate them to English on your own.
 
-Section headings stay in English (the pipeline reads them by name), and so do rule
-names, severities, paths and layer names — they are identifiers
-(`IDENTIFIER_LANGUAGE`).
+Section headings stay in English (the pipeline reads them by name), and so do the
+rule names and severities this skill defines — they are its own vocabulary, cited
+back by the generated stories. Paths, layer names and every symbol quoted from the
+code are identifiers: they follow `IDENTIFIER_LANGUAGE` (profile, language block)
+and are copied verbatim from the codebase.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).

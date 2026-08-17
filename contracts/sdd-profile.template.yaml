@@ -77,8 +77,9 @@ paths:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # OUTPUT_LANGUAGE is what the skills speak in chat; ARTIFACT_LANGUAGE is the prose
-# of the artifacts and follows OUTPUT_LANGUAGE when null. Three things stay English
-# regardless: structural section headings, identifiers, and the git surface.
+# of the artifacts and follows OUTPUT_LANGUAGE when null. Two things stay English
+# regardless of every key here: the structural section headings (the skills parse
+# them by name) and the git surface (history read outside the project).
 #
 # IDENTIFIER_LANGUAGE covers the whole CODE surface, not just the names: paths,
 # classes, fields, endpoints, YAML keys — plus code comments and test names. A
@@ -86,6 +87,11 @@ paths:
 # makes the file harder to read than either choice on its own. What a comment may
 # SAY (only the why, never the story's ACs) is a convention, not a language
 # setting: it lives in the `design-principles` skill, § "Comments".
+#
+# This key is the ONLY place the code's language is decided: no skill carries a
+# default of its own, so leaving it null leaves the skills with nothing to read.
+# English below is this template's suggestion, not a fallback — replace it with
+# whatever this codebase actually names things in.
 language:
   OUTPUT_LANGUAGE: null
   ARTIFACT_LANGUAGE: null

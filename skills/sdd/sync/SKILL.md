@@ -450,8 +450,10 @@ next steps.
 keeps the language `/design` produced it in — never translate it on promotion.
 
 The section names this skill reads (`## Design Decisions`, `## Global Architecture
-Impact`) are structural contracts with `/design` — always English, as are paths,
-schema names and any other identifier (`IDENTIFIER_LANGUAGE`).
+Impact`) are structural contracts with `/design` — always English. Paths, schema
+names and any other identifier follow `IDENTIFIER_LANGUAGE` (profile, language
+block): promote them verbatim from the delta, and never translate one into English
+because this document is written in it.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The message samples in this document are written in English; render them in the

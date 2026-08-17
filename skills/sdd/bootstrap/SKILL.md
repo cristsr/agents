@@ -83,10 +83,15 @@ A one-line key summarizing them would only be a second version to keep in sync.
    - Artifact language (`ARTIFACT_LANGUAGE`) — the language the **prose** of
      `spec.md`, `context.md`, `design.md`, `plan.md`, the flow docs and the OpenAPI
      `summary`/`description` is written in. Offer `OUTPUT_LANGUAGE` as the default and
-     state what is not prose and follows the contract instead: structural section
-     headings (located by name), identifiers, and the git surface (commit messages /
-     the PR).
-   - Identifier language (`IDENTIFIER_LANGUAGE`) — normally English.
+     state what this key does **not** cover: the structural section headings (English,
+     located by name) and the git surface (commit messages / the PR), plus everything
+     on the code's own axis, which the next question sets.
+   - Identifier language (`IDENTIFIER_LANGUAGE`) — the language of the **code**:
+     paths, classes, fields, endpoints, and also the comments and test names, which
+     sit one line from a symbol. Don't propose a language: look at how the codebase
+     already names things and offer that, and leave the key set to whatever the
+     developer answers. It has no fallback anywhere in the ecosystem — a null here
+     leaves every skill that writes code without a language to write it in.
    - ORM and test framework
    - Architecture pattern
    - Which MCP servers the pipeline should rely on (`mcp.EXPECTED`), if any
@@ -198,9 +203,11 @@ A one-line key summarizing them would only be a second version to keep in sync.
 The profile is configuration, not an artifact — `ARTIFACT_LANGUAGE` doesn't apply
 to it. Split the language question the way every file is split:
 
-- **Keys and values are identifiers** — `PROJECT_NAME`, `mono-repo`,
-  `docs/architecture/`, a model id. They follow `IDENTIFIER_LANGUAGE` (English) and
-  are never translated: the skills locate keys by name and match enums verbatim.
+- **Keys and enum values are schema literals** — `PROJECT_NAME`, `mono-repo`,
+  `docs/architecture/`, a model id. Write them exactly as the template does and
+  never translate one: the skills locate keys by name and match enums verbatim.
+  `IDENTIFIER_LANGUAGE` is a value the profile *declares*, not a rule that governs
+  the profile's own keys — the code it describes is what follows it.
 - **Comments are prose.** The template ships English ones, maintained with the
   skills repo; your own clarifying comments follow the user's language. Nothing
   parses a comment — it is only read, never matched.

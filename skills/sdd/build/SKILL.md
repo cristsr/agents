@@ -221,6 +221,10 @@ concurrently, one `code-implementer` subagent per group:
      the `TESTS.module` port in `tdd`, the `VERIFY.run` port in `evidence`
    - the conventions to respect: `.agents/profile.yaml`,
      `docs/architecture/conventions.md`, `docs/architecture/testing.md`
+   - the **resolved** `IDENTIFIER_LANGUAGE` (profile, language block), stated as a
+     value and not as a key name — it governs the identifiers, comments and test
+     names the subagent writes, and a subagent that has to guess it writes the
+     language of its own prompt instead
    The `code-implementer` subagent's own prompt already encodes the execution
    contract (TDD red→green, stop at first failure, own-files-only, never touch
    plan.md) and its structured report format — do not repeat it, just supply the
@@ -450,9 +454,11 @@ the `Task N` headings and the `## AC Coverage` heading are structural — never 
 their wording.
 
 **Code comments and test names follow the code**, i.e. `IDENTIFIER_LANGUAGE`
-(normally English) — they are part of the codebase, not of the artifact prose. What
-a comment may say (only the why, and never the story's ACs) is a convention rather
-than a language rule: it lives in Step 2 and in the `design-principles` skill.
+(profile, language block) — they are part of the codebase, not of the artifact
+prose. That key is the whole rule: this skill declares no default, so read it and
+write in whatever it says, and pass it to `code-implementer` along with the tasks.
+What a comment may say (only the why, and never the story's ACs) is a convention
+rather than a language rule: it lives in Step 2 and in the `design-principles` skill.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The progress and summary samples in this document are written in English; render them

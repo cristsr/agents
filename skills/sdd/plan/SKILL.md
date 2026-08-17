@@ -712,10 +712,14 @@ profile path and `stack.SKILLS`.
 descriptions, the expected outputs and the AC → Task table of `plan.md`. Never
 translate them to English on your own.
 
-Three things stay in English regardless of that key: the **task markers**
-(`Task 0`, `Task N` — `/build` and `/hotfix` locate them by name), the **identifiers**
-(paths, classes, commands, `IDENTIFIER_LANGUAGE`) and the **branch description** asked
-for in orchestrator step 3, since it ends up in git history.
+Two things stay in English regardless of every language key: the **task markers**
+(`Task 0`, `Task N` — `/build` and `/hotfix` locate them by name) and the **branch
+description** asked for in orchestrator step 3, since it ends up in git history.
+
+Everything the plan writes as code — paths, class and method names, commands, and
+the code, comments and test names inside each task — follows `IDENTIFIER_LANGUAGE`
+(profile, language block). That axis is not a synonym for English: read the key and
+write what it says, since `code-implementer` transcribes a task's code verbatim.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The message samples in this document are written in English; render them in the

@@ -93,3 +93,6 @@ Do not mark tasks `[P]` when one group's deliverable is validated against anothe
   Task titles, step descriptions and expected outputs: `ARTIFACT_LANGUAGE`
   (profile, language block).
 - Content, paths and commands: verbatim.
+- Whatever a task **writes** into the repository — new symbols, comments, the names
+  of the checks — follows `IDENTIFIER_LANGUAGE` (profile, language block). `/build`
+  transcribes it as written.

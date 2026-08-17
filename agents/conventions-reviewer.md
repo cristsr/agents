@@ -72,7 +72,11 @@ If you weren't given an explicit base branch/ref:
      traceability belongs to `plan.md`; the code outlives the story workspace, and
      the number moves when `/refine` or `/hotfix` renumber the ACs.
   2. **Comments and test names follow `IDENTIFIER_LANGUAGE`** (profile, language
-     block), like every other symbol — not `ARTIFACT_LANGUAGE`.
+     block), like every other symbol — not `ARTIFACT_LANGUAGE`. Read the key in
+     `.agents/profile.yaml` before reporting anything on this rule: the language
+     is whatever that key says, never the language this document is written in.
+     If the key is unset, report it under "Unknowns" instead of judging the
+     comments against a language nobody declared.
   A comment that merely restates the line below it is a DRY finding, reported only
   when the project declares `design-principles` — that one is a judgment call, and
   the two above are not.
@@ -131,13 +135,15 @@ changes, against the `feat/core` branch."
 ```
 ## Conventions review — apps/ledger
 
-**Sources used:** CLAUDE.md (English comments + JSDoc, no DB enums), skill:typescript, skill:design-principles
+**Sources used:** CLAUDE.md (JSDoc on public methods, no DB enums), profile language block (IDENTIFIER_LANGUAGE: Español), skill:typescript, skill:design-principles
 **Diff reviewed:** git diff feat/core...HEAD -- apps/ledger
 
 ### Findings
 
-- **apps/ledger/src/transactions/domain/posting/posting.serializer.spec.ts:8** — non-English comment ("// monto de prueba") (source: CLAUDE.md, "Comments — English + JSDoc" section)
-  The comment must be in English; the rest of the file already complies.
+- **apps/ledger/src/transactions/domain/posting/posting.service.ts:41** — comment cites the story's artifacts ("// AC-3: validar la transferencia") (source: skill:design-principles § Comments)
+  The code carries no AC number: state the rule ("solo asientos conciliados"); the traceability already lives in plan.md.
+- **apps/ledger/src/transactions/domain/posting/posting.serializer.spec.ts:8** — comment written in a language other than IDENTIFIER_LANGUAGE ("// test amount") (source: profile, language block: IDENTIFIER_LANGUAGE = Español)
+  Comments follow the code's language axis; the rest of the file already complies.
 
 ### Unknowns
 none

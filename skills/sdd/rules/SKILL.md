@@ -219,8 +219,10 @@ Stop — don't start designing or planning.
 `OUTPUT_LANGUAGE` if the project doesn't declare it): articles, reasons and
 verification notes. Never translate them to English on your own.
 
-Article numbering, gate names (they're terms of art), technical identifiers, file
-names and paths stay in English (`IDENTIFIER_LANGUAGE`).
+Article numbering and gate names stay English — they are terms of art the other
+skills cite. Technical identifiers, file names and paths follow
+`IDENTIFIER_LANGUAGE` (profile, language block): quote them as the codebase spells
+them rather than assuming a language for them.
 
 **Chat interaction (the interview) follows the user's language**
 (`OUTPUT_LANGUAGE` in the profile). The message samples in this document are written

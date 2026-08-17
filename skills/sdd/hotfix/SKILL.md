@@ -380,7 +380,11 @@ the `## Hotfixes` entry and the steps of the `Task HOTFIX-N` block. Match the la
 the item's artifacts are already written in; never translate them.
 
 `## Hotfixes`, `Task HOTFIX-N` and `## AC Coverage` are structural names — always
-English, as are paths, classes and any other identifier (`IDENTIFIER_LANGUAGE`).
+English, whatever the language keys say.
+
+Paths, classes, the fix's code and its regression-test names are identifiers: they
+follow `IDENTIFIER_LANGUAGE` (profile, language block), which is a key to read and
+not another word for English.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The message samples in this document are written in English; render them in the

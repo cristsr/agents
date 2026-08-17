@@ -258,9 +258,10 @@ Stop — do not start the design.
 `OUTPUT_LANGUAGE` if the project doesn't declare it): `context.md`'s inventory
 descriptions and detected gaps. Never translate them to English on your own.
 
-Two things stay in English regardless of that key: the **section headings** (`/design`
-and `/plan` read them by name) and the **identifiers** quoted from the code — paths,
-classes, fields, endpoints (`IDENTIFIER_LANGUAGE`).
+The **section headings** stay English regardless of that key (`/design` and `/plan`
+read them by name). The **identifiers** — paths, classes, fields, endpoints — are
+quoted from the code verbatim and therefore sit on `IDENTIFIER_LANGUAGE` (profile,
+language block): copy what the code says, never a translation of it.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The delta-report sample above is written in English; render it in the user's language

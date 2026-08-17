@@ -813,10 +813,13 @@ After the verification passes and the escalations are handled:
 `docs/flows/*.md`, plus the `summary` and `description` fields of the API contract and
 the labels of the diagrams. Never translate them to English on your own.
 
-Two things stay in English regardless of that key: the **section headings**
-(`## Design Decisions`, `## Global Architecture Impact` — `/sync`, `/plan` and
-`/docs` read them by name) and the **identifiers** — paths, schema names,
-`operationId`, fields, endpoints, table and column names (`IDENTIFIER_LANGUAGE`).
+The **section headings** stay English regardless of that key (`## Design Decisions`,
+`## Global Architecture Impact` — `/sync`, `/plan` and `/docs` read them by name).
+
+The **identifiers** you design — paths, schema names, `operationId`, fields,
+endpoints, table and column names — follow `IDENTIFIER_LANGUAGE` (profile, language
+block). They are what `/plan` turns into code, so name them in the language that key
+declares and match the existing code; the skill carries no default of its own.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
 The message samples in this document are written in English; render them in the

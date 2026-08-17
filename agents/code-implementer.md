@@ -63,6 +63,11 @@ Your caller (normally the `/build` skill) passes you:
   project.
 - The conventions to respect: `.agents/profile.yaml`,
   `docs/architecture/conventions.md`, `docs/architecture/testing.md`.
+- The resolved `IDENTIFIER_LANGUAGE` — the language of everything you write into
+  the codebase: identifiers, comments and test names. If the caller didn't state
+  it, read `language.IDENTIFIER_LANGUAGE` from `.agents/profile.yaml`; if the key
+  is unset there too, report it as a missing input instead of picking a language,
+  the same way you would for a missing verification command.
 
 ## Rules
 
@@ -101,9 +106,10 @@ Your caller (normally the `/build` skill) passes you:
   traceability table, and not to the codebase, which outlives the story
   workspace. State the RULE the AC asked for instead ("settled entries only"),
   which survives the renumbering `/refine` and `/hotfix` do. Comments and test
-  names follow `IDENTIFIER_LANGUAGE` (profile, language block — normally
-  English), like every other symbol. The full rule is the `design-principles`
-  skill, § "Comments".
+  names follow `IDENTIFIER_LANGUAGE` (profile, language block), like every other
+  symbol — read that key rather than defaulting to the language this document is
+  written in, and if it is missing, say so instead of choosing. The full rule is
+  the `design-principles` skill, § "Comments".
 - Never run state-changing git commands (`git add`, `git commit`, `git push`,
   branch changes). The branch is prepared before you start and version control
   belongs to the user.

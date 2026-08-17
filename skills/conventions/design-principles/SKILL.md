@@ -9,7 +9,7 @@ description: >
   responsibilities, or coupling.
 metadata:
   author: styve
-  version: "1.1"
+  version: "1.2"
   tags: [solid, dry, yagni, tell-dont-ask, comments, oop, design, principles]
   category: code-quality
 ---
@@ -147,9 +147,12 @@ worth citing an authority for, cite the durable one — the constitution article
 the living module doc, the ADR in `docs/decisions.md`.
 
 **Language:** comments and test names follow `IDENTIFIER_LANGUAGE` (profile,
-language block — normally English). They are part of the codebase, not of the
-artifact prose that follows `ARTIFACT_LANGUAGE`: a reader of the code should not
-have to switch languages between a symbol and the line above it.
+language block). They are part of the codebase, not of the artifact prose that
+follows `ARTIFACT_LANGUAGE`: a reader of the code should not have to switch
+languages between a symbol and the line above it. Read the key — this skill has no
+default of its own, and the examples in this document being in English is an
+artifact of the skill's own prose, never a suggestion for the code you write. If
+the profile does not declare the key, ask rather than pick one.
 
 ---
 

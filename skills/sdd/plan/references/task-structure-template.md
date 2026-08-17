@@ -97,3 +97,6 @@ Keep the artifact readable — the redaction is prose, not a dump:
   Task titles, step descriptions and expected outputs: `ARTIFACT_LANGUAGE`
   (profile, language block).
 - Code, paths and commands: verbatim.
+- The code a task **writes** — new symbols, its comments and its test names —
+  follows `IDENTIFIER_LANGUAGE` (profile, language block). `/build` transcribes it
+  as written, so this is where the codebase's language is actually decided.
