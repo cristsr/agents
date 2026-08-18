@@ -112,3 +112,7 @@ Keep the artifact readable — the redaction is prose, not a dump:
 - Prose, justifications, business descriptions: `ARTIFACT_LANGUAGE` (profile,
   language block — falls back to `OUTPUT_LANGUAGE`).
 - Class names, paths, endpoints, table names: verbatim from the code.
+- **The artifact never names the pipeline.** This template's `<!-- -->` comments and
+  `[bracketed]` notes are instructions to whoever fills it in, not content: they don't
+  reach the artifact. Neither does the skill, PHASE or Step that produced a line —
+  what is written down is the decision, not who made it.

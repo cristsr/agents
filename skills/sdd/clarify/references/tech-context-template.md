@@ -61,3 +61,7 @@ an assumption as a requirement.
 - Component names, classes, paths, identifiers, endpoints: `IDENTIFIER_LANGUAGE`
 - Descriptive bullet text: `ARTIFACT_LANGUAGE` (profile, language block — falls back to
   `OUTPUT_LANGUAGE`)
+- **The artifact never names the pipeline.** This template's `<!-- -->` comments and
+  `[bracketed]` notes are instructions to whoever fills it in, not content: they don't
+  reach the artifact. Neither does the skill, PHASE or Step that produced a line —
+  what is written down is the decision, not who made it.

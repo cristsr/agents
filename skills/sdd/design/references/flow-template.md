@@ -96,3 +96,7 @@ best.
   back to `OUTPUT_LANGUAGE`).
 - `use_case`, `module`, `entrypoint`, `command` and every identifier in the diagram:
   verbatim from the code — never translated.
+- **The artifact never names the pipeline.** This template's `<!-- -->` comments and
+  `[bracketed]` notes are instructions to whoever fills it in, not content: they don't
+  reach the artifact. Neither does the skill, PHASE or Step that produced a line —
+  what is written down is the decision, not who made it.

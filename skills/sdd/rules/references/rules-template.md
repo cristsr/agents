@@ -114,7 +114,13 @@ review is a style preference: either it gets a mechanical gate or it belongs in
 
 **Language:** articles, reasons and verification notes in `ARTIFACT_LANGUAGE`
 (profile, language block — falls back to `OUTPUT_LANGUAGE`). Gate names stay in English
-(terms of art); identifiers and paths always English.
+(terms of art); identifiers and paths follow `IDENTIFIER_LANGUAGE` and are quoted as
+the codebase spells them.
+
+**The constitution never names the pipeline**: this template's `<!-- -->` comments are
+instructions to whoever fills it in and don't reach `docs/rules.md`, and no article
+records which skill or PHASE wrote it. Naming `/design` as the *gate* that verifies an
+article is different — that is the mechanism, and it belongs there.
 
 **Formatting:** keep the constitution readable — a blank line after every heading,
 between every article, and before and after every list. One idea per bullet; never a

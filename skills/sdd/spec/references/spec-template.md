@@ -227,3 +227,7 @@ Keep the artifact readable — the redaction is prose, not a dump:
   `ARTIFACT_LANGUAGE`, translate its content into `ARTIFACT_LANGUAGE` when writing
   `spec.md`, but keep proper nouns, identifiers, endpoints and error codes verbatim.
   If both match, transcribe without translating anything.
+- **The artifact never names the pipeline.** This template's `<!-- -->` comments and
+  `[bracketed]` notes are instructions to whoever fills it in, not content: they don't
+  reach the artifact. Neither does the skill, PHASE or Step that produced a line —
+  what is written down is the decision, not who made it.

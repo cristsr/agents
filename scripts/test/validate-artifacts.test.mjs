@@ -225,3 +225,43 @@ test('--json emits parseable output', () => {
   const { out } = check({ 'spec.md': VALID_SPEC }, { args: ['spec-0001', '--json'] });
   assert.doesNotThrow(() => JSON.parse(out));
 });
+
+// ── The artifacts don't name the pipeline ───────────────────────────────────
+// README § "The artifacts never name the pipeline". The leak is always a copy:
+// a template's instruction comment, or a note to the writer left inside the
+// block that gets written down. Neither survives a refactor of the stage names,
+// and neither means anything to whoever reads the artifact later.
+
+test('a spec citing the skill that wrote a line is warned about', () => {
+  const spec = VALID_SPEC.replace(
+    'WHEN the month closes, THE SYSTEM SHALL emit one row per settled entry.',
+    'WHEN the month closes, THE SYSTEM SHALL emit one row per settled entry (written by /clarify).',
+  );
+  const { out } = check({ 'spec.md': spec });
+  assert.match(out, /WARNINGS/);
+  assert.match(out, /names the skill that produced it/);
+});
+
+test('a template instruction comment left in an artifact is warned about', () => {
+  const spec = `${VALID_SPEC}\n<!-- Scenarios (written by /clarify, never by /spec). -->\n`;
+  const { out } = check({ 'spec.md': spec });
+  assert.match(out, /template instruction comment/);
+});
+
+test('a plan citing a PHASE of the skill that produced it is warned about', () => {
+  const spec = `${VALID_SPEC}\n> Every AC must appear in the table (see PHASE 3.5).\n`;
+  const { out } = check({ 'spec.md': spec });
+  assert.match(out, /PHASE/);
+});
+
+test('naming the STORY is traceability, not a signature', () => {
+  // The line to keep drawing: spec-0042 in an artifact is project history and
+  // stays; the skill that typed it is machinery and does not.
+  const spec = VALID_SPEC.replace(
+    '## Ambiguity Resolution',
+    '## Ambiguity Resolution',
+  ).concat('\nSupersedes the decision taken in spec-0007.\n');
+  const { code, out } = check({ 'spec.md': spec });
+  assert.equal(code, 0);
+  assert.doesNotMatch(out, /WARNINGS/);
+});

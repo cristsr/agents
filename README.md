@@ -129,6 +129,10 @@ Three axes, three profile keys — no skill decides the language on its own:
 | Artifact prose | `ARTIFACT_LANGUAGE` | the text inside every artifact |
 | Identifiers | `IDENTIFIER_LANGUAGE` | paths, classes, fields, endpoints, YAML keys — **and code comments and test names**, which belong to the codebase rather than to the artifact prose |
 
+No skill ships a default for any of the three. `IDENTIFIER_LANGUAGE` in particular
+is read, never assumed: a project that leaves it null gets a warning from
+`validate-profile.mjs`, not English by default.
+
 **Structural headings stay in English regardless.** They are a contract between
 skills, parsed by name: `## Acceptance Criteria`, `## Ambiguity Resolution`,
 `## Build Mode Rationale`, `## Technical Context`, `## Global Architecture Impact`,
@@ -156,6 +160,25 @@ declares — the profile never decides that.
 The catalog — operations, placeholders, consumers and how to add one — is
 `contracts/PORTS.md`.
 
+## The artifacts never name the pipeline
+
+An artifact says **what** it specifies, designs or plans — never which skill wrote it,
+at which PHASE, or which Step of another skill produced a line in it. No "written by
+`/clarify`", no "(via `/sync`)", no "see PHASE 3.5". The same rule the code follows for
+AC numbers applies here, for the same reasons: the reader of a `spec.md`, a living doc
+or a PR body does not run this pipeline, the stage names change when a skill is
+refactored, and a citation nothing validates is a second source of truth.
+
+Two consequences worth naming, because both are easy to leak:
+
+- A template's `<!-- -->` comments are instructions to whoever fills it in. They are
+  **not** content: they never reach the artifact, and neither do the `[bracketed]`
+  placeholders explaining what to write.
+- Referencing the **story** is different and stays allowed — `spec-0042` in a decision
+  log entry or a flow's `introduced_by` is project traceability, not a signature.
+
+`validate-artifacts.mjs` warns when a story's artifacts break this.
+
 ## Artifact checks
 
 Two scripts answer mechanically what a skill would otherwise judge by eye. Both run
@@ -173,9 +196,10 @@ flags a *regression* — an unfinished stage sitting behind finished ones, where
 
 **`validate-artifacts.mjs`** checks that the artifacts hold their shape: the
 structural headings above, AC numbering and scenario form, the traceability table
-against `spec.md`'s ACs, and `## AC Coverage` with zero `✗`. It validates only what
-exists, so a story at the context stage is not faulted for having no plan. Exit codes:
-`0` valid · `1` issues · `2` could not run.
+against `spec.md`'s ACs, and `## AC Coverage` with zero `✗`. It also warns when an
+artifact names the pipeline instead of its subject (the section above). It validates
+only what exists, so a story at the context stage is not faulted for having no plan.
+Exit codes: `0` valid · `1` issues · `2` could not run.
 
 It runs at the gates each skill declares — `/status`, `/plan`'s close, `/sync`'s
 `Requires`, and `/healthcheck --all`.

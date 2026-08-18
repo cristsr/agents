@@ -207,7 +207,10 @@ final summary so the user decides what to do with them.
 
 e.g. `feat(movement): spec-0009 add transfers between own accounts`.
 
-**Body** (markdown, always in English):
+**Body** (markdown, always in English). The testing line reports the gate result
+`/sync` already produced in its Step 2; write the result, not where it came from —
+a PR is read by people who don't run this pipeline, and naming the skill that
+produced a line tells them nothing they can act on:
 
 ```markdown
 ## Summary
@@ -225,11 +228,10 @@ e.g. `feat(movement): spec-0009 add transfers between own accounts`.
 - <module/task> — <what was done>
 
 ## Documentation
-- Story archived in `work/done/spec-<number>/` (via /sync)
+- Story archived in `work/done/spec-<number>/`
 
 ## Testing
-- `CI_GATES` (tests) ✓ (result from /sync Step 2) — or "not run", if /sync
-  skipped the gates or the key is `—`
+- `CI_GATES` (tests) ✓ — or "not run"
 
 ## Migrations
 - `<timestamp>-<Name>` — <what it creates/alters> (or "None")

@@ -27,22 +27,24 @@ if there is only one group.]
 | AC-1 | Task N |
 | AC-2 | Task N, Task M |
 
-> Every AC in `spec.md` must appear at least once in this table. If any is missing,
-> add the corresponding task before saving the plan (see PHASE 3.5).
-
 ---
 ```
+
+Every AC in `spec.md` must appear at least once in that table. If any is missing, add
+the corresponding task before saving the plan (PHASE 3.5). That rule is for you, not
+for the plan: it stays here, out of the artifact.
 
 ---
 
 ## Task 0 — Always the first task after the header
 
+Resolve the branch name before writing this task: it is recorded in
+`work/active/spec-<number>/.branch`. Write it **literally** into the commands — the
+plan runs without stopping, so it must not have to ask, and the artifact says which
+branch it is, never who resolved it.
+
 ```markdown
 ### Task 0: Verify the working branch
-
-> The branch name was resolved by `/prepare` and recorded in
-> `work/active/spec-<number>/.branch` — write it literally into the commands below.
-> The plan runs without stopping, so it must not have to ask.
 
 **Steps:**
 
@@ -71,3 +73,7 @@ fence**. One idea per bullet; never a bullet longer than ~3 lines.
   `OUTPUT_LANGUAGE`).
 - Branch names, paths and commands: verbatim. The branch description stays English —
   it ends up in git history.
+- **The artifact never names the pipeline.** This template's `<!-- -->` comments and
+  `[bracketed]` notes are instructions to whoever fills it in, not content: they don't
+  reach the artifact. Neither does the skill, PHASE or Step that produced a line —
+  what is written down is the decision, not who made it.

@@ -221,6 +221,42 @@ export function section(text, name) {
   return lines.slice(start + 1, end).join('\n').trim();
 }
 
+// The pipeline is the machinery, not the subject: an artifact records the decision,
+// never which skill, PHASE or Step produced it. The leak is never deliberate — it is
+// a template's instruction comment copied along with the content, or a note meant for
+// the writer ("resolved by /prepare") left inside the block that gets written down.
+// Both read as helpful and both rot: the stage names move when a skill is refactored,
+// and whoever reads the artifact afterwards does not run this pipeline.
+const SKILL = 'spec|clarify|design|plan|build|sync|hotfix|refine|scan|docs|commit|prepare|forge|bootstrap|rules';
+const FOOTPRINTS = [
+  // Checked first: a leaked comment usually CONTAINS one of the patterns below, and
+  // naming the comment points at the cause (a template pasted whole) rather than at
+  // the sentence inside it.
+  [/<!--/, 'carries a template instruction comment'],
+  // "(via /sync)", "written by /clarify", "produced by /design", "resolved by /prepare"
+  [new RegExp(`\\((?:via|by|from)\\s+\`?/(?:${SKILL})\`?[^)]*\\)`, 'i'), 'names the skill that produced it'],
+  [new RegExp(`\\b(?:written|created|produced|generated|resolved|appended|added|promoted)\\s+by\\s+\`?/(?:${SKILL})\\b`, 'i'), 'names the skill that produced it'],
+  // "result from /sync Step 2", "see /plan PHASE 3.5"
+  [new RegExp(`/(?:${SKILL})\`?\\s+(?:PHASE|Step)\\s*\\d`, 'i'), 'names the stage that produced it'],
+  [/\bPHASE\s*\d/, 'cites a skill PHASE'],
+];
+
+/**
+ * Lines where an artifact talks about the pipeline instead of its subject.
+ * Returns `[{ line, text, reason }]` — empty when the artifact keeps to itself.
+ */
+export function pipelineFootprint(text) {
+  if (!text) return [];
+  const found = [];
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line) return;
+    const hit = FOOTPRINTS.find(([re]) => re.test(line));
+    if (hit) found.push({ line: i + 1, text: line, reason: hit[1] });
+  });
+  return found;
+}
+
 function nextHeading(lines, from, maxLevel, limit = lines.length) {
   for (let i = from; i < limit; i++) {
     const m = lines[i].match(/^(#{1,6})\s/);

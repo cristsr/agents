@@ -10,11 +10,14 @@
 //   5. Every <STACK_REFS>/<file> template exists in the generic pack (the fallback
 //      floor every project shares); an <STACK_REFS>/architecture/ reference is an
 //      error — packs carry no guides, the framework concretion lives in the skill
+//   6. No template puts a note about the pipeline inside its literal block: a
+//      template is copied, so such a note lands in the artifact and makes it name
+//      the skill or PHASE that produced it
 // Usage: node validate-skills.mjs
 
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { discoverSkills, duplicateNames } from './lib/skills.mjs';
-import { invocations, agentsPaths } from './lib/prose.mjs';
+import { invocations, agentsPaths, templateNotes } from './lib/prose.mjs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -310,6 +313,30 @@ for (const f of [...skillFiles(SKILLS), ...agentFiles(), ...contractFiles(), ...
       report(`ISSUE [${f}]: cites ~/.agents/${ref}, which does not exist`);
     }
   }
+}
+
+// --- 9. A template's literal block carries no note about the pipeline ---
+// README § "The artifacts never name the pipeline". A template is copied by an
+// agent, so anything inside its ```markdown block lands in the artifact — a note
+// meant for the writer ("resolved by /prepare", "see PHASE 3.5") included. The
+// instruction belongs OUTSIDE the fence, or inside an HTML comment, which the
+// templates already declare is not content. This catches it at the source; the
+// artifact side is validate-artifacts.mjs's warning.
+for (const f of [...skillFiles(SKILLS), ...packTemplates()]) {
+  if (!/template.*\.md$/i.test(f)) continue;
+  for (const note of templateNotes(readFileSync(f, 'utf8'))) {
+    report(`ISSUE [${f}]: line ${note.line} puts a note about the pipeline inside the literal block — it would be copied into the artifact: "${note.text}"`);
+  }
+}
+
+function packTemplates() {
+  const out = [];
+  for (const pack of PACKS) {
+    const dir = join(STACKS, pack, 'references');
+    if (!existsSync(dir)) continue;
+    for (const e of readdirSync(dir)) out.push(join(dir, e));
+  }
+  return out;
 }
 
 if (issues === 0) {

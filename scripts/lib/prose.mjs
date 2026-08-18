@@ -71,3 +71,29 @@ export function agentsPaths(text) {
   }
   return out;
 }
+
+// A template is copied, not read: whatever sits inside its ```markdown block ends
+// up in the artifact. So a note meant for whoever fills the template in — "the
+// branch was resolved by /prepare", "see PHASE 3.5" — must live outside the fence
+// (or inside an HTML comment, which the templates declare is never content),
+// because inside it the artifact ends up naming the pipeline that produced it.
+//
+// Only blockquotes are inspected. That is the shape those notes take, and it keeps
+// the check off the artifact's own content, where a `/docs` endpoint or a "phase 2
+// rollout" business rule is legitimate.
+const PIPELINE = /\/(spec|clarify|design|plan|build|sync|hotfix|refine|scan|docs|commit|prepare|forge|bootstrap|rules)\b|\bPHASE\s*\d/;
+
+/**
+ * Notes about the pipeline left inside a template's literal block.
+ * Returns `[{ line, text }]`, 1-indexed — empty when the template keeps them out.
+ */
+export function templateNotes(text) {
+  const out = [];
+  let inFence = false;
+  String(text ?? '').split(/\r?\n/).forEach((line, i) => {
+    if (/^[ \t]*```/.test(line)) { inFence = !inFence; return; }
+    if (!inFence || !/^\s*>/.test(line)) return;
+    if (PIPELINE.test(line)) out.push({ line: i + 1, text: line.trim() });
+  });
+  return out;
+}

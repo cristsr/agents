@@ -21,7 +21,7 @@ import { loadProfile, listStories, storyIdMatcher, key } from './lib/profile.mjs
 import {
   readStory, frontMatter, acceptanceCriteria, clarificationMarkers,
   tasks, traceability, acCoverage, hasHeading, section,
-  buildMode, BUILD_MODES,
+  buildMode, BUILD_MODES, pipelineFootprint,
 } from './lib/story.mjs';
 
 const argv = process.argv.slice(2);
@@ -234,6 +234,18 @@ function validate(storyId) {
     }
   }
 
+  // ── the artifacts don't name the pipeline ─────────────────────────────────
+  // README § "The artifacts never name the pipeline". Reported once per artifact
+  // with the first offending line, so a template pasted whole doesn't drown the
+  // report in identical warnings.
+  for (const [id, name] of [['spec', 'spec.md'], ['context', 'context.md'], ['design', 'design.md'], ['plan', 'plan.md']]) {
+    const marks = pipelineFootprint(story.text[id]);
+    if (!marks.length) continue;
+    const first = marks[0];
+    const more = marks.length > 1 ? `, and ${marks.length - 1} more line(s)` : '';
+    warn(name, `line ${first.line} ${first.reason}: "${truncate(first.text)}"${more} — the artifact records the decision, not who made it`);
+  }
+
   // ── closed stories ────────────────────────────────────────────────────────
   // The equivalent of `openspec validate --archived`: a story only leaves
   // work/active with its plan fully executed.
@@ -284,6 +296,10 @@ function render(reports) {
     if (!r.ok) failed++;
   }
   process.exit(failed ? 1 : 0);
+}
+
+function truncate(text, max = 70) {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
 function rel(path) {

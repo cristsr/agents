@@ -7,7 +7,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { stripFences, invocations, agentsPaths } from '../lib/prose.mjs';
+import { stripFences, invocations, agentsPaths, templateNotes } from '../lib/prose.mjs';
 
 test('stripFences removes fenced blocks and keeps inline code', () => {
   const text = [
@@ -93,4 +93,51 @@ test('agentsPaths skips placeholder patterns', () => {
 test('agentsPaths dedupes repeated citations', () => {
   const text = '~/.agents/contracts/PORTS.md and again ~/.agents/contracts/PORTS.md';
   assert.deepEqual(agentsPaths(text), ['contracts/PORTS.md']);
+});
+
+// ── templateNotes: what a template must not hand to the artifact ────────────
+// A template is copied, so its literal block IS the artifact. The three cases
+// below are the line the check has to hold: a note to the writer inside the
+// block is a defect, the same note outside it is the fix, and the artifact's own
+// content is none of its business.
+
+test('templateNotes catches a note to the writer left inside the literal block', () => {
+  // The real case: plan-header-template carried this inside the Task 0 block, so
+  // every plan.md written from it said who had resolved the branch.
+  const template = [
+    'Every plan starts with this header:',
+    '',
+    '```markdown',
+    '### Task 0: Verify the working branch',
+    '',
+    '> The branch name was resolved by `/prepare` and recorded in `.branch`.',
+    '```',
+  ].join('\n');
+  const notes = templateNotes(template);
+  assert.equal(notes.length, 1);
+  assert.equal(notes[0].line, 6);
+  assert.match(notes[0].text, /prepare/);
+});
+
+test('templateNotes ignores the same instruction outside the block', () => {
+  const template = [
+    'The branch was resolved by `/prepare` (PHASE 1) — write it in literally.',
+    '',
+    '```markdown',
+    '### Task 0: Verify the working branch',
+    '```',
+  ].join('\n');
+  assert.deepEqual(templateNotes(template), []);
+});
+
+test('templateNotes leaves the artifact own content alone', () => {
+  // A blockquote is suspicious only when it names the pipeline. A quoted business
+  // rule is content, and an endpoint that reads like a command is a known cost:
+  // it is reported, and a template quoting `GET /docs` is rare enough to accept.
+  const template = [
+    '```markdown',
+    '> The export lists settled entries only.',
+    '```',
+  ].join('\n');
+  assert.deepEqual(templateNotes(template), []);
 });

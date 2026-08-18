@@ -28,7 +28,7 @@ enough to be checked, and a well-configured project can still hold a story whose
 artifacts contradict each other.
 
 `~/.agents/scripts/validate-skills.mjs` (Node) checks
-along seven axes:
+along eight axes:
 
 1. **Profile keys** — every key the skills reference exists in
    `contracts/sdd-profile.template.yaml` (the ones that don't come out as warnings, to review
@@ -53,6 +53,10 @@ along seven axes:
    contract exists on disk. Those paths encode the source tree's shape, so every
    move breaks some of them, and a broken one stays invisible until someone
    follows it.
+8. **Templates don't hand the pipeline to the artifact** — no template puts a note
+   naming a skill, a PHASE or a Step inside its literal ```` ```markdown ```` block.
+   A template is copied, so such a note lands in the artifact, which then records
+   who wrote a line instead of what it decided.
 
 **Announce at start:** "Validating the SDD ecosystem's consistency."
 
@@ -107,6 +111,9 @@ the ACs (numbering, non-empty bodies, scenario shape), the front-matter `type`
 against `ITEM_TYPES`, the headings `/sync` and `/build` navigate by
 (`## Ambiguity Resolution`, `## Global Architecture Impact`, `## AC Coverage`), the
 `### AC → Task traceability` table against `spec.md`'s ACs, and the task numbering.
+It also warns when an artifact names the pipeline that produced it — a leaked
+template comment, a "(via `/sync`)", a "see PHASE 3.5" — which is a story to clean
+up, not a broken contract.
 
 This is the one step that validates **work in flight** rather than the ecosystem, so
 a finding here is a story to fix, not a skill to fix. Report it in its own line of
