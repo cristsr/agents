@@ -313,10 +313,24 @@ fix didn't break anything that was already passing).
    > "⚠️ This fix also affects the contract. Run `/refine api spec-<number>`
    > (or `diagram`/`data-model` as appropriate) to keep it aligned."
 
-2. Delegate a conventions check to the `conventions-reviewer` subagent over this
+2. **Check that the fix carries no reference to the story** — the same gate `/build`
+   runs at its Step 3.2, and the one that matters most here, because a hotfix exists
+   *because of* an AC and its regression test invites naming it:
+
+   ```bash
+   node ~/.agents/scripts/validate-code-provenance.mjs
+   ```
+
+   Exit `1` lists file, line and match. Rewrite each hit to state the behavior
+   ("returns 200 with an empty list") instead of `AC-2` — the numbering is what this
+   very skill changes, so a comment citing it is stale by the same edit that created
+   the fix. Then re-run. Any `NOTES` about property comments are advisory, exactly
+   as in `/build`: mention them, never let them block the fix.
+
+3. Delegate a conventions check to the `conventions-reviewer` subagent over this
    single task's diff (same pattern as `/build` Step 3.3).
 
-3. Show a summary:
+4. Show a summary:
    - AC corrected/added
    - Files modified
    - Test results for the affected module
@@ -324,11 +338,11 @@ fix didn't break anything that was already passing).
    - Contract warnings (if any)
    - Conventions findings (if any)
 
-4. Say:
+5. Say:
    > "Hotfix applied. `spec.md` and `plan.md` updated with HOTFIX-N. Review the
    > changes and tell me if anything needs adjusting."
 
-5. Stop — don't continue with further changes without confirmation.
+6. Stop — don't continue with further changes without confirmation.
 
 ---
 

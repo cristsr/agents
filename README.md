@@ -204,6 +204,24 @@ Exit codes: `0` valid · `1` issues · `2` could not run.
 It runs at the gates each skill declares — `/status`, `/plan`'s close, `/sync`'s
 `Requires`, and `/healthcheck --all`.
 
+```bash
+node ~/.agents/scripts/validate-code-provenance.mjs [<base-ref>] [--working] [--json]
+```
+
+**`validate-code-provenance.mjs`** is the same rule applied to the other direction:
+the **code** carries no reference to the story that produced it. It reads the added
+lines of `BASE_BRANCH...HEAD` and **fails** on any that cite an AC, a task, a `work/`
+path or the project's own story id (`STORY_ID_PATTERN`, so `HU-1234` is caught where
+that is the spelling). `plan.md` and the docs are exempt — the traceability belongs
+there. `/build` (Step 3.2) and `/hotfix` (PHASE 6) run it before closing.
+
+It also prints **notes** — never failures — for loose `//` comments on single
+properties, the shape `design-principles` asks you to replace with a better name.
+That half stays advisory on purpose: a project that adopts JSDoc/TSDoc documents its
+properties by standard, and no script can tell which convention is in force. A story
+id in code is wrong everywhere; a documented property is wrong only sometimes, and
+the difference belongs in the exit code.
+
 ## Repository layout
 
 ```

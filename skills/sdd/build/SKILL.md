@@ -175,8 +175,10 @@ which stay with the story; the code outlives the workspace `/sync` archives, so
 the citation becomes a pointer nobody can follow — and a stale one, since
 `/refine` renumbers ACs and `/hotfix` adds them. Write the rule the AC asked for
 ("settled entries only"), not its number. Comment only what the code cannot say
-about itself, and follow `IDENTIFIER_LANGUAGE` for comments and test names, like
-any other symbol. Full rule: the `design-principles` skill, § "Comments".
+about itself, on the structure and never on a single property — a field that needs
+a sentence beside it needs a better name — and follow `IDENTIFIER_LANGUAGE` for
+comments and test names, like any other symbol. Full rule: the `design-principles`
+skill, § "Comments".
 
 In `build_mode: evidence` the cycle written in each task runs forward instead of
 red-first: apply the change, then run the task's `VERIFY.run` command and compare
@@ -275,21 +277,33 @@ After ALL tasks are complete:
    In `build_mode: evidence` this is `VERIFY.full` instead, with `VERIFY.run` per
    deliverable as the fallback when `full` is unbound.
 
-2. **Grep the diff for artifact references in the code** — one command, before
+2. **Check that the code carries no reference to the story** — one command, before
    delegating anything:
 
    ```bash
-   git diff BASE_BRANCH...HEAD | grep -nE '^\+.*\b(AC-[0-9]+|Task [0-9]+|spec-[0-9]+|work/active)\b'
+   node ~/.agents/scripts/validate-code-provenance.mjs
    ```
 
-   Substitute `BASE_BRANCH` (`develop`) from the profile. Hits in `plan.md` are
-   expected — that is where traceability belongs. A hit in a source or test file is
-   a violation of the Step 2 rule: rewrite the line to state the rule instead of the
-   AC number, then re-run. No output means clean.
+   It reads the added lines of `BASE_BRANCH...HEAD` (the profile's, resolved by the
+   script) and reports every one that cites an AC, a task, the project's own story
+   id — `STORY_ID_PATTERN`, so `HU-1234` is caught in a project that numbers its work
+   that way — or a `work/` path. `plan.md` and the docs are exempt: that is where the
+   traceability belongs. Exit `0` is clean; exit `1` lists file, line and match.
 
-   This is grepped rather than trusted because it is the one convention whose cost
-   is invisible at the moment it is broken: the comment reads as helpful today and
-   points nowhere once `/sync` archives the workspace.
+   Fix each hit by stating the RULE instead of the number, then re-run. The one
+   exception is a project whose **domain** is tasks or specs, where `Task 3` can be
+   genuine content — say so in the close-out rather than rewording the domain.
+
+   The same command also prints `NOTES` for loose `//` comments on single
+   properties. Those never affect the exit code and are not a gate: a field that
+   needs a sentence beside it usually needs a better name, but a project that
+   documents properties by standard (JSDoc/TSDoc) is following its own convention,
+   which wins. Act on them where they're right, mention them in the summary, and
+   never strip a project's documentation to silence them.
+
+   This is checked rather than trusted because it is the one convention whose cost is
+   invisible at the moment it is broken: the comment reads as helpful today and points
+   nowhere once `/sync` archives the workspace.
 
 3. Delegate a conventions check to the `conventions-reviewer` subagent —
    it runs read-only against the diff and keeps the verbose review out of
