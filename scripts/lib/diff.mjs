@@ -99,8 +99,11 @@ const CODELIKE = /\.(ts|tsx|js|jsx|mjs|cjs|mts|cts|java|cs|kt|kts|swift|scala|go
 // Applied to the line with its string literals blanked out — otherwise the `//`
 // of `url: 'https://…'` reads as the start of a comment, which is the one false
 // positive this check cannot afford.
+// The `(?<![\\:/])` guard is the other half of the same problem: a regex literal
+// ends in `\/` (`path.replace(/^b\//, '')`) and a protocol in `:` — neither starts
+// a comment. Blanking strings does not cover those, because neither is a string.
 const TRAILING_ON_FIELD =
-  /^\s{2,}(?:readonly\s+|private\s+|public\s+|protected\s+|static\s+|final\s+|val\s+|var\s+)*[A-Za-z_$][\w$]*\??\s*[:=].*?\/\/\s*\S/;
+  /^\s{2,}(?:readonly\s+|private\s+|public\s+|protected\s+|static\s+|final\s+|val\s+|var\s+)*[A-Za-z_$][\w$]*\??\s*[:=].*?(?<![\\:/])\/\/\s*\S/;
 
 /** Blanks out string literals, keeping the line's length and shape. */
 function withoutStrings(line) {

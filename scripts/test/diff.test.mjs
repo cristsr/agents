@@ -191,3 +191,15 @@ test('prose and markdown are not scanned for property comments', () => {
   ].join('\n');
   assert.deepEqual(propertyComments(diff), []);
 });
+
+test('a regex literal in an assignment is not a trailing comment', () => {
+  // Found by running the check over its own commit: a regex ends in `\/`, which
+  // blanking string literals does not cover because a regex is not a string.
+  const diff = [
+    '--- a/src/parse.ts',
+    '+++ b/src/parse.ts',
+    '@@ -0,0 +1 @@',
+    "+  file = path.replace(/^b\\//, '');",
+  ].join('\n');
+  assert.deepEqual(propertyComments(diff), []);
+});
