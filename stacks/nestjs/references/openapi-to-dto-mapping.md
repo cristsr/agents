@@ -35,3 +35,7 @@ class must trace back to a field in `work/active/spec-<number>/docs/<api-artifac
   a rename that needs to also reach the entity/use case.
 - Never add a validator not implied by the schema (e.g. don't add
   `@MaxLength()` unless `api.yaml` specifies `maxLength`).
+- A schema `description` becomes `@ApiProperty({ description })` — never a `//`
+  comment beside the field. The decorator is published to the API consumer; a
+  comment is a note about a name, and a field whose name needs one gets renamed
+  instead (`design-principles` § "Comments").

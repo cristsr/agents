@@ -555,9 +555,20 @@ test name or a TODO. This is the one rule where you are the last line of defense
 written here lands in the repository and outlives the workspace `/sync` archives.
 Write the rule the AC states ("settled entries only"), which survives the
 renumbering `/refine` and `/hotfix` do. Comment only what the code cannot say
-about itself, in `IDENTIFIER_LANGUAGE` like every other symbol. Full rule: the
-`design-principles` skill, § "Comments"; `/build` greps the diff for it before
-closing.
+about itself, in `IDENTIFIER_LANGUAGE` like every other symbol.
+
+The same reasoning governs **where** a comment sits: on the structure (class,
+function, module, interface, enum), never on one of its properties. A task that
+writes an entity or a DTO with a loose `//` per field is writing the names badly —
+`amount` with "in cents" beside it is `amountInCents`. Spend the line on the name,
+which every caller reads, instead of on a comment only this file sees. Two things
+stay: contract metadata (`@ApiProperty({ description })`, an OpenAPI `description`),
+which is not a comment; and property documentation in a project whose convention is
+to document properties (JSDoc/TSDoc, docstrings) — there the standard wins, and
+`context.md` tells you which one the codebase already follows.
+
+Full rule: the `design-principles` skill, § "Comments"; `/build` checks the diff
+for artifact references before closing.
 
 **Tests must cover:**
 - Each acceptance criterion from spec.md → at least one test case

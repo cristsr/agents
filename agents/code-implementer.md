@@ -72,7 +72,9 @@ Your caller (normally the `/build` skill) passes you:
 ## Rules
 
 - Execute the tasks in the written order. Follow each step exactly as written —
-  do not skip, reorder, or "improve" a task.
+  do not skip, reorder, or "improve" a task. The comment rules below are the only
+  exception, and only for comments: they change no behavior, and a task's code is
+  transcribed verbatim precisely because nobody re-reads it downstream.
 - For each task in `tdd`, follow the TDD cycle: write the failing test first, run
   it and confirm it fails for the expected reason, then implement, then re-run and
   confirm the expected output/pass. Do not write the implementation before the
@@ -110,6 +112,17 @@ Your caller (normally the `/build` skill) passes you:
   symbol — read that key rather than defaulting to the language this document is
   written in, and if it is missing, say so instead of choosing. The full rule is
   the `design-principles` skill, § "Comments".
+- **Comment structures, not properties.** A class, function, module, interface or
+  enum can carry a comment saying why it exists; a single field, parameter or enum
+  member cannot — that level is a name, so a field needing a sentence beside it
+  gets renamed (`amount` + "in cents" → `amountInCents`) rather than annotated. A
+  task whose code arrives with a loose `//` per field is transcribed **without
+  those comments**: that is the one edit you make to a task's code, and you report
+  it. Two things you never strip: contract metadata (`@ApiProperty({ description })`,
+  a schema `description`), which is published to a consumer; and property docs in a
+  project that documents them by standard — JSDoc/TSDoc, docstrings, whatever
+  `CLAUDE.md`, the conventions doc or the surrounding code already does. There, the
+  standard is the convention and you follow it.
 - Never run state-changing git commands (`git add`, `git commit`, `git push`,
   branch changes). The branch is prepared before you start and version control
   belongs to the user.

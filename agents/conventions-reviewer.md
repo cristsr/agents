@@ -64,9 +64,9 @@ If you weren't given an explicit base branch/ref:
      sources above covers the specific case.
 - If no source documents a rule for something you see in the diff, don't report
   it as a violation — the project's silence is not a convention you get to invent.
-- Two rules hold regardless of what the project documents, because they belong to
-  the pipeline that produced the diff rather than to the project (cite them as
-  `skill:design-principles § Comments`):
+- Three rules about comments come from the pipeline that produced the diff rather
+  than from the project (cite them as `skill:design-principles § Comments`). The
+  first two hold regardless of what the project documents; the third yields to it:
   1. **No code references the story's artifacts** — an `AC-<n>`, `spec-<number>`,
      `Task <n>` or `work/active/…` path in a comment, a test name or a TODO. The
      traceability belongs to `plan.md`; the code outlives the story workspace, and
@@ -77,9 +77,20 @@ If you weren't given an explicit base branch/ref:
      is whatever that key says, never the language this document is written in.
      If the key is unset, report it under "Unknowns" instead of judging the
      comments against a language nobody declared.
-  A comment that merely restates the line below it is a DRY finding, reported only
-  when the project declares `design-principles` — that one is a judgment call, and
-  the two above are not.
+  3. **A comment says what the code cannot, at the level of the structure.** Two
+     shapes to report, with the same source:
+     - a loose `//` comment on a **single property** — a field, a parameter, an
+       enum member. That level is a name: the fix is renaming it (`amount` + "in
+       cents" → `amountInCents`), not annotating it.
+     - a comment that restates the line below it, narrates the obvious, or runs
+       long enough that the reader skips it.
+
+     Unlike the two above, this one **yields to the project**. If it documents
+     properties by standard — JSDoc/TSDoc, docstrings, `@ApiProperty({ description })`
+     or any published-doc convention visible in `CLAUDE.md`, the conventions doc or
+     the surrounding code — that is the house style and there is no finding. Report
+     it only where no such standard exists, and weigh it as the judgment call it is:
+     a constraint or a non-obvious consequence earns its lines however many it takes.
 - Every finding must cite the exact file + line and the specific rule it breaks
   (with its source: `conventions.md`, `CLAUDE.md`, a skill, or
   "consistency with `<sibling file>`").

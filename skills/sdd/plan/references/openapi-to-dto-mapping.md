@@ -35,6 +35,10 @@ class must trace back to a field in `work/active/spec-<number>/docs/<api-artifac
   entity/use case too.
 - Never add a validator not implied by the schema (e.g. don't add length
   limits unless the contract specifies `maxLength`).
+- A schema `description` becomes the stack's documentation metadata for that field
+  (the annotation, decorator or docstring the framework publishes) — never a plain
+  comment beside it. A field whose NAME needs a comment gets renamed instead
+  (`design-principles` § "Comments").
 - For the exact DTO syntax (decorators/annotations), see the stack pack
   (`STACK_REFS`, e.g. `[typescript, nestjs]`) and the project's conventions
   (the DTO shape this very file defines).
