@@ -449,38 +449,10 @@ resolution.
 ---
 ## Example
 
-**Input:** `/build spec-1933`
-
-**During execution — output per group:**
-
-```
-Executing plan spec-1933.
-
-[Task 0] Verify the working branch...
-  ✓ on feat/SPEC-1933-filter-zones-by-service-type, clean tree
-→ Marking Task 0 as [X]
-
-[Group A: catalog-ms] Tasks 1-3
-  ✓ Tests written: 3 specs, 8 cases
-  ✓ <TESTS.module> → FAIL (8 failing, as expected)
-  ✓ Task 1 implemented → PASS (3 tests)
-  ✓ Task 2 implemented → PASS (2 tests)
-  ✓ Task 3 implemented → PASS (3 tests)
-→ Marking Tasks 1-3 as [X]
-```
-
-**plan.md after Group A goes green:**
-```markdown
-### Task 1: Filter zones by service type [P] [X]
-```
-
-**Final output:**
-> All tasks completed. Review the changes and tell me if anything needs adjusting.
-> Once they're OK, the next step is `/sync spec-<number>` to close out the module's
-> documentation (and then `/commit spec-<number>` for the commits and the PR).
+A full worked run — a run executing a group and closing out — is in
+`references/example.md`. Read it when the shape of the output is in doubt.
 
 ---
-
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
