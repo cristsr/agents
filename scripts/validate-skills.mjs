@@ -18,6 +18,7 @@
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { discoverSkills, duplicateNames } from './lib/skills.mjs';
 import { invocations, agentsPaths, templateNotes } from './lib/prose.mjs';
+import { rel } from './lib/paths.mjs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -90,7 +91,7 @@ for (const line of readLines(TEMPLATE)) {
   if (m && !STOP_KEYS.test(m[1])) defined.add(m[1]);
 }
 if (defined.size === 0) {
-  console.error(`FAIL: no keys found in ${TEMPLATE} — is the template still YAML?`);
+  console.error(`FAIL: no keys found in ${rel(TEMPLATE, ROOT)} — is the template still YAML?`);
   process.exit(2);
 }
 
@@ -276,7 +277,7 @@ for (const [a, b] of duplicateNames(skillDirs())) {
 }
 
 // --- 7. Every `/command` invoked in prose resolves to a real skill ---
-// A skill hands off by NAME: "invoke /docs", "that's /plan's job". A rename that
+// A skill hands off by NAME: "invoke /sdd-docs", "that's /sdd-plan's job". A rename that
 // updates the folder but not the prose leaves a call into a void that no reader
 // notices — the skill sounds authoritative and the step silently does nothing.
 // This is what let `/architecture` survive its own rename in seven places.
@@ -288,8 +289,8 @@ const HOST_COMMANDS = new Set([
   'security-review', 'config', 'help', 'clear', 'compact',
 ]);
 // Two spellings count as an invocation, and only these two: the skill wrapped in
-// backticks (`` `/plan` ``), or one opening a word after a space, a quote or a
-// parenthesis ("run /plan"). What this deliberately excludes is the alternation
+// backticks (`` `/sdd-plan` ``), or one opening a word after a space, a quote or a
+// parenthesis ("run /sdd-plan"). What this deliberately excludes is the alternation
 // prose is full of — `` `providers`/registrations ``, `use case(s)/handler(s)` —
 // where the slash separates two words and names no command at all.
 {
@@ -318,7 +319,7 @@ for (const f of [...skillFiles(SKILLS), ...agentFiles(), ...contractFiles(), ...
 // --- 9. A template's literal block carries no note about the pipeline ---
 // README § "The artifacts never name the pipeline". A template is copied by an
 // agent, so anything inside its ```markdown block lands in the artifact — a note
-// meant for the writer ("resolved by /prepare", "see PHASE 3.5") included. The
+// meant for the writer ("resolved by /sdd-prepare", "see PHASE 3.5") included. The
 // instruction belongs OUTSIDE the fence, or inside an HTML comment, which the
 // templates already declare is not content. This catches it at the source; the
 // artifact side is validate-artifacts.mjs's warning.
@@ -326,6 +327,50 @@ for (const f of [...skillFiles(SKILLS), ...packTemplates()]) {
   if (!/template.*\.md$/i.test(f)) continue;
   for (const note of templateNotes(readFileSync(f, 'utf8'))) {
     report(`ISSUE [${f}]: line ${note.line} puts a note about the pipeline inside the literal block — it would be copied into the artifact: "${note.text}"`);
+  }
+}
+
+// --- 10. No angle-bracket placeholder in the front matter ---
+// The front matter is the only part of a skill that is ALWAYS loaded, and it is
+// read as data rather than as prose: an `<app>` or `<story-id>` there reads as a
+// tag instead of as the slot it stands for. The body may use whatever notation is
+// clearest — this is about the block the harness parses. Braces are the
+// ecosystem's placeholder form already: the profile template writes `{{STORY_ID}}`.
+// A real generic (`Nullable<T>`) is the same defect here — reword it, because the
+// keyword is what a query matches, never the angle brackets.
+for (const f of skillFiles(SKILLS)) {
+  const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(readFileSync(f, 'utf8'));
+  if (!fm) continue;
+  // `<` followed by a letter or a slash, so a stray comparison is not a finding.
+  for (const hit of new Set(fm[1].match(/<[A-Za-z/][^>\n]*>/g) ?? [])) {
+    report(`ISSUE [${f}]: front matter carries "${hit}" — angle brackets read as a tag there; use braces, or reword`);
+  }
+}
+
+// --- 11. The description fits the hard limit ---
+// Over 1024 characters the description is not merely long: the harness may reject or
+// truncate it, and truncation takes the negative triggers with it — the half that keeps
+// a skill from firing on someone else's work. The check exists because the failure is
+// silent and arrives from an ordinary edit: a rename that adds one clause is enough.
+// The note threshold flags a description with no room left before the next edit.
+const DESC_MAX = 1024;
+const DESC_NOTE = 950;
+for (const f of skillFiles(SKILLS)) {
+  const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(readFileSync(f, 'utf8'));
+  if (!fm) continue;
+  // Walked by lines on purpose: `$` under the /m flag stops at the first newline and
+  // would measure only the description's opening line.
+  const lines = fm[1].split(/\r?\n/);
+  const start = lines.findIndex((l) => /^description:/.test(l));
+  if (start === -1) continue;
+  let end = start + 1;
+  while (end < lines.length && !/^\w[\w-]*:/.test(lines[end])) end++;
+  const head = lines[start].replace(/^description:\s*[>|]?-?\s*/, '');
+  const n = [head, ...lines.slice(start + 1, end)].join(' ').split(/\s+/).filter(Boolean).join(' ').length;
+  if (n > DESC_MAX) {
+    report(`ISSUE [${f}]: description is ${n} characters — the hard limit is ${DESC_MAX}`);
+  } else if (n > DESC_NOTE) {
+    console.log(`note: ${rel(f, ROOT)} description at ${n}/${DESC_MAX} — little room left`);
   }
 }
 

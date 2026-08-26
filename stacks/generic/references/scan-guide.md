@@ -1,6 +1,6 @@
 # Scan Guide (generic — stack-agnostic)
 
-Reference for `/scan` PHASE 3 (CodeGraph mode and fallback): use it to read the
+Reference for `/sdd-scan` PHASE 3 (CodeGraph mode and fallback): use it to read the
 specific files the graph returns (or the subagent locates), with progressive
 disclosure — read only the sections needed per file type.
 

@@ -3,8 +3,8 @@
 //
 // The rule is `design-principles` § "Comments": code never cites the story's
 // artifacts — not an AC number, not a story id, not a task, not a path into the
-// workspace. Each citation dies the same way. `/sync` archives the workspace, so
-// the pointer goes nowhere; `/refine` and `/hotfix` renumber the ACs, so the
+// workspace. Each citation dies the same way. `/sdd-sync` archives the workspace, so
+// the pointer goes nowhere; `/sdd-refine` and `/sdd-hotfix` renumber the ACs, so the
 // number then lies; and `plan.md` already holds the traceability table, so the
 // comment is a second source of truth nothing validates.
 //

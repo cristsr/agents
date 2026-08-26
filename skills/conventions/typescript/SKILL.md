@@ -1,7 +1,7 @@
 ---
 name: typescript
 description: >
-  Enforces TypeScript coding conventions: guard clauses, Nullable<T> types, optional chaining,
+  Enforces TypeScript coding conventions: guard clauses, Nullable types, optional chaining,
   abstract classes over interfaces, path aliases, readonly immutability, and naming conventions.
   Use when writing or reviewing TypeScript code, creating types or interfaces, handling
   null/undefined values, naming files/classes/methods/variables, structuring imports, or asked

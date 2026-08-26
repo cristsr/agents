@@ -265,3 +265,30 @@ test('naming the STORY is traceability, not a signature', () => {
   assert.equal(code, 0);
   assert.doesNotMatch(out, /WARNINGS/);
 });
+
+// ── The artifacts cite paths relative to the project ────────────────────────
+// README § "The artifacts cite paths relative to the project". Nobody types an
+// absolute path into a spec: a validator or a shell prints one and the line is
+// quoted whole. It reads as evidence and stops being true on the next clone.
+
+test('a validator line quoted with its absolute path is warned about', () => {
+  const spec = `${VALID_SPEC}\n\`npm run rules:check\` fails with \`no rules document at C:\\Users\\dev\\project\\docs\\rules.md\`.\n`;
+  const { out } = check({ 'spec.md': spec });
+  assert.match(out, /WARNINGS/);
+  assert.match(out, /cites a path from one machine/);
+});
+
+test('a POSIX home path in a plan is the same defect', () => {
+  const plan = `${PLAN}\n\nRun the suite from /home/dev/project/apps/api.\n`;
+  const { out } = check({ 'spec.md': VALID_SPEC, 'plan.md': plan });
+  assert.match(out, /plan\.md: line \d+ cites a path from one machine/);
+});
+
+test('an endpoint and a repo-relative path are not machine paths', () => {
+  // The line to keep drawing: what an artifact is FULL of must pass, or the
+  // check gets turned off. `/api/...` is a route, `docs/…` already travels.
+  const spec = `${VALID_SPEC}\nThe route is /api/v1/entries and the contract sits in docs/api.yaml.\n`;
+  const { code, out } = check({ 'spec.md': spec });
+  assert.equal(code, 0);
+  assert.doesNotMatch(out, /WARNINGS/);
+});

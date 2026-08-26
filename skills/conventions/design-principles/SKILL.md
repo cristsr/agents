@@ -186,9 +186,9 @@ no `Task 7`, no link to `work/active/…` — not in a comment, a test name, a c
 body or a TODO. Three reasons, and each one is enough:
 
 - **The reference dies.** The story workspace is archived to `work/done/` when
-  `/sync` closes it. The code outlives it, so the citation becomes a pointer to
+  `/sdd-sync` closes it. The code outlives it, so the citation becomes a pointer to
   something the reader cannot open.
-- **The number moves.** `/refine` renumbers ACs and `/hotfix` adds them. A
+- **The number moves.** `/sdd-refine` renumbers ACs and `/sdd-hotfix` adds them. A
   comment saying `AC-3` keeps claiming AC-3 after AC-3 became AC-4 — it does not
   break, it lies.
 - **Traceability already has a home.** The `### AC → Task traceability` table in

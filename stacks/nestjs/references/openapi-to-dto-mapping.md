@@ -1,6 +1,6 @@
 # OpenAPI → NestJS DTO Mapping
 
-Reference for the DTO task(s) in `/plan`. Every field in a generated DTO
+Reference for the DTO task(s) in `/sdd-plan`. Every field in a generated DTO
 class must trace back to a field in `work/active/spec-<number>/docs/<api-artifact>`
 (`api.delta.yaml` si `API_CONTRACT_MODE=delta`; si no `api.yaml`)
 — never invent a field, decorator, or type not implied by this mapping.
@@ -31,7 +31,7 @@ class must trace back to a field in `work/active/spec-<number>/docs/<api-artifac
   makes diffing the two artifacts easier during review.
 - If `api.yaml` and `context.md` disagree on a field that already exists in
   an entity (different name or type), `api.yaml` wins for the DTO — but flag
-  it to the user before proceeding, since it likely means `/design` introduced
+  it to the user before proceeding, since it likely means `/sdd-design` introduced
   a rename that needs to also reach the entity/use case.
 - Never add a validator not implied by the schema (e.g. don't add
   `@MaxLength()` unless `api.yaml` specifies `maxLength`).

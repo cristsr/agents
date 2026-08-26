@@ -7,7 +7,7 @@ a change to an existing one — omit entirely otherwise (no empty file).
 This is the data model contract: schema definition (per the project's ORM) +
 migration SQL, kept separate from `design.md` (narrative) and the API contract
 (HTTP) because it has its own audience (whoever reviews/runs the migration) and
-its own consumer in `/plan` (the schema + migration tasks read this file
+its own consumer in `/sdd-plan` (the schema + migration tasks read this file
 directly, field by field).
 
 ---
@@ -50,7 +50,7 @@ CREATE TABLE table_name (
 ## Rules
 - One `## EntityName` block per new/changed table.
 - Schema field names/types must match the SQL column names/types exactly —
-  `/plan`'s "Entity field consistency" check (PHASE 3.5) compares them directly.
+  `/sdd-plan`'s "Entity field consistency" check (PHASE 3.5) compares them directly.
 - Field names here should match `context.md` where the field already exists
   on a related entity (reuse, don't rename without reason).
 - If a field is also exposed in the API contract, the

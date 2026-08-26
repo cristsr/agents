@@ -17,7 +17,7 @@
 //
 // This exists because it is the one convention whose cost is invisible at the moment
 // it is broken: `// AC-3` reads as helpful the day it is written and points nowhere
-// once /sync archives the workspace. It replaces the hand-written grep /build used
+// once /sdd-sync archives the workspace. It replaces the hand-written grep /sdd-build used
 // to carry, which hardcoded `spec-` (wrong for any project numbering its work
 // differently) and needed a POSIX shell (this ecosystem runs on Windows too).
 

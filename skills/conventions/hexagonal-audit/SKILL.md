@@ -4,14 +4,14 @@ description: >
   Audits an existing codebase against the hexagonal rules (dependency direction,
   layer topology, ports & bindings, error handling) and produces a ranked
   findings report — then bridges into the SDD pipeline by generating draft
-  spec.md stories (work/active/<story-id>/spec.md) whose ACs derive from the HIGH
-  and MEDIUM findings, ready for /clarify → /design → /plan → /build. Read-only:
+  spec.md stories (work/active/{story-id}/spec.md) whose ACs derive from the HIGH
+  and MEDIUM findings, ready for /sdd-clarify → /sdd-design → /sdd-plan → /sdd-build. Read-only:
   never edits code unless the user asks for the fixes to be applied. Use when
   the user says "audit the project", "review the architecture", "audit it",
   "find architecture improvements", "does this respect hexagonal", or wants to
   turn architecture debt into backlog stories. Do NOT use to build modules (use
-  /hexagonal-architecture), to survey the codebase for an item (use /clarify),
-  or for C4 diagrams of the whole system (use /docs).
+  /hexagonal-architecture), to survey the codebase for an item (use /sdd-clarify),
+  or for C4 diagrams of the whole system (use /sdd-docs).
 metadata:
   author: styve
   version: "1.0"
@@ -28,7 +28,7 @@ metadata:
 ## Project profile (read first, always)
 
 Read `.agents/profile.yaml` at the root of the current project before anything else.
-If it doesn't exist, tell the user to run `/bootstrap` and stop — without a profile you
+If it doesn't exist, tell the user to run `/sdd-bootstrap` and stop — without a profile you
 don't know this project's conventions. The file is a YAML map of named blocks; a key
 holding `null` is not configured, so use the fallback this skill declares for it —
 never a guessed value.
@@ -41,7 +41,7 @@ in the `Contract` below.
 
 ## Contract
 
-What this skill needs, what it hands to `/clarify`, and what it may not do. **Check
+What this skill needs, what it hands to `/sdd-clarify`, and what it may not do. **Check
 every `Requires` row before mapping anything** — auditing against rules the project
 never adopted produces findings nobody asked for, and the survey is the expensive part.
 
@@ -55,7 +55,7 @@ never adopted produces findings nobody asked for, and the survey is the expensiv
 | The story workspace exists | `work/active/` is present | Create it — the `spec.md` drafts need it — and confirm `WORKDIR_ACTIVE` in the profile |
 | The ids to generate are free | for each resolved `<story-id>`, `work/active/<story-id>/` does **not** exist | Never overwrite: pick the next free id, or ask if the id came from a tracker key |
 
-**Produces** — this is what `/clarify` looks for
+**Produces** — this is what `/sdd-clarify` looks for
 
 - `docs/audits/<date>-<scope>.md`: the ranked report (HIGH/MEDIUM/LOW), each finding
   with its `file:line`, the rule broken, the concrete cost and the smallest fix, plus
@@ -63,7 +63,7 @@ never adopted produces findings nobody asked for, and the survey is the expensiv
 - one or more `work/active/<story-id>/spec.md` following
   `../../sdd/spec/references/spec-template.md`, each with:
   - **at least one numbered AC** under `## Acceptance Criteria`, written as expected
-    system behavior. This is a hard gate, not a stylistic note: `/clarify` stops on an
+    system behavior. This is a hard gate, not a stylistic note: `/sdd-clarify` stops on an
     item with no ACs, so an audit story without them is dead on arrival
   - one AC per HIGH/MEDIUM finding; LOW findings as a hygiene checklist in the body,
     never as ACs
@@ -75,12 +75,12 @@ never adopted produces findings nobody asked for, and the survey is the expensiv
 - `work/active/<story-id>/spec.md` — new files only, never over an existing workspace
 
 Not the project's source or test files. Not `context.md`, `design.md` or `plan.md` of
-the items it drafts — those come later, from `/clarify` onward.
+the items it drafts — those come later, from `/sdd-clarify` onward.
 
 **Never**
 
 - **Forbidden:** editing code. AUDIT mode produces findings and stories; the fixes get
-  built with `/plan` + `/build` like any other item. This holds even when the fix is
+  built with `/sdd-plan` + `/sdd-build` like any other item. This holds even when the fix is
   one line and obvious — that one line is what the story is for.
 - **Forbidden:** reporting a detector hit as a finding without reading the file. Every
   hit is a lead; a finding cites `file:line` because someone looked.
@@ -148,7 +148,7 @@ the 13 dimensions, write findings, auditor's rules). Summary:
 With the final report, turn the findings into SDD pipeline work:
 
 1. **One story per audited module** (or per cluster of findings if the module has
-   few): create `work/active/<story-id>/spec.md` with the structure of `/spec`'s
+   few): create `work/active/<story-id>/spec.md` with the structure of `/sdd-spec`'s
    template (`../../sdd/spec/references/spec-template.md`).
 2. **The ID** is resolved with the profile's `STORY_ID_MODE` (sequential → next free
    number; name → slug; tracker-code → ask for the key).
@@ -159,7 +159,7 @@ With the final report, turn the findings into SDD pipeline work:
 4. Each `spec.md` carries an `## Audit Context` section referencing the full report
    (`docs/audits/<date>-<scope>.md` — save the report there).
 5. Before closing, verify the gate the `Contract` states: every generated `spec.md` has
-   at least one numbered AC. Count them — a draft with zero is one `/clarify` will
+   at least one numbered AC. Count them — a draft with zero is one `/sdd-clarify` will
    refuse, so it isn't a draft, it's a dead file.
 6. Report and suggest the next step: `/clarify <id>`.
 
@@ -172,9 +172,9 @@ With the final report, turn the findings into SDD pipeline work:
 | The framework skill's detector won't run (no bash / another language) | Skill with no script for the stack | Map manually with the language's find/grep; per-stack detailers live in the framework skill's `audit-smells.md` |
 | `work/active/` doesn't exist | Pipeline never started in this repo | Create it (the spec.md drafts require it) and confirm the profile's `WORKDIR_ACTIVE` |
 | The resolved `<story-id>` already exists | An earlier audit, or a real item, uses that id | Ask — never overwrite a workspace; take the next free id instead |
-| A generated `spec.md` has no ACs | Every finding for that module was LOW | Don't leave the draft: fold the checklist into an existing story, or drop it — `/clarify` rejects an item with no ACs |
+| A generated `spec.md` has no ACs | Every finding for that module was LOW | Don't leave the draft: fold the checklist into an existing story, or drop it — `/sdd-clarify` rejects an item with no ACs |
 | Too many findings | Unprioritized report | Only HIGH/MEDIUM generate ACs; LOW stay as a checklist |
-| The user wants you to apply the fixes | Mode confusion | That's story work: generate the `spec.md` files and let them go through `/plan` + `/build` — AUDIT never edits code |
+| The user wants you to apply the fixes | Mode confusion | That's story work: generate the `spec.md` files and let them go through `/sdd-plan` + `/sdd-build` — AUDIT never edits code |
 | The generated `spec.md` doesn't follow the template | Inconsistent format | Consult `../../sdd/spec/references/spec-template.md` and the profile's `STORY_ID_MODE` |
 
 ---

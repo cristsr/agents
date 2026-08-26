@@ -13,8 +13,8 @@ description: >
   process into a skill", "build a skill for X", or describes a repeatable
   workflow they want Claude to follow consistently.
   Do NOT use to review or score an existing skill (use /skill-evaluator), to
-  edit project artifacts of a user story (use /refine), or to define
-  project-wide governing principles (use /rules).
+  edit project artifacts of a user story (use /sdd-refine), or to define
+  project-wide governing principles (use /sdd-rules).
 ---
 
 # skill-creator

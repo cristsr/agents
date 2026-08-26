@@ -1,6 +1,6 @@
 // validate-rules.mjs — the constitution's FORM, checked mechanically.
 //
-// /design and /plan validate their work against docs/rules.md, so a rule they
+// /design and /plan validate their work against docs/sdd-rules.md, so a rule they
 // cannot evaluate is worse than no rule: it passes silently. The two checks
 // worth pinning are the ones that decide whether a rule is checkable at all —
 // a Principle phrased without MUST/SHALL/NEVER, and a verification that names
@@ -113,5 +113,5 @@ test('a missing file is "could not run", not "invalid"', () => {
   const run = spawnSync(process.execPath, [SCRIPT, join(tmpdir(), 'sdd-no-rules-9f3c.md')], { encoding: 'utf8' });
   assert.equal(run.status, 2);
   // The error names where the template lives — a path that must resolve.
-  assert.match(`${run.stdout}${run.stderr}`, /skills\/sdd\/rules\/references\/rules-template\.md/);
+  assert.match(`${run.stdout}${run.stderr}`, /skills\/sdd\/sdd-rules\/references\/rules-template\.md/);
 });

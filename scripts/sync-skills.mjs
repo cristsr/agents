@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join, relative } from 'node:path';
 import { homedir } from 'node:os';
 import { discoverSkills, duplicateNames } from './lib/skills.mjs';
+import { home as short } from './lib/paths.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..');
@@ -37,7 +38,7 @@ const prune = argv.includes('--prune');
 
 const skills = discoverSkills(SOURCE);
 if (skills.length === 0) {
-  console.error(`FAIL: no skill found under ${SOURCE}`);
+  console.error(`FAIL: no skill found under ${short(SOURCE)}`);
   process.exit(2);
 }
 
@@ -50,7 +51,7 @@ if (dupes.length) {
 }
 
 if (!existsSync(DEST)) {
-  if (dryRun) console.log(`would create ${DEST}`);
+  if (dryRun) console.log(`would create ${short(DEST)}`);
   else mkdirSync(DEST, { recursive: true });
 }
 
@@ -69,11 +70,11 @@ for (const skill of skills) {
     if (pointsIntoSource(state.target)) {
       actions.push({ verb: 'relink', skill, link, note: `was ${short(state.target)}` });
     } else {
-      blocked.push(`${skill.name}: link points outside the source tree (${state.target}) — left untouched`);
+      blocked.push(`${skill.name}: link points outside the source tree (${short(state.target)}) — left untouched`);
     }
   } else {
     // A real directory: could be a hand-made copy that has since diverged.
-    blocked.push(`${skill.name}: a real directory exists at ${link} — inspect it, then remove it and re-run`);
+    blocked.push(`${skill.name}: a real directory exists at ${short(link)} — inspect it, then remove it and re-run`);
   }
 }
 
@@ -107,7 +108,7 @@ for (const action of actions) {
 // ── Report ──────────────────────────────────────────────────────────────────
 const categories = [...new Set(skills.map((s) => s.category))].sort();
 console.log(`\n${skills.length} skills · ${categories.join(' · ')}`);
-console.log(`source ${short(SOURCE)}  →  ${DEST} (flat; OpenCode reads it too)`);
+console.log(`source ${short(SOURCE)}  →  ${short(DEST)} (flat; OpenCode reads it too)`);
 
 if (blocked.length) {
   console.log(`\nNEEDS ATTENTION (${blocked.length}):`);
@@ -140,7 +141,3 @@ function samePath(a, b) {
   return norm(a) === norm(b);
 }
 
-function short(path) {
-  const home = homedir();
-  return path.startsWith(home) ? path.replace(home, '~').split('\\').join('/') : path;
-}

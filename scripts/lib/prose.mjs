@@ -1,6 +1,6 @@
 // prose.mjs — reads the cross-references the ecosystem writes in PROSE.
 //
-// A skill hands off to another one by name ("that's /plan's job") and cites the
+// A skill hands off to another one by name ("that's /sdd-plan's job") and cites the
 // repo by absolute path (`~/.agents/contracts/PORTS.md`). Neither is code, so
 // nothing breaks loudly when a rename leaves one behind: the skill still reads
 // as authoritative and the step silently does nothing. That is exactly how
@@ -15,7 +15,7 @@
  *
  * Inside a fence a `/word` is a filesystem path or a shell flag, and treating it
  * as an invocation would drown the real findings. Inline code is the OPPOSITE
- * case — `` `/plan` `` is exactly how one skill cites another — so backticks are
+ * case — `` `/sdd-plan` `` is exactly how one skill cites another — so backticks are
  * left alone. Fences are matched with leading whitespace allowed: a fence nested
  * in a list item is indented, and an anchored `^```" would miss it and take the
  * whole diagram as prose.
@@ -25,8 +25,8 @@ export function stripFences(text) {
 }
 
 // Two spellings count as an invocation, and only these two: the command wrapped
-// in backticks (`` `/plan` ``), or one opening a word after a space, a quote or
-// a parenthesis ("run /plan"). What this deliberately excludes is the
+// in backticks (`` `/sdd-plan` ``), or one opening a word after a space, a quote or
+// a parenthesis ("run /sdd-plan"). What this deliberately excludes is the
 // alternation prose is full of — `` `providers`/registrations ``,
 // `use case(s)/handler(s)`, `command`/query — where the slash separates two
 // words and names no command at all.
@@ -74,12 +74,12 @@ export function agentsPaths(text) {
 
 // A template is copied, not read: whatever sits inside its ```markdown block ends
 // up in the artifact. So a note meant for whoever fills the template in — "the
-// branch was resolved by /prepare", "see PHASE 3.5" — must live outside the fence
+// branch was resolved by /sdd-prepare", "see PHASE 3.5" — must live outside the fence
 // (or inside an HTML comment, which the templates declare is never content),
 // because inside it the artifact ends up naming the pipeline that produced it.
 //
 // Only blockquotes are inspected. That is the shape those notes take, and it keeps
-// the check off the artifact's own content, where a `/docs` endpoint or a "phase 2
+// the check off the artifact's own content, where a `/sdd-docs` endpoint or a "phase 2
 // rollout" business rule is legitimate.
 const PIPELINE = /\/(spec|clarify|design|plan|build|sync|hotfix|refine|scan|docs|commit|prepare|forge|bootstrap|rules)\b|\bPHASE\s*\d/;
 
