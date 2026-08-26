@@ -23,6 +23,13 @@ targets:
       fast: haiku
 
     # capability → native tools (allowlist: what isn't declared isn't granted)
+    #
+    # MCP tools are subject to the same allowlist as the native ones: a subagent
+    # whose frontmatter declares `tools:` receives EXACTLY that list, and an
+    # `mcp__*` entry in settings' `permissions.allow` only silences the prompt —
+    # it does not put the tool on the agent's table. Without `graph` below, an
+    # agent asking the CODE_SURVEY port for the graph falls through to its
+    # `inline` grep/read fallback and pays for it in round-trips.
     capabilities:
       read: [Read]
       search: [Grep, Glob]
@@ -31,6 +38,7 @@ targets:
       edit: [Edit, Write]
       web: [WebFetch, WebSearch]
       agents: [Agent]
+      graph: [mcp__codegraph__codegraph_explore]
 
     # Implementation of each guard in this provider.
     guards:
@@ -78,6 +86,13 @@ targets:
       edit: { edit: true, write: true }
       web: { webfetch: true }
       agents: { task: true }
+      # Deliberately empty, and not an oversight. OpenCode enables everything by
+      # default and `deny_unlisted` only emits a deny for what `known_tools`
+      # names — the codegraph MCP tool is in neither list, so it is already
+      # reachable there. The entry exists so `graph` resolves in this target too:
+      # resolveCapabilities() dies on a capability an enabled target doesn't map,
+      # which would break the sync for every agent declaring it.
+      graph: {}
 
     # What isn't declared is emitted as a `deny` rule, rather than omitted.
     # OpenCode enables everything by default: omitting would be granting.
