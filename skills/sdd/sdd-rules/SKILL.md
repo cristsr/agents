@@ -42,15 +42,12 @@ articles doesn't get followed; aim for 6–10 high-impact articles.
 
 ## Project profile (read first, always)
 
-Read `.agents/profile.yaml` at the root of the current project before anything else.
-If it doesn't exist, tell the user to run `/sdd-bootstrap` and stop — without a profile you
-don't know this project's conventions. The file is a YAML map of named blocks; a key
-holding `null` is not configured, so use the fallback this skill declares for it —
-never a guessed value.
-
-This skill binds no port: it writes one document and validates it with a script that
-ships with the ecosystem. What it needs from the profile is the language axis and the
-docs pointer, listed under **Profile keys** in the `Contract` below.
+Read `.agents/profile.yaml` from the project root before anything else, as
+`~/.agents/references/project-profile.md` describes: what a missing file means, how a
+`null` key falls back, and why every path or command shown here is only an example the
+profile overrides. **This skill binds no port** — it writes one document and validates
+it with a script that ships with the ecosystem. The keys it reads are listed under
+**Profile keys** in the `Contract` below.
 
 ---
 

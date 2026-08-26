@@ -27,15 +27,11 @@ metadata:
 
 ## Project profile (read first, always)
 
-Read `.agents/profile.yaml` at the root of the current project before anything else.
-If it doesn't exist, tell the user to run `/sdd-bootstrap` and stop — without a profile you
-don't know this project's conventions. The file is a YAML map of named blocks; a key
-holding `null` is not configured, so use the fallback this skill declares for it —
-never a guessed value.
-
-Any path, command or stack convention shown in this document is an example resolution;
-the profile's value wins. The keys this skill reads are listed under **Profile keys**
-in the `Contract` below.
+Read `.agents/profile.yaml` from the project root before anything else, as
+`~/.agents/references/project-profile.md` describes: what a missing file means, how a
+`null` key falls back, how a port resolves to an adapter, and why every path or command
+shown here is only an example the profile overrides. The keys this skill reads are
+listed under **Profile keys** in the `Contract` below.
 
 ---
 

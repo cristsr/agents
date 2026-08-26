@@ -56,21 +56,11 @@ mode) or "Updating `docs/architecture/` with spec-<number>." (Update mode).
 
 ## Project profile (read first, always)
 
-Read `.agents/profile.yaml` at the root of the current project before anything else.
-If it doesn't exist, tell the user to run `/sdd-bootstrap` and stop — without a profile you
-don't know this project's conventions. The file is a YAML map of named blocks; a key
-holding `null` is not configured, so use the fallback this skill declares for it —
-never a guessed value.
-
-Tools come from the profile's `ports` block: this skill names the capability it
-needs — a port — and the block says which command, agent or MCP tool provides it
-here. Run the first adapter that resolves; when one resolves and then fails, report
-that failure instead of trying the next. A port with no usable adapter is **unbound**
-— see the `Degrades` row below.
-
-Any path, diagram notation or command shown in this document is an example resolution;
-the profile's value wins. The keys this skill reads are listed under **Profile keys**
-in the `Contract` below.
+Read `.agents/profile.yaml` from the project root before anything else, as
+`~/.agents/references/project-profile.md` describes: what a missing file means, how a
+`null` key falls back, how a port resolves to an adapter, and why every path or command
+shown here is only an example the profile overrides. The keys this skill reads are
+listed under **Profile keys** in the `Contract` below.
 
 ---
 
