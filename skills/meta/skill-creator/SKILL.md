@@ -236,11 +236,12 @@ Consult `references/skill-template.md` for the full template.
 ### Step 1: [First major step]
 Clear explanation of what happens.
 
-## Examples
-Example 1: [common scenario]
-User says: "…"
-Actions: 1. … 2. …
-Result: …
+## Example
+
+A full worked run — an interview turned into a finished skill — is in
+`references/example.md`. Read it when the shape of the output is in doubt.
+
+---
 
 ## Troubleshooting
 Error: [common message]
@@ -437,44 +438,14 @@ weight.
 
 ## Common Issues
 
+The 3 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |---|---|---|
 | The user doesn't know which use cases to give | The idea is still fuzzy | Don't move on: ask them to describe the last time they did the task by hand, step by step |
 | The skill wants to do too much | Several unrelated workflows mixed together | Split into two skills; each with its own `description` and cross negative triggers |
 | Generic `description` ("helps with X") | PHASE 1 was skipped | Go back to the use cases and extract the user's literal phrases |
-| Enormous `SKILL.md` | Everything inline instead of progressive disclosure | Move the detail into `references/` and link it |
-| Clashes with an existing skill | Overlapping scopes | Add negative triggers to both (`Do NOT use to…`) |
-| Invalid name | Spaces, uppercase or underscores | Convert to kebab-case: `My Cool Skill` → `my-cool-skill` |
-| Empty `Contract` rows on a standalone skill | The template got filled in without running PHASE 2 Step 4 | Delete the block. No handoff, no contract — invented rows train the reader to skim it |
-| `Produces` that nobody can check ("leaves the module documented") | Written for the author, not for the next skill | Restate as a count or a file that either exists or doesn't |
-| The skill hardcodes a path or branch the project configures | The literal was never classified as normative | Replace with the key inline, example in parentheses; add it to `Profile keys` |
 
 ---
-
-## Example
-
-**Input:** "I want a skill that builds my weekly incident report"
-
-**Flow:**
-1. PHASE 1: interview → 2 use cases. Literal phrases: "build the weekly report",
-   "this week's incident report". Tools: monitoring MCP + a validation script.
-2. PHASE 2: category 3 (MCP enhancement), problem-first framing, pattern 3
-   (iterative refinement — the report improves with validation and regeneration).
-   Step 4: **pipeline** — it writes into the shared reports workspace and reads the
-   project's config for the output path.
-3. PHASE 3: `name: incident-weekly-report`; `description` with what + when +
-   the literal phrases + `Do NOT use for ad-hoc incident queries`.
-4. PHASE 4: `SKILL.md` + `scripts/check_report.py` + `references/severity-rules.md`.
-5. PHASE 5: `## Contract` after the Overview — `Requires` (the week's incidents
-   exported), `Produces` (one file per severity, zero incidents unclassified),
-   `Writes` (the reports path only), `Never` (never edits the incident source),
-   `Profile keys` (`REPORTS_DIR`, `OUTPUT_LANGUAGE`). Then the instructions: initial
-   draft → quality check → refinement loop → finalization, plus troubleshooting for
-   MCP connection errors.
-6. PHASE 6: trigger battery (3 positive, 2 negative) + a token baseline.
-7. PHASE 7: checklist OK → handoff.
-
-**Output:**
-> "Skill created at `incident-weekly-report/`. Run the trigger queries to verify it
-> loads when it should. For a full review, use
-> `/skill-evaluator incident-weekly-report/`."

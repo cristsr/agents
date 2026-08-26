@@ -163,15 +163,15 @@ With the final report, turn the findings into SDD pipeline work:
 
 ## Common Issues
 
+The 3 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| The framework skill's detector won't run (no bash / another language) | Skill with no script for the stack | Map manually with the language's find/grep; per-stack detailers live in the framework skill's `audit-smells.md` |
 | `work/active/` doesn't exist | Pipeline never started in this repo | Create it (the spec.md drafts require it) and confirm the profile's `WORKDIR_ACTIVE` |
 | The resolved `<story-id>` already exists | An earlier audit, or a real item, uses that id | Ask — never overwrite a workspace; take the next free id instead |
-| A generated `spec.md` has no ACs | Every finding for that module was LOW | Don't leave the draft: fold the checklist into an existing story, or drop it — `/sdd-clarify` rejects an item with no ACs |
-| Too many findings | Unprioritized report | Only HIGH/MEDIUM generate ACs; LOW stay as a checklist |
 | The user wants you to apply the fixes | Mode confusion | That's story work: generate the `spec.md` files and let them go through `/sdd-plan` + `/sdd-build` — AUDIT never edits code |
-| The generated `spec.md` doesn't follow the template | Inconsistent format | Consult `../../sdd/spec/references/spec-template.md` and the profile's `STORY_ID_MODE` |
 
 ---
 
