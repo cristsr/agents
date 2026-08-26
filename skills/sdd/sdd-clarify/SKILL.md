@@ -652,10 +652,9 @@ you don't want anything decided out of your sight.
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
-`OUTPUT_LANGUAGE` if the project doesn't declare it): the ACs you rewrite in
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (language block): the ACs you rewrite in
 `spec.md`, the rationale of each entry in the decision log, and `context.md`'s
-inventory prose. Never translate them to English on your own.
+inventory prose.
 
 The **section headings** stay English regardless of that key (`## Acceptance
 Criteria`, `## Ambiguity Resolution`, `## Technical Context`, `## Build Mode
@@ -666,10 +665,6 @@ which are matched verbatim.
 The **identifiers** quoted from the code — paths, classes, fields, endpoints —
 follow `IDENTIFIER_LANGUAGE` (profile, language block). Quote them exactly as the
 code spells them; this skill has no language of its own to convert them into.
-
-**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
-The message samples in this document are written in English; render them in the
-user's language when that differs.
 
 ---
 

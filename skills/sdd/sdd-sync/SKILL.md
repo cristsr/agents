@@ -404,8 +404,7 @@ resolution.
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
-`OUTPUT_LANGUAGE` if the project doesn't declare it): the entries appended to
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (language block): the entries appended to
 `docs/decisions.md` and anything you write into the living docs. Promoted content
 keeps the language `/sdd-design` produced it in — never translate it on promotion.
 
@@ -414,7 +413,3 @@ Impact`) are structural contracts with `/sdd-design` — always English. Paths, 
 names and any other identifier follow `IDENTIFIER_LANGUAGE` (profile, language
 block): promote them verbatim from the delta, and never translate one into English
 because this document is written in it.
-
-**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
-The message samples in this document are written in English; render them in the
-user's language when that differs.

@@ -275,7 +275,3 @@ resolution.
 independent of `ARTIFACT_LANGUAGE`: git history and the PR are the repo's shared
 record, read outside the project. The profile's language block states this exception
 explicitly, so it isn't a decision this skill makes on its own.
-
-**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
-The message samples in this document are written in English; render them in the
-user's language when that differs.

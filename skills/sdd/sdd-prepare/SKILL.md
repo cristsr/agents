@@ -274,6 +274,3 @@ A full worked run — the checkout, the pull and the branch it records — is in
 This skill writes only the branch name. A branch is git surface — history read
 outside the project — so its description stays English regardless of the language
 keys, exactly as `/sdd-commit` treats commit messages and the PR.
-**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile) —
-the message samples above are written in English; render them in the user's language
-when that differs.

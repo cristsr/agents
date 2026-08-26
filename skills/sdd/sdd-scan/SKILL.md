@@ -249,15 +249,10 @@ A full worked run — a refreshed context.md and its delta report — is in
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
-`OUTPUT_LANGUAGE` if the project doesn't declare it): `context.md`'s inventory
-descriptions and detected gaps. Never translate them to English on your own.
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (language block): `context.md`'s inventory
+descriptions and detected gaps.
 
 The **section headings** stay English regardless of that key (`/sdd-design` and `/sdd-plan`
 read them by name). The **identifiers** — paths, classes, fields, endpoints — are
 quoted from the code verbatim and therefore sit on `IDENTIFIER_LANGUAGE` (profile,
 language block): copy what the code says, never a translation of it.
-
-**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
-The delta-report sample above is written in English; render it in the user's language
-when that differs.

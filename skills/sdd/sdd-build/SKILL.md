@@ -456,8 +456,7 @@ A full worked run — a run executing a group and closing out — is in
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-**Any note you append to `plan.md` follows `ARTIFACT_LANGUAGE`** (profile, language block —
-falls back to `OUTPUT_LANGUAGE` if the project doesn't declare it). The `[X]` markers,
+**Any note you append to `plan.md` follows `ARTIFACT_LANGUAGE`** (language block). The `[X]` markers,
 the `Task N` headings and the `## AC Coverage` heading are structural — never touch
 their wording.
 
@@ -467,7 +466,3 @@ prose. That key is the whole rule: this skill declares no default, so read it an
 write in whatever it says, and pass it to `sdd-code-implementer` along with the tasks.
 What a comment may say (only the why, and never the story's ACs) is a convention
 rather than a language rule: it lives in Step 2 and in the `design-principles` skill.
-
-**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
-The progress and summary samples in this document are written in English; render them
-in the user's language when that differs.

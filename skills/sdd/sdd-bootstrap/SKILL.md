@@ -267,8 +267,6 @@ to it. Split the language question the way every file is split:
   skills repo; your own clarifying comments follow the user's language. Nothing
   parses a comment — it is only read, never matched.
 
-**Chat interaction (the interview) follows the user's language.**
-
 ---
 
 ## Common Issues

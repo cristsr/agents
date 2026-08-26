@@ -672,8 +672,7 @@ A full worked run — a written plan.md and its first tasks — is in
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
-`OUTPUT_LANGUAGE` if the project doesn't declare it): the task titles, the step
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (language block): the task titles, the step
 descriptions, the expected outputs and the AC → Task table of `plan.md`. Never
 translate them to English on your own.
 
@@ -685,7 +684,3 @@ Everything the plan writes as code — paths, class and method names, commands, 
 the code, comments and test names inside each task — follows `IDENTIFIER_LANGUAGE`
 (profile, language block). That axis is not a synonym for English: read the key and
 write what it says, since `sdd-code-implementer` transcribes a task's code verbatim.
-
-**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
-The message samples in this document are written in English; render them in the
-user's language when that differs.

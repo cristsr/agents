@@ -421,14 +421,9 @@ A full worked run — Direct and Guided mode on each artifact — is in
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
 **Every artifact this skill edits keeps the language it was produced in** by `/sdd-spec`,
-`/sdd-clarify` and `/sdd-design` — i.e. `ARTIFACT_LANGUAGE` (profile, language block; falls back to
-`OUTPUT_LANGUAGE`). A refinement never switches an artifact's language: write the
+`/sdd-clarify` and `/sdd-design` — i.e. `ARTIFACT_LANGUAGE` (language block). A refinement never switches an artifact's language: write the
 correction in the language the surrounding text is already in.
 
 Section headings are structural and stay in English. Paths, classes and any other
 identifier follow `IDENTIFIER_LANGUAGE` (profile, language block) — a separate
 axis with its own key, not a second name for English.
-
-**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
-The message samples in this document are written in English; render them in the
-user's language when that differs.

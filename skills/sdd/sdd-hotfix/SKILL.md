@@ -362,8 +362,7 @@ A full worked run — a post-build gap corrected end to end — is in
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
-`OUTPUT_LANGUAGE` if the project doesn't declare it): the corrected AC, the body of
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (language block): the corrected AC, the body of
 the `## Hotfixes` entry and the steps of the `Task HOTFIX-N` block. Match the language
 the item's artifacts are already written in; never translate them.
 
@@ -373,7 +372,3 @@ English, whatever the language keys say.
 Paths, classes, the fix's code and its regression-test names are identifiers: they
 follow `IDENTIFIER_LANGUAGE` (profile, language block), which is a key to read and
 not another word for English.
-
-**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
-The message samples in this document are written in English; render them in the
-user's language when that differs.

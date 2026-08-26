@@ -305,9 +305,8 @@ Stop — don't start designing or planning.
 
 **Conversational output** follows `~/.agents/references/chat-conventions.md` — the six blocks (announce, progress, question, summary, stop, handoff).
 
-**`docs/rules.md` follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
-`OUTPUT_LANGUAGE` if the project doesn't declare it): articles, reasons and
-verification notes. Never translate them to English on your own.
+**`docs/rules.md` follows `ARTIFACT_LANGUAGE`** (language block): articles, reasons and
+verification notes.
 
 **The structural headings are literals, not prose — never translate them**, whatever
 `ARTIFACT_LANGUAGE` says. `validate-rules.mjs` locates them by exact string, so a
@@ -329,10 +328,6 @@ note — is prose in `ARTIFACT_LANGUAGE`.
 Technical identifiers, file names and paths follow `IDENTIFIER_LANGUAGE` (profile,
 language block): quote them as the codebase spells them rather than assuming a
 language for them.
-
-**Chat interaction (the interview) follows the user's language**
-(`OUTPUT_LANGUAGE` in the profile). The message samples in this document are written
-in English; render them in the user's language when that differs.
 
 ---
 

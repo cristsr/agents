@@ -370,8 +370,7 @@ After saving `work/active/{story-id}/spec.md`:
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
-`OUTPUT_LANGUAGE` if the project doesn't declare it). The framing block, the ACs and
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (language block). The framing block, the ACs and
 the business rules of `spec.md` are written in that language. Never translate them to
 English on your own: the language is the profile's decision, not this skill's.
 
@@ -383,10 +382,6 @@ copied exactly as the profile's `ITEM_TYPES` declares them (e.g. `feat`, `bug`,
 The item ID and any path or symbol you quote are **identifiers**: they follow
 `IDENTIFIER_LANGUAGE` (profile, language block), which decides the code's language
 on its own — this skill has no default to fall back on.
-
-**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
-The message samples in this document are written in English; render them in the
-user's language when that differs.
 
 ---
 

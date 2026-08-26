@@ -644,11 +644,10 @@ A full worked run — a design run and the artifacts it leaves — is in
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
-`OUTPUT_LANGUAGE` if the project doesn't declare it): the prose of `design.md`,
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (language block): the prose of `design.md`,
 `docs/research.md`, `docs/diagram.md`, `docs/component.md`, `docs/data-model.md`,
 `docs/flows/*.md`, plus the `summary` and `description` fields of the API contract and
-the labels of the diagrams. Never translate them to English on your own.
+the labels of the diagrams.
 
 The **section headings** stay English regardless of that key (`## Design Decisions`,
 `## Global Architecture Impact` — `/sdd-sync`, `/sdd-plan` and `/sdd-docs` read them by name).
@@ -657,7 +656,3 @@ The **identifiers** you design — paths, schema names, `operationId`, fields,
 endpoints, table and column names — follow `IDENTIFIER_LANGUAGE` (profile, language
 block). They are what `/sdd-plan` turns into code, so name them in the language that key
 declares and match the existing code; the skill carries no default of its own.
-
-**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
-The message samples in this document are written in English; render them in the
-user's language when that differs.

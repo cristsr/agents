@@ -298,17 +298,12 @@ resolution.
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
-**Artifact prose follows `ARTIFACT_LANGUAGE`** (profile, language block — falls back to
-`OUTPUT_LANGUAGE` if the project doesn't declare it): the prose of
+**Artifact prose follows `ARTIFACT_LANGUAGE`** (language block): the prose of
 `<DOCS_ARCHITECTURE>/context.md` and `containers.md`, plus the node and edge labels of
-the diagrams. Never translate them to English on your own.
+the diagrams.
 
 The section name this skill reads in `design.md` (`## Global Architecture Impact`) is
 a structural contract with `/sdd-design` — always English. The node **IDs**, app and
 service names and any other identifier follow `IDENTIFIER_LANGUAGE` (profile,
 language block) and are quoted verbatim from the code they name — that key is what
 decides their language, not this document's.
-
-**Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).
-The message samples in this document are written in English; render them in the
-user's language when that differs.
