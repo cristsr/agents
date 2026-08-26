@@ -165,17 +165,16 @@ own, it names it.
 
 ## Common Issues
 
+The 2 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | `node` is not on PATH | The script can't run | Check the artifacts by hand (`[ -f ... ]`, `rg -c '\[X\]' plan.md`) and say the report was manual — see `Degrades` |
 | No story carries that id | Typo, or the id uses a legacy prefix | The script reads `STORY_ID_LEGACY_PREFIXES` too. List the active stories and ask which one — never create the folder |
-| The report suggests `/sdd-design` on an `evidence` story | The carril was read but not applied | `design` is `skipped` there, not missing: report "not required in this carril" and point at `/sdd-plan` |
-| Everything looks done but the folder is still under `WORKDIR_ACTIVE` | `/sdd-sync` never ran | The next step is `/sdd-sync`, not `/sdd-commit` — `/sdd-commit` works on the archived story |
-| `next.regression` came back | A finished stage sits on top of an unfinished one | Say why before relaying the command: re-running that stage would discard built work, which is why the script points at `/sdd-hotfix` |
-| A stage is `ready` but `branch` is `null` | `/sdd-prepare` never ran | Name `/sdd-prepare` alongside the stage command — `/sdd-plan` stops without `.branch` |
 
 ---
-
 ## Example
 
 **Input:** `/status spec-0042`

@@ -341,19 +341,18 @@ fix didn't break anything that was already passing).
 
 ## Common Issues
 
+The 4 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | plan.md doesn't exist | The flow never reached `/sdd-plan` | Redirect to the normal `/sdd-refine` + `/sdd-plan` + `/sdd-build` |
 | plan.md with no `[X]` task | `/sdd-build` hasn't run yet | Redirect to `/sdd-refine` — no hotfix needed |
-| The gap implies a new service/endpoint/table | Badly sized story, not a targeted defect | Recommend `/refine spec` + a full `/sdd-plan` instead of a hotfix |
 | The corrected AC contradicts another existing AC | The original AC had a different intent than the one reported | Show both ACs, confirm with the user before applying |
-| The fix requires touching the contract, the flow artifact or `data-model.md` | The gap was contractual, not just wording | Warn at close, don't correct automatically — use `/sdd-refine` for those files |
-| The module's tests fail after the fix | The fix broke behavior already covered | Don't mark `[X]`, adjust the fix until the whole suite passes |
 | The story is already in `work/done/` | `/sdd-sync` closed it before the defect surfaced | Ask before anything: reopen the workspace (move it back to `work/active/`) or open a new item |
-| `/sdd-sync` then rejects the close for an uncovered AC | the hotfix added an AC without its `## AC Coverage` line | Add the line in PHASE 5, step 5 — one per AC, with a real test reference |
 
 ---
-
 ## Example
 
 **Input:** `/hotfix spec-1933` — "AC-2 only said 'returns an empty list' without specifying the HTTP code, and it was implemented returning 404 — a real client expects 200 with an empty array"

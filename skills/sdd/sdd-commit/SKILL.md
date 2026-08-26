@@ -285,18 +285,19 @@ commands by hand.
 
 ## Common Issues
 
+The 5 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |---|---|---|
 | `work/done/spec-<number>/` doesn't exist | `/sdd-sync` hasn't run yet | Stop — suggest `/sync spec-<number>` first |
 | The index has unexpected files after a `git add` | Something was left staged from a previous session | Stop, `git restore --staged <path>`, re-verify before committing |
-| There are unrelated changes in the working tree | Other work in progress on the same branch | Exclude them from every `git add` and list them separately in the summary |
 | `git status --porcelain` is empty | The commits already ran, or `/sdd-sync` left nothing pending | Check `git log`; report it and stop — don't draft a PR for an empty change |
 | Current branch is the base branch | The user forgot to switch branches | Stop immediately, ask them to switch to the working branch |
-| A commit was created with the wrong grouping | The index wasn't verified before committing | `git reset --soft HEAD~1` puts it back in the index (working tree untouched); regroup and commit again — only valid while nothing has been pushed |
 | User asks to run `git push` or `gh pr create` | Out of this skill's scope | Remind them those are text commands for the user to run; don't execute them even if asked within this flow — confirm explicitly outside the skill if they insist |
 
 ---
-
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 

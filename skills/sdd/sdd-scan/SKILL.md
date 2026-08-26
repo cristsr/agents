@@ -229,18 +229,17 @@ Stop — do not start the design.
 
 ## Common Issues
 
+The 3 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | `context.md` doesn't exist | The item was never clarified | Redirect to `/clarify spec-<number>`, which produces it |
 | `spec.md` doesn't exist | `/sdd-spec` never ran | STOP: run `/spec spec-<number>` first |
-| The item's scope changed | ACs were added since the last survey | Re-derive components from `spec.md` and report the change |
-| Module not found | New or renamed module | Record it as a gap in `context.md`; don't block |
-| The refresh contradicts a decision already made | The code changed under the item's feet | Flag it and suggest `/sdd-clarify`; `/sdd-scan` never edits `spec.md` |
-| Component off `BASE_BRANCH` | Base not prepared | Warn and continue; suggest `/sdd-prepare` |
 | The item is already in `work/done/` | `/sdd-sync` closed it | Stop — nothing downstream reads a refreshed context once the story is archived |
 
 ---
-
 ## Example
 
 **Input:** `/scan spec-0042` — the item was clarified three weeks ago and the module

@@ -215,6 +215,10 @@ to `/sdd-commit`.
 
 ## Common Issues
 
+The 6 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |---|---|---|
 | `design.md` missing at preflight | `/sdd-design` never ran or wasn't approved | STOP; run `/design spec-<number>` first |
@@ -223,9 +227,8 @@ to `/sdd-commit`.
 | Empty `plan.md` after `/sdd-plan` | `/sdd-plan` stopped on a gate | Abort forge; resolve what `/sdd-plan` reported (e.g. `/sdd-clarify`) and retry |
 | `plan.md` without `Task 0` | the plan was written or edited by hand | Abort; regenerate with `/sdd-plan` — nothing would create the working branch |
 | `spec.md` with `[NEEDS CLARIFICATION]` | unresolved ambiguities | STOP; `/clarify spec-<number>` before forging |
-| A test fails at the end | implementation defect | `/sdd-build` stops; forge **aborts before `/sdd-sync`**. Fix the code, or `/sdd-hotfix` if it's a spec gap |
-| `/sdd-sync` reports a duplicate flow | the design gave a different name to an existing flow | forge stops after the build; fix the design with `/sdd-refine` and retry `/sdd-sync` |
 
+---
 ## Examples
 
 ### Example 1: happy forge (full pipeline)

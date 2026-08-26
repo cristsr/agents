@@ -414,26 +414,19 @@ next steps.
 
 ## Common Issues
 
+The 5 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |---|---|---|
 | `plan.md` has tasks without `[X]` | `/sdd-build` didn't finish | Stop — suggest `/build spec-<number>` |
 | `plan.md` has an AC marked `✗` in `## AC Coverage` | Tasks executed, but an acceptance criterion has no test behind it | Stop — the story isn't ready to close; fix the gap, or `/hotfix spec-<number>` if it traces back to an ambiguous AC |
-| `plan.md` has no `## AC Coverage` section at all | Plan built before this convention existed | Don't infer coverage from the `[X]` markers — ask the user to confirm the ACs are met before closing |
 | Folder is already in `work/done/` | sync already ran for this story | Report it and stop |
-| No `docs/` folder in the story | Story with no API/diagram changes | Skip Step 3, note it in the final summary |
-| `design.md` has no "Design Decisions" section | Story with no significant decisions | Skip Step 4 silently — not every story has a decision worth recording |
-| `docs/decisions.md` doesn't exist yet | No story with decisions has ever closed in this repo | Create it in Step 4 with the standard header — no need to wait for a separate bootstrap skill |
-| Destination doc already exists | Module docs accumulate across stories | Overwrite (the new version supersedes) and note it in the final summary so `/sdd-commit` reflects it in the PR |
-| Module can't be identified | `design.md` doesn't name it | Ask the user — don't guess |
 | Current branch is the base branch | The user forgot to switch branches | Stop immediately, ask them to switch to the working branch |
 | lint/test/build fails in Step 2 | Regression at close time | Stop — fix directly, or `/sdd-hotfix` if it traces back to a spec gap |
-| User asks to group/execute commits or draft the PR right here | Scope confusion after the skill split | Explain that's `/commit spec-<number>`, meant to run right after |
-| `design.md` has no "Global Architecture Impact" section | Story designed before this convention existed | Don't guess from the diff — ask the user directly whether the story touched global architecture |
-| The section says "Yes" but the node/edge isn't clear | `/sdd-design` didn't specify it in enough detail | Invoke `/docs spec-<number>` anyway and let it ask for precision, or ask the user before invoking |
-| User asks to bootstrap `docs/architecture/` from here | Out of this skill's scope | Explain that's `/sdd-docs` (with no arguments), not `/sdd-sync` |
 
 ---
-
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 

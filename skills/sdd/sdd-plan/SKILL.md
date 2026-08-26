@@ -649,26 +649,20 @@ After step 5's verification passes:
 
 ## Common Issues
 
+The 6 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Service order unclear | Ambiguous sequence diagram | Read the whole diagram, infer from arrow direction |
-| No `docs/diagram.md` in the story | `DOC_UNIT = use-case` | Not a gap: read the inline `sequenceDiagram` of each `docs/flows/*.md` |
-| Undefined field in a test | Incomplete design | Use only fields confirmed in `<api-artifact>` / `docs/data-model.md` |
-| Use case not registered in the module | Task omitted | Always include the module registration step |
-| A test with no AC behind it | Invented test | Every test must map to an AC in spec.md |
-| Relative path in imports | Convention violated | Follow the conventions doc under `DOCS_ARCHITECTURE` |
 | `plan.md` already has `[X]` tasks | `/sdd-build` already ran on this story | Ask before regenerating — a targeted fix is `/hotfix spec-<number>` |
-| `TESTS.module` unbound | Project without a per-module command | Write each task's TDD cycle against `TESTS.full` |
 | `build_mode: evidence` with an ineligible `type` | The allowlist was never widened, or the field was hand-written | Stop at step 0 and quote the validator. Widening `EVIDENCE_MODE_TYPES` is the developer's call — never write the plan against the guardrail |
 | `build_mode: evidence` with `VERIFY` unbound | The project declared the mode but bound no check | Stop: bind the port, or move the story back to `tdd`. Never plan tasks whose verification is a human reading them |
-| An `evidence` story that ALSO has design artifacts | `/sdd-design` ran before the mode was decided | Not an error: the artifacts are extra context. Plan against the evidence carril anyway — the mode in `spec.md` wins |
 | No `design.md` and the mode is `tdd` | `/sdd-design` never ran | Stop as always — in `tdd` the design is the input, and `evidence` is not the way around that |
 | `.branch` missing at Requires | `/sdd-prepare` never ran | Stop and ask the user to run `/prepare spec-<number>` first — Task 0 verifies the branch, it doesn't create it |
 | An AC cannot be mapped with the artifacts at hand | The design leaves it uncovered | Show the escalation to the user and ask; `/sdd-refine` the design or instruct the mapping — never save a plan with an uncovered AC |
-| The written plan lacks the traceability table or has `[X]` | PHASE 3.5 was skipped or cut short | Fix it before closing — step 5's validator catches both |
 
 ---
-
 ## Example
 
 **Input:** `/plan spec-1933` with a design.md defining an endpoint in `catalog-ms`.

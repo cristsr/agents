@@ -392,20 +392,16 @@ user's language when that differs.
 
 ## Common Issues
 
+The 2 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | No title provided | User pasted only the content | If it comes from a tracker, ask for the exact title; if it originates in the project, propose a 5-8 word one and confirm it |
-| Very long tracker title | Item with a descriptive name in the backlog | Keep it verbatim — the 5-8 word rule only applies to new titles |
-| Type ambiguous between `bug` and `debt` | The defect is structural, not behavioral | If there's an observable symptom today → `bug`; if it's a latent risk → `debt` |
 | Type ambiguous between `bug` and `hotfix` | Defect in already-built code | If it traces to an ambiguous AC of the original item → `/sdd-hotfix`; if it's independent → a new `bug` |
-| `incident` with no root cause | Still under investigation | Mandatory marker; the item may exist but won't advance to `/sdd-design` without a root cause |
-| Unnumbered ACs in the input | Badly formatted item | Number them in order of appearance |
-| The item already exists | Re-run | Confirm overwrite before continuing |
-| The folder has `hu.md`, not `spec.md` | Item predating the rename | Treat it as the same artifact; mention it uses the legacy name |
-| Number not identifiable | Input with no ID | Resolve per `STORY_ID_MODE`: next free (sequential), title slug (name) or tracker key (tracker-code) |
 
 ---
-
 ## Example A — Bug from manual text
 
 **User input:**

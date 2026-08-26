@@ -399,19 +399,18 @@ Stop — do not start planning or building.
 
 ## Common Issues
 
+The 4 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | spec.md doesn't exist and a spec refine is requested | /sdd-spec never ran | STOP: "Run `/spec spec-<number>` first to create the story." |
 | context.md and design.md don't exist | /sdd-clarify never ran | Offer to refine spec.md if it exists, or STOP: "Run `/sdd-spec` and `/sdd-clarify` first." |
-| design.md doesn't exist but context.md does | /sdd-design never ran | Offer to refine context.md or spec.md only. |
-| A change in spec.md contradicts existing ACs | Scope creep or a real correction | Show the affected AC, ask for explicit confirmation before applying. |
-| plan.md already exists (no `[X]` tasks) and there's a structural change in spec/design | Artifact refined after planning, but before building | Warn: "plan.md may be out of date. Run `/plan spec-<number>` to regenerate it." |
 | plan.md already exists WITH `[X]` tasks and there's a structural change | Post-build defect from a clarification gap | Redirect to `/hotfix spec-<number>` — don't regenerate the plan, see the note in PHASE 4. |
 | User asks to refine plan.md | Out of this skill's scope | Redirect: "To modify the plan, run `/plan spec-<number>` again or edit plan.md manually." |
-| Section not found in the artifact | Incomplete artifact or different format | Show the whole artifact and ask which section applies. |
 
 ---
-
 ## Example
 
 ### Direct Mode — refining design.md

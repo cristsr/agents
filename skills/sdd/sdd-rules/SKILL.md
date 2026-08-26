@@ -338,22 +338,17 @@ in English; render them in the user's language when that differs.
 
 ## Common Issues
 
+The 3 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Vague principles ("good code") | Non-testable answer | Ask again for the objective rejection criterion in review |
-| Too many articles (>10) | Negotiable and non-negotiable got mixed | Prioritize; move the negotiable ones to `docs/` |
 | Constitution already exists with content | Re-run | Ask amend vs. rewrite; in amend, preserve what wasn't touched |
-| File exists but is empty (0 bytes) | Prior scaffolding never populated | Treat as Create mode, version 1.0.0 |
-| User doesn't know what to put | Project with no written conventions | Seed from `DOCS_ARCHITECTURE`/CONTRIBUTING if they exist, or use the gate defaults |
 | `validate-rules.mjs` reports "no articles found" on a file full of articles | The headings were translated — `### Artículo 1:` instead of `### Article 1:` | The structural headings are located by literal string (see **Output language**). Restore them; the prose after the colon stays in `ARTIFACT_LANGUAGE` |
 | The validator reports the gates section missing | `## Mandatory Quality Gates` translated or renamed | Same cause: restore the literal heading |
-| An article is flagged as not normative | The Principle is phrased without MUST / SHALL / NEVER — often because it was translated ("debe") | The keyword stays English; it is what the validator tests and what makes the rule normative |
-| "no gates checked" warning | Every gate was disabled in PHASE 4, leaving the checkbox list empty | Keep the section with at least one gate line; an empty list reads as an oversight, not as a decision |
-| The constitution is written but `/sdd-design` and `/sdd-plan` ignore it | It lives somewhere other than `docs/rules.md` | The four consumers hard-code that path and degrade silently. Move the file there and leave a link at the preferred location |
-| `/sdd-design` says the constitution has no gates it can apply | Gates recorded as prose instead of `- [ ]` checkboxes | They are a binary checklist; write them as checkboxes |
 
 ---
-
 ## Example
 
 **Input:** `/sdd-rules`

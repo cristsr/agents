@@ -250,19 +250,18 @@ With every <component> on a fresh `BASE_BRANCH`:
 
 ## Common Issues
 
+The 4 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | Dirty working tree in a component | Uncommitted work | STOP for that component; don't touch it — let the user resolve it and retry |
 | `--ff-only` refuses the pull | Local divergence from the remote | Stop and report; human decision |
 | Component can't be identified | Missing `context.md` or the user didn't say which | Ask explicitly — don't guess |
-| `PREP_SKILL` in the profile points to another skill | The project defines its own prep | Run the one the profile names; this skill is the default |
-| The working branch already exists | The user created it by hand, or a previous run | Not an error: verify it's checked out and skip creation — the `.branch` file is re-written with the same name |
-| A bare `/sdd-prepare` (no story id) | No id in the input | Refresh the base only, report that `.branch` needs the story id, and point to `/prepare spec-<number>` |
 | `/prepare spec-XXXX` with an id that has no workspace | Typo in the id, or `/sdd-spec` never ran | Stop before any git command — the `Requires` row catches it. Otherwise the branches move and `.branch` fails to write at the very end |
-| The pipeline is on the base branch | `/sdd-prepare` never ran, or a working branch was left behind | Run `/prepare spec-<number>` first — `/sdd-plan` and `/sdd-build` require `.branch` |
 
 ---
-
 ## Example
 
 **User input:**

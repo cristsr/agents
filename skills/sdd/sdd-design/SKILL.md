@@ -623,24 +623,18 @@ After the verification passes and the escalations are handled:
 
 ## Common Issues
 
+The 4 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | context.md not found | /sdd-clarify never ran | Tell the user to run /sdd-clarify first |
 | `spec.md` has `[NEEDS CLARIFICATION]` markers | Unresolved ambiguities | STOP: run `/clarify spec-<number>` before designing |
 | A Quality Gate fails (⚠️) | The design violates a principle | Adjust the design to pass it, or record a justified exception in `design.md` and approve it in PHASE 5 |
-| No constitution | `/sdd-rules` never ran | Apply the 4 built-in gates by default; suggest `/sdd-rules` to make them enforceable |
-| Undefined field in a schema | Ambiguous item | Ask in PHASE 3 before designing |
-| Affected <component> not identified | Incomplete context.md | Ask the user before continuing |
-| Diagram with no schema names on the arrows | Missing contract information | Resolve in PHASE 3 before diagramming |
-| `component.md` already exists from an earlier story of the same module | It's a living per-module document, accumulated across stories | Read it first and update it surgically — never regenerate it from scratch, that would lose earlier stories' components |
-| Unclear whether the story touches global architecture | The module/integration is ambiguous with respect to what `context.md` already lists | Resolve it in PHASE 3 as one more question — never leave "Global Architecture Impact" ambiguous, `/sdd-sync` and `/sdd-docs` trust that answer as written |
-| New table not confirmed | Item ambiguous about persistence | Ask it as one of the 5 questions |
-| `<api-artifact>` modified after /sdd-plan | Contract change after approval | Warn: run `/plan spec-<number>` again to regenerate the DTOs |
 | You can't even list the unknowns in PHASE 2 | Missing context, or a spec that contradicts itself | Stop before drafting: show the blocker, fix the input (`/sdd-refine`/`/sdd-clarify`), then re-run |
-| `CONTRACT_LINT` or `DIAGRAM_CHECK` fails in step 5 | A port is stricter than the file tools | Fix-and-retry (max 3) editing the artifact; after that, record it as a known risk in `design.md` |
 
 ---
-
 ## Example
 
 **Input:** `/design spec-1933` — an endpoint that filters zones by service type,

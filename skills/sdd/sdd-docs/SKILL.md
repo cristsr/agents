@@ -301,17 +301,17 @@ untouched because the change didn't belong there.
 
 ## Common Issues
 
+The 3 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |---|---|---|
 | `docs/architecture/` doesn't exist yet | Never run in Bootstrap mode | Run `/sdd-docs` with no arguments first |
-| Unclear whether the change is Context or Container | The design wasn't explicit about scope | Default to Container (the level that changes more often); only touch Context if there's a genuinely new actor/external system |
 | The delta isn't clear from `design.md` | The design wasn't explicit about the change's scope | Ask the user which node/edge to add/remove — don't guess |
 | Asked to "regenerate the whole diagram" | Scope confusion | Remember Update is surgical; a full rebootstrap is a different, destructive action toward manual annotations — confirm explicitly with the user first |
-| `design.md` marked "No" but it actually touched global architecture | `/sdd-design` misjudged the impact at design time | Fix the "Global Architecture Impact" section in `design.md` and run `/docs spec-<number>` manually — there's no `/sdd-sync` heuristic to compensate |
-| Asked for a design-decisions log | Out of this skill's scope | That's `docs/decisions.md` (repo root), maintained by `/sdd-sync` directly in its Step 4 — it doesn't live inside `docs/architecture/` |
 
 ---
-
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 

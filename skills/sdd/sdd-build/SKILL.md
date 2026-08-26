@@ -434,26 +434,19 @@ Quick summary:
 
 ## Common Issues
 
+The 5 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Test fails on first run | Implementation has a bug | Read the error carefully, fix the implementation |
-| Test fails repeatedly | Test setup incorrect | Stop and ask — do not guess |
-| File already exists | Plan re-executed | Check if content is correct, overwrite only if needed |
-| Module not found in imports | Barrel export missing | Add export to index.ts before continuing |
 | Branch is main/master | User forgot to switch | Stop immediately, ask for correct branch |
-| Use case not injected | Module registration missing | Check module.ts providers array |
 | An AC with no task in the traceability table | `/sdd-plan` produced the plan before this change, or PHASE 3.5 was skipped | STOP at Step 1.3, ask for the plan to be regenerated with `/plan spec-<number>` |
 | An AC ends up `✗` in `## AC Coverage` | The tasks are done but no test exercises that AC's behavior | STOP at Step 3.4 — report the uncovered ACs and ask; `/sdd-sync` will refuse to close the story anyway |
 | An `evidence` task's baseline run starts red | The deliverable was already broken before this task | Stop: a later green would prove nothing. Report it — fixing the pre-existing break is its own decision |
-| A `VERIFY` command exits 0 but prints something the plan didn't predict | The check is weaker than the plan assumed, or the expected output is stale | Treat it as a failed verification. Do not mark `[X]` on a check whose output you cannot match |
 | `plan.md` is written in the other carril than `spec.md` declares | The mode changed after the plan was written | Critical gap: stop at Step 1 and ask for `/plan spec-<number>` to be regenerated. Never reconcile it by choosing one yourself |
-| A `[P]` group's subagent modifies a file another group already touched | Wrong grouping in `/sdd-plan` | Stop the parallel batch, resolve the conflict, continue the remaining groups sequentially |
-| A `[P]` group's subagent fails or its verification is red | A bug in that group's code, or a test/instructions gap | Inspect the reported error, fix it, re-run that group's verification before marking `[X]`; never accept a subagent's word without re-running its tests |
-| `API_CLIENT_EXPORT` unbound, or its adapter unavailable | Tool not installed or project doesn't use it | Skip the step, suggest importing `<api-artifact>` straight into Postman, don't block the close |
-| `<api-artifact>` doesn't exist | Story with no new/changed endpoints | Skip the Postman generation silently |
 
 ---
-
 ## Example
 
 **Input:** `/build spec-1933`
