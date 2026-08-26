@@ -397,12 +397,14 @@ resolution.
 | Type ambiguous between `bug` and `hotfix` | Defect in already-built code | If it traces to an ambiguous AC of the original item → `/sdd-hotfix`; if it's independent → a new `bug` |
 
 ---
+
 ## Example
 
 A full worked run — a bug and a technical debt, each from raw text — is in
 `references/example.md`. Read it when the shape of the output is in doubt.
 
 ---
+
 ## Defect
 
 **Symptom:** the balance counts transfers between the same user's accounts twice.

@@ -175,12 +175,14 @@ resolution.
 | No story carries that id | Typo, or the id uses a legacy prefix | The script reads `STORY_ID_LEGACY_PREFIXES` too. List the active stories and ask which one — never create the folder |
 
 ---
+
 ## Example
 
 A full worked run — a report and the next step it names — is in
 `references/example.md`. Read it when the shape of the output is in doubt.
 
 ---
+
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 

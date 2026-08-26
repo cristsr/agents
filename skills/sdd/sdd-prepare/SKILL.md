@@ -262,12 +262,14 @@ resolution.
 | `/prepare spec-XXXX` with an id that has no workspace | Typo in the id, or `/sdd-spec` never ran | Stop before any git command — the `Requires` row catches it. Otherwise the branches move and `.branch` fails to write at the very end |
 
 ---
+
 ## Example
 
 A full worked run — the checkout, the pull and the branch it records — is in
 `references/example.md`. Read it when the shape of the output is in doubt.
 
 ---
+
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 

@@ -344,6 +344,7 @@ resolution.
 | The validator reports the gates section missing | `## Mandatory Quality Gates` translated or renamed | Same cause: restore the literal heading |
 
 ---
+
 ## Example
 
 A full worked run — an interview and the constitution it writes — is in

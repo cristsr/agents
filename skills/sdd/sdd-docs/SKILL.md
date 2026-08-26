@@ -257,6 +257,7 @@ A full worked run — a bootstrap and a surgical update — is in
 `references/example.md`. Read it when the shape of the output is in doubt.
 
 ---
+
 ## Global Architecture Impact
 
 **Does it touch global architecture?** Yes.
@@ -295,6 +296,7 @@ resolution.
 | Asked to "regenerate the whole diagram" | Scope confusion | Remember Update is surgical; a full rebootstrap is a different, destructive action toward manual annotations — confirm explicitly with the user first |
 
 ---
+
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 

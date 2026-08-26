@@ -411,12 +411,14 @@ resolution.
 | User asks to refine plan.md | Out of this skill's scope | Redirect: "To modify the plan, run `/plan spec-<number>` again or edit plan.md manually." |
 
 ---
+
 ## Example
 
 A full worked run — Direct and Guided mode on each artifact — is in
 `references/example.md`. Read it when the shape of the output is in doubt.
 
 ---
+
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 

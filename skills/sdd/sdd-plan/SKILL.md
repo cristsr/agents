@@ -663,12 +663,14 @@ resolution.
 | An AC cannot be mapped with the artifacts at hand | The design leaves it uncovered | Show the escalation to the user and ask; `/sdd-refine` the design or instruct the mapping — never save a plan with an uncovered AC |
 
 ---
+
 ## Example
 
 A full worked run — a written plan.md and its first tasks — is in
 `references/example.md`. Read it when the shape of the output is in doubt.
 
 ---
+
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 

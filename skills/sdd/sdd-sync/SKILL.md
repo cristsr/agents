@@ -352,6 +352,7 @@ A full worked run — a close-out reconciling the docs — is in
 `references/example.md`. Read it when the shape of the output is in doubt.
 
 ---
+
 ## Global Architecture Impact
 
 **Does it touch global architecture?** Yes.
@@ -401,6 +402,7 @@ resolution.
 | lint/test/build fails in Step 2 | Regression at close time | Stop — fix directly, or `/sdd-hotfix` if it traces back to a spec gap |
 
 ---
+
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 

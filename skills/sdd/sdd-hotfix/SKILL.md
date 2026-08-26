@@ -353,12 +353,14 @@ resolution.
 | The story is already in `work/done/` | `/sdd-sync` closed it before the defect surfaced | Ask before anything: reopen the workspace (move it back to `work/active/`) or open a new item |
 
 ---
+
 ## Example
 
 A full worked run — a post-build gap corrected end to end — is in
 `references/example.md`. Read it when the shape of the output is in doubt.
 
 ---
+
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 

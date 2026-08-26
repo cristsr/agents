@@ -635,12 +635,14 @@ resolution.
 | You can't even list the unknowns in PHASE 2 | Missing context, or a spec that contradicts itself | Stop before drafting: show the blocker, fix the input (`/sdd-refine`/`/sdd-clarify`), then re-run |
 
 ---
+
 ## Example
 
 A full worked run — a design run and the artifacts it leaves — is in
 `references/example.md`. Read it when the shape of the output is in doubt.
 
 ---
+
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 

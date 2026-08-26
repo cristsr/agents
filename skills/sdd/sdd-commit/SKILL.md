@@ -253,6 +253,7 @@ A full worked run — the commit grouping and the drafted PR — is in
 `references/example.md`. Read it when the shape of the output is in doubt.
 
 ---
+
 ## Common Issues
 
 The 5 that **interrupt a run** — it stops, or the call goes back to the user.
@@ -268,6 +269,7 @@ resolution.
 | User asks to run `git push` or `gh pr create` | Out of this skill's scope | Remind them those are text commands for the user to run; don't execute them even if asked within this flow — confirm explicitly outside the skill if they insist |
 
 ---
+
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 

@@ -240,12 +240,14 @@ resolution.
 | The item is already in `work/done/` | `/sdd-sync` closed it | Stop — nothing downstream reads a refreshed context once the story is archived |
 
 ---
+
 ## Example
 
 A full worked run — a refreshed context.md and its delta report — is in
 `references/example.md`. Read it when the shape of the output is in doubt.
 
 ---
+
 ## Output language
 **Conversational output** follows `~/.agents/references/chat-conventions.md` - the six blocks (announce, progress, question, summary, stop, handoff).
 
