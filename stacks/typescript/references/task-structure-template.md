@@ -1,92 +1,100 @@
-# Task Structure Template
+# Task Structure Template (typescript)
 
-Every task after Task 0 must follow this exact structure:
+A task is a **vertical slice**: the whole path that closes one behavior, from its
+entry point down to the deepest new thing it needs. Not one task per layer.
+
+Every task after Task 0 follows this structure:
 
 ```markdown
-### Task N: [Component name]
+### Task N: [Behavior this slice closes]
 
 **Files:**
-- Create: `<component>/src/exact/path/to/file.ts`
-- Modify: `<component>/src/exact/path/to/existing.ts:123-145`
-- Test: `<component>/src/exact/path/to/file.spec.ts`
 
-**Step 1: Write the failing test**
+- Create: `<component>/src/modules/<module>/application/<name>.use-case.ts`
+- Modify: `<component>/src/modules/<module>/<module>.module.ts`
+- Test: `<component>/src/modules/<module>/application/<name>.use-case.spec.ts`
 
-In `<component>/src/path/to/file.spec.ts`:
+**Contract:**
 
-```typescript
-describe('ClassName', () => {
-  it('should [behavior]', async () => {
-    // arrange
-    const input = ...;
-    // act
-    const result = await service.method(input);
-    // assert
-    expect(result).toEqual(expected);
-  });
-});
+- `<Name>UseCase.execute(dto: <Name>Dto): Promise<<Result>>`
+- injects `<Name>RepositoryPort` (abstract class token)
+- throws `<Name>NotFoundError` when the repository returns empty
+
+**Cases:**
+
+- a matching record exists → returns it mapped to `<Result>`
+- no match → throws `<Name>NotFoundError`
+- the repository rejects → the error propagates unwrapped
+
+**Cycle:** write the cases as failing tests → implement → green.
+
+**Verify:** `npx jest src/modules/<module>/ --no-coverage` → PASS (3 tests)
 ```
 
-**Step 2: Run it and confirm it fails**
+> The command above is this pack's default `TESTS.module` adapter (`ports.yaml`).
+> If the profile binds a different one, that one wins.
 
-> The command comes from the `TESTS.module` port; here it runs against the specific
-> spec. The commands below are this pack's default adapter (`ports.yaml`) — if the
-> profile binds a different one, that one wins.
-
-```bash
-cd <component>
-npx jest src/path/to/file.spec.ts --no-coverage
-cd ..
-```
-Expected: FAIL — "Cannot find module" or "X is not a function"
-
-**Step 3: Implement the minimum code**
-
-In `<component>/src/path/to/file.ts`:
-
-```typescript
-// minimum necessary name
-```
-
-**Step 4: Run it and confirm it passes**
-
-```bash
-npx jest src/path/to/file.spec.ts --no-coverage
-```
-Expected: PASS
 ---
 
-## Notes on task design
+## What the plan fixes, and what it leaves to the build
 
-- Each task should represent a single cohesive component (service, repository, use case, port, adapter)
-- Tasks should be ordered by dependency: define interfaces before implementations
-- A task with more than 6 steps is likely too large — split it
-- Always mock external dependencies, never use real services in unit tests
+The plan fixes **what cannot be inferred**. The build writes **what follows from it**.
+
+Write verbatim — these are requirements, not scaffolding:
+
+- Signatures, class and symbol names, the injection token, the error classes
+- Field names and types taken from `<api-artifact>` or `docs/data-model.md`
+- Any literal the requirement pins: enum members, the migration SQL, a regex, an
+  HTTP status, an env key
+- The expected output of a command, when a task ends in one
+
+Do **not** write: method bodies, `describe`/`it` bodies, imports, decorators,
+constructor boilerplate, `jest.fn()` mock setup. Those follow from the contract and
+the cases, and writing them here means writing the feature twice — once as prose no
+one can execute, once as code.
+
+A task is under-specified when two competent implementations of it would disagree on
+something a caller can observe. That is the line — not "does it contain code".
+
+---
+
+## Granularity
+
+- **One task = one verifiable behavior**, end to end. The use case, its port, its
+  DTOs, the repository method and the controller wiring are *one* task — one
+  `jest` run proves the whole slice.
+- **A shared foundation is its own task, first.** The entity and its migration, or a
+  port several slices inject, is written once, before them.
+- **Split by behavior, never by layer.** If a task touches more than ~6 files or
+  closes more than 2 ACs, there is a second behavior hiding in it.
+- Order by dependency: whatever the others build on comes first.
+- Mock every injected port with `jest.fn()`; never a real service in a unit test.
+
+Every task ends in exactly one `jest` run. That count is the plan's time budget —
+Jest's startup dominates a module suite, so halving the tasks halves the wall clock.
 
 ## `[P]` marker (parallel execution)
 
-If PHASE 2 of `/plan` detected independent microservice groups, mark every task
-header belonging to those groups with a trailing `[P]`:
+Mark a task `[P]` when it shares no file and no new symbol with the tasks of another
+group in the same plan:
 
 ```markdown
-### Task 4: Request and response DTOs [P]
+### Task 4: Reject an expired token [P]
 ```
 
-`[P]` means: this task has no dependency on tasks from a *different* `[P]`
-group in the same plan. `/build` executes the groups concurrently, delegating
-each one to its own `code-implementer` subagent (one subagent per group,
-launched in parallel), and re-verifies each group's tests before marking its
-tasks `[X]`. Tasks within the *same* group still execute in their written order.
+`/sdd-build` runs the groups concurrently, one `sdd-code-implementer` subagent each,
+and re-verifies every group before marking its tasks `[X]`. Tasks inside a group keep
+their written order.
 
-Do not mark tasks `[P]` if there is any chance one group's code imports or
-depends on the other's output.
+Do not mark `[P]` when one group imports, extends or validates against another's
+output — two tasks editing the same `*.module.ts` are never parallel.
 
 ## Language rules
 
-- `Task N` and `Step N` are structural — `/build` parses them, always English.
-  Task titles, step descriptions and expected outputs: `ARTIFACT_LANGUAGE`
-  (profile, language block).
-- Code, paths and commands: verbatim.
-- The code a task **writes** — new symbols, its comments and its test names —
-  follows `IDENTIFIER_LANGUAGE` (profile, language block). `/build` transcribes it
-  as written, so this is where the codebase's language is actually decided.
+- `Task N` is structural — `/sdd-build` parses it, always English. Task titles, the
+  contract lines, the cases and the expected outputs: `ARTIFACT_LANGUAGE` (profile,
+  language block).
+- Paths, symbols and commands: verbatim.
+- The code a task **produces** — its symbols, comments and test names — follows
+  `IDENTIFIER_LANGUAGE` (profile, language block). The plan names the symbols, so
+  this is where the codebase's language is decided.

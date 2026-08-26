@@ -4,50 +4,50 @@ The task shape for a story whose acceptance criteria are closed with **executabl
 evidence** instead of a test written red-first: a validator over an artifact, a linter
 over a config file, a migration dry-run, a docs link check.
 
-Everything that makes the TDD template trustworthy is kept: exact paths, complete
-content (never "add the section here"), one verification command per task, and the
-expected output written down. What changes is only the direction of the cycle — the
-change comes first, the check confirms it.
+Everything that makes this carril trustworthy is kept: exact paths, one verification
+command per task, and the expected output written down verbatim. What changes is the
+direction of the cycle — the change comes first, the check confirms it.
 
-Every task after Task 0 must follow this exact structure:
+Every task after Task 0 follows this structure:
 
 ```markdown
 ### Task N: [Deliverable name]
 
 **Files:**
+
 - Create: `<exact path>/<file>.<ext>`
-- Modify: `<exact path>/<existing>.<ext>:123-145`
+- Modify: `<exact path>/<existing>.<ext>`
 
-**Step 1: Baseline — confirm the check is green before touching anything**
+**Shape:**
 
-> ONLY when the task modifies something that already exists and is already covered
-> by the check (a refactor, a config edit, a doc rewrite). Skip this step entirely
-> for a file being created — there is nothing to baseline.
-> The command comes from the `VERIFY.run` port, with `<target>` substituted.
+- <the sections, keys or entries the deliverable must contain>
+- <the values the check reads, verbatim — key names, enum members, ids>
+- <the invariant that makes it correct>
 
-```bash
-<VERIFY.run adapter, against the target>
-```
-Expected: PASS — recorded so a later red is unambiguously caused by this task.
+**Baseline:** `<VERIFY.run adapter, against the target>` → PASS
 
-**Step 2: Write the change**
+> ONLY when the task modifies something already covered by the check. Skip it for a
+> file being created — there is nothing to baseline.
 
-In `<path>/<file>.<ext>`:
-
-```<language|markdown|yaml>
-<the complete content — the full section, the full block, the full file.
- Never a description of what to write.>
-```
-
-**Step 3: Verify**
-
-```bash
-<VERIFY.run adapter, against the target>
-```
-Expected: PASS — `<the exact output line that proves it, verbatim>`
+**Verify:** `<VERIFY.run adapter, against the target>`
+Expected: `<the exact output line that proves it, verbatim>`
 ```
 
 ---
+
+## What the plan fixes, and what it leaves to the build
+
+The plan fixes **what the check reads and what the requirement pins**. The build
+writes the deliverable that satisfies it.
+
+Write verbatim: section headings the validator looks for, key names, enum members,
+ids, paths, and the expected output line. Those are the requirement.
+
+Do not transcribe the deliverable's prose. A plan that contains the finished document
+has written it twice — once where nothing can validate it, once where something can.
+
+A task is under-specified when the check could pass on a deliverable that misses the
+point. That is the line — not "does it contain the full text".
 
 ## The rule that replaces red-green
 
@@ -59,27 +59,31 @@ real, so the plan has to make that explicit instead:
   from being wrong, the task needs a different check — not a softer expectation.
 - **Expected output is quoted verbatim**, not summarized. "Expected: PASS" alone is
   not evidence; `OK: 43 profile keys, no issues.` is.
-- **Baseline before a modification.** Without it, a red at Step 3 is ambiguous: it may
+- **Baseline before a modification.** Without it, a red at Verify is ambiguous: it may
   have been red before the task started.
 - **One check per task**, against the narrowest target the port allows — the same
   reason `TESTS.module` is the TDD hot path.
 
-## Notes on task design
+## Granularity
 
-- Each task should represent a single cohesive deliverable (one document, one config
-  file, one migration, one coherent section of an artifact)
-- Tasks are ordered by dependency: **whatever other artifacts validate against comes
-  first**. A catalog before the file that declares entries against it; a schema before
-  the documents it validates
-- A task with more than 6 steps is likely too large — split it
-- A task whose only verification is "the reviewer reads it" is not a task in this
-  mode: either find the check, or the story belongs in `build_mode: tdd`
+- **One task = one run of the check.** Deliverables that the *same* command validates
+  in one pass belong in the same task: three entries in one catalog is one task, not
+  three, because one run proves all of them.
+- **Split when the check differs**, or when one deliverable validates against
+  another's output — that dependency also fixes the order.
+- Order by dependency: **whatever other artifacts validate against comes first.** A
+  catalog before the file declaring entries against it; a schema before the documents
+  it validates.
+- A task whose only verification is "the reviewer reads it" does not belong in this
+  carril — either find the check, or the story is `build_mode: tdd`.
+
+Every task ends in exactly one verification run. That count is the plan's time budget.
 
 ## `[P]` marker (parallel execution)
 
-Identical to the TDD template: if PHASE 2 of `/plan` detected independent groups, mark
-every task header in those groups with a trailing `[P]`, and `/build` runs one
-`code-implementer` subagent per group, re-verifying each group before marking `[X]`.
+Identical to the TDD template: mark every task header in an independent group with a
+trailing `[P]`, and `/sdd-build` runs one `sdd-code-implementer` subagent per group,
+re-verifying each group before marking `[X]`.
 
 ```markdown
 ### Task 4: Port catalog entry [P]
@@ -89,10 +93,8 @@ Do not mark tasks `[P]` when one group's deliverable is validated against anothe
 
 ## Language rules
 
-- `Task N` and `Step N` are structural — `/build` parses them, always English.
-  Task titles, step descriptions and expected outputs: `ARTIFACT_LANGUAGE`
-  (profile, language block).
-- Content, paths and commands: verbatim.
-- Whatever a task **writes** into the repository — new symbols, comments, the names
-  of the checks — follows `IDENTIFIER_LANGUAGE` (profile, language block). `/build`
-  transcribes it as written.
+- `Task N` is structural — `/sdd-build` parses it, always English. Task titles, the
+  shape lines and the expected outputs: `ARTIFACT_LANGUAGE` (profile, language block).
+- Paths, keys and commands: verbatim.
+- Whatever a task **produces** in the repository — symbols, comments, the names of the
+  checks — follows `IDENTIFIER_LANGUAGE` (profile, language block).
