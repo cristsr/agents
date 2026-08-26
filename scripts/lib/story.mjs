@@ -144,7 +144,7 @@ export function clarificationMarkers(text) {
 // ── plan.md ─────────────────────────────────────────────────────────────────
 
 /**
- * Every `### Task N: <title>` heading, with its `[X]` (done, written by /build at
+ * Every `### Task N: <title>` heading, with its `[X]` (done, written by /sdd-build at
  * the end of the heading) and `[P]` (parallel group) markers. State lives on the
  * heading line only — the checkbox lists inside a task body are TDD steps.
  */
@@ -183,7 +183,7 @@ export function traceability(text) {
   return map;
 }
 
-/** The `## AC Coverage` section /build appends: one line per AC, ✓ or ✗. */
+/** The `## AC Coverage` section /sdd-build appends: one line per AC, ✓ or ✗. */
 export function acCoverage(text) {
   if (!text) return null;
   const lines = text.split(/\r?\n/);
@@ -219,6 +219,42 @@ export function section(text, name) {
   const level = lines[start].match(/^#+/)[0].length;
   const end = nextHeading(lines, start + 1, level);
   return lines.slice(start + 1, end).join('\n').trim();
+}
+
+// The pipeline is the machinery, not the subject: an artifact records the decision,
+// never which skill, PHASE or Step produced it. The leak is never deliberate — it is
+// a template's instruction comment copied along with the content, or a note meant for
+// the writer ("resolved by /sdd-prepare") left inside the block that gets written down.
+// Both read as helpful and both rot: the stage names move when a skill is refactored,
+// and whoever reads the artifact afterwards does not run this pipeline.
+const SKILL = 'spec|clarify|design|plan|build|sync|hotfix|refine|scan|docs|commit|prepare|forge|bootstrap|rules';
+const FOOTPRINTS = [
+  // Checked first: a leaked comment usually CONTAINS one of the patterns below, and
+  // naming the comment points at the cause (a template pasted whole) rather than at
+  // the sentence inside it.
+  [/<!--/, 'carries a template instruction comment'],
+  // "(via /sdd-sync)", "written by /sdd-clarify", "produced by /sdd-design", "resolved by /sdd-prepare"
+  [new RegExp(`\\((?:via|by|from)\\s+\`?/(?:${SKILL})\`?[^)]*\\)`, 'i'), 'names the skill that produced it'],
+  [new RegExp(`\\b(?:written|created|produced|generated|resolved|appended|added|promoted)\\s+by\\s+\`?/(?:${SKILL})\\b`, 'i'), 'names the skill that produced it'],
+  // "result from /sdd-sync Step 2", "see /sdd-plan PHASE 3.5"
+  [new RegExp(`/(?:${SKILL})\`?\\s+(?:PHASE|Step)\\s*\\d`, 'i'), 'names the stage that produced it'],
+  [/\bPHASE\s*\d/, 'cites a skill PHASE'],
+];
+
+/**
+ * Lines where an artifact talks about the pipeline instead of its subject.
+ * Returns `[{ line, text, reason }]` — empty when the artifact keeps to itself.
+ */
+export function pipelineFootprint(text) {
+  if (!text) return [];
+  const found = [];
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line) return;
+    const hit = FOOTPRINTS.find(([re]) => re.test(line));
+    if (hit) found.push({ line: i + 1, text: line, reason: hit[1] });
+  });
+  return found;
 }
 
 function nextHeading(lines, from, maxLevel, limit = lines.length) {

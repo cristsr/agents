@@ -2,14 +2,15 @@
 name: design-principles
 description: >
   Enforces software design principles: SOLID, DRY, YAGNI, Tell Don't Ask, and how code
-  is commented (only the why, never the story's ACs, language per IDENTIFIER_LANGUAGE).
-  Use when designing classes, services, or modules; writing or reviewing code comments,
-  docstrings or TODOs; reviewing code for duplication or unnecessary complexity; creating
-  abstractions; adding new features; or asked about OOP best practices, code design,
-  responsibilities, or coupling.
+  is commented (only the why, on the structure and never on a single property, never
+  the story's ACs, language per IDENTIFIER_LANGUAGE). Use when designing classes,
+  services, or modules; writing or reviewing code comments, docstrings or TODOs;
+  naming or documenting fields, DTO properties or enum members; reviewing code for
+  duplication or unnecessary complexity; creating abstractions; adding new features;
+  or asked about OOP best practices, code design, responsibilities, or coupling.
 metadata:
   author: styve
-  version: "1.1"
+  version: "1.3"
   tags: [solid, dry, yagni, tell-dont-ask, comments, oop, design, principles]
   category: code-quality
 ---
@@ -115,6 +116,15 @@ needs a comment to be *read* needs a better name instead. Write the comment you
 would want to find in six months, and nothing else — an obvious comment is
 duplication under DRY, and every reader pays to confirm it says nothing.
 
+**Size follows the reason, never the change.** The measure is not a line count: a
+genuine constraint is worth every line it takes, and a comment nobody needed is too
+long at one. What is always wrong is a comment sized by the effort that produced it
+rather than by what the reader needs — a paragraph narrating how the function was
+arrived at, a header block restating the signature, a summary of the work in the
+comment instead of in the commit message. That is where the commit body, the ADR
+and the living doc go. Match the density of the file you are in: comments three
+times longer than the ones around them are noise even when each is defensible.
+
 ```typescript
 // Wrong: restates the code, and cites an artifact the reader cannot resolve
 // AC-3: validate the transfer
@@ -127,14 +137,58 @@ function sum(entries: Entry[]): Money { … }
 function sum(entries: Entry[]): Money { … }
 ```
 
+**Comment the structure, never the property.** A comment belongs at the top of a
+class, function, module, interface or enum — the level where intent, invariants and
+the reason the thing exists live. A single field, parameter or enum member is not
+that level: it is a name, and a name that needs a sentence next to it is the defect.
+Rename it.
+
+```typescript
+// Wrong: three comments doing the job three names should do
+export class Transfer {
+  // the account the money comes from
+  source: string;
+  // amount in cents
+  amount: number;
+  // when it was created
+  date: Date;
+}
+
+// Correct: the structure says why it exists, the fields say what they are
+/** A transfer is settled the moment both ledgers accept it — see `settle()`. */
+export class Transfer {
+  sourceAccountId: string;
+  amountInCents: number;
+  createdAt: Date;
+}
+```
+
+This is a **default, and the project overrides it.** A codebase that adopts JSDoc,
+TSDoc, docstrings or any published-documentation standard documents its public
+properties on purpose — that is what the standard is for, and a doc block on every
+field is then the house style, not a smell. When `CLAUDE.md`, the conventions doc or
+the project's own code says so, follow the project. What this rule targets is the
+loose `//` nobody asked for, in a codebase with no such standard.
+
+Two more things it does NOT forbid, because neither is a comment about a name:
+
+- **Contract metadata** — `@ApiProperty({ description })`, a schema `description`,
+  a serialization decorator. That text is published to a consumer, so it belongs to
+  the API surface and follows the contract's rules, not this one.
+- **An external constraint no name can carry** — a field that exists only for
+  backward compatibility, a value another system imposes verbatim. Try the name
+  first (`legacyCoreCode`); when it genuinely cannot be expressed, one line stating
+  the constraint is what the code cannot say about itself. That is the rare
+  exception, not the default.
+
 **Never reference the story's artifacts from code.** No `AC-3`, no `spec-0042`,
 no `Task 7`, no link to `work/active/…` — not in a comment, a test name, a commit
 body or a TODO. Three reasons, and each one is enough:
 
 - **The reference dies.** The story workspace is archived to `work/done/` when
-  `/sync` closes it. The code outlives it, so the citation becomes a pointer to
+  `/sdd-sync` closes it. The code outlives it, so the citation becomes a pointer to
   something the reader cannot open.
-- **The number moves.** `/refine` renumbers ACs and `/hotfix` adds them. A
+- **The number moves.** `/sdd-refine` renumbers ACs and `/sdd-hotfix` adds them. A
   comment saying `AC-3` keeps claiming AC-3 after AC-3 became AC-4 — it does not
   break, it lies.
 - **Traceability already has a home.** The `### AC → Task traceability` table in
@@ -147,9 +201,12 @@ worth citing an authority for, cite the durable one — the constitution article
 the living module doc, the ADR in `docs/decisions.md`.
 
 **Language:** comments and test names follow `IDENTIFIER_LANGUAGE` (profile,
-language block — normally English). They are part of the codebase, not of the
-artifact prose that follows `ARTIFACT_LANGUAGE`: a reader of the code should not
-have to switch languages between a symbol and the line above it.
+language block). They are part of the codebase, not of the artifact prose that
+follows `ARTIFACT_LANGUAGE`: a reader of the code should not have to switch
+languages between a symbol and the line above it. Read the key — this skill has no
+default of its own, and the examples in this document being in English is an
+artifact of the skill's own prose, never a suggestion for the code you write. If
+the profile does not declare the key, ask rather than pick one.
 
 ---
 
@@ -300,7 +357,7 @@ See `references/solid-guide.md` for NestJS-specific DI patterns.
 
 | Principle | Rule | Symptom of Violation |
 |-----------|------|----------------------|
-| Comments | Only the why; never cite the story's artifacts | `// AC-3`, `spec-0042`, a comment restating the line below |
+| Comments | Only the why, on the structure and not on its properties; never cite the story's artifacts | A comment per field, `// AC-3`, `spec-0042`, a comment restating the line below |
 | Tell Don't Ask | Logic inside objects, not outside | Chain of getters + external if |
 | DRY | One source of truth per concept | Copy-pasted logic or validation |
 | YAGNI | Build what is needed now | Unused params, speculative abstractions |

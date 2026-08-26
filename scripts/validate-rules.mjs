@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // validate-rules.mjs — validates a project's `docs/rules.md` (the constitution)
 // against the contract its template declares
-// (`~/.agents/skills/sdd/rules/references/rules-template.md`).
-// Run after every rules edit (the /rules skill runs it on write, /healthcheck on demand):
+// (`~/.agents/skills/sdd/sdd-rules/references/rules-template.md`).
+// Run after every rules edit (the /sdd-rules skill runs it on write, /healthcheck on demand):
 //   node ~/.agents/scripts/validate-rules.mjs [docs/rules.md]
 //
 // It checks the FORM, not the content: the front-matter, the three fields per
@@ -14,6 +14,7 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { rel } from './lib/paths.mjs';
 
 let parseYaml;
 try {
@@ -32,8 +33,8 @@ const warn = (m) => warnings.push(m);
 const target = process.argv[2] ?? resolve(process.cwd(), 'docs/rules.md');
 const abs = resolve(target);
 if (!existsSync(abs)) {
-  console.error(`FAIL: no rules document at ${abs}`);
-  console.error('Create it with /rules (template: ~/.agents/skills/sdd/rules/references/rules-template.md).');
+  console.error(`FAIL: no rules document at ${rel(abs)}`);
+  console.error('Create it with /sdd-rules (template: ~/.agents/skills/sdd/sdd-rules/references/rules-template.md).');
   process.exit(2);
 }
 
@@ -98,7 +99,7 @@ while (i < lines.length) {
       /\b(CI|lint(er|ing)?|tests?|testing|npm|npx|scripts?|pipeline|gates?|audits?|checks?|checkers?|validators?|e2e|contracts?)\b|\/(design|plan)\b/i
         .test(verified[1]);
     if (/\breview\b/i.test(verified[1]) && !concrete) {
-      warn(`Article ${num}: "How it's verified" names only code review — name a concrete gate (CI job, linter, /design phase, script) or demote the rule to docs/`);
+      warn(`Article ${num}: "How it's verified" names only code review — name a concrete gate (CI job, linter, /sdd-design phase, script) or demote the rule to docs/`);
     }
   }
   i = end;
@@ -138,5 +139,5 @@ if (issues.length) {
   for (const x of issues) console.log(`  ${x}`);
   process.exit(1);
 }
-console.log(`OK: ${abs} — ${articleCount} articles, constitution contract intact.`);
+console.log(`OK: ${rel(abs)} — ${articleCount} articles, constitution contract intact.`);
 process.exit(0);

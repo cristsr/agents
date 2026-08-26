@@ -4,7 +4,7 @@
 //
 // The pipeline is a dependency graph, not a checklist: each artifact declares what
 // it requires, and the stage is COMPUTED from what exists on disk. The first
-// `ready` artifact is the one to write next — the /status skill renders that
+// `ready` artifact is the one to write next — the /sdd-status skill renders that
 // answer, it doesn't derive it.
 //
 // Read-only: it opens files and never writes, moves or deletes anything.
@@ -12,27 +12,28 @@
 // Exit codes: 0 = reported · 2 = could not run (unknown story, no workspace)
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join } from 'node:path';
 import { loadProfile, listStories, storyIdMatcher, workdirBase } from './lib/profile.mjs';
+import { rel as toRel } from './lib/paths.mjs';
 import { readStory, acceptanceCriteria, clarificationMarkers, tasks, acCoverage, traceability, buildMode } from './lib/story.mjs';
 
 // ── The pipeline graph ──────────────────────────────────────────────────────
 // Order here is dependency order; ties break by declaration order, so the first
 // `ready` entry is always the next thing to do.
 const PIPELINE = [
-  { id: 'spec', file: 'spec.md', requires: [], command: '/spec' },
-  { id: 'context', file: 'context.md', requires: ['spec'], command: '/clarify' },
-  { id: 'design', file: 'design.md', requires: ['context'], command: '/design' },
-  { id: 'plan', file: 'plan.md', requires: ['design'], command: '/plan' },
-  { id: 'build', file: null, requires: ['plan'], command: '/build' },
-  { id: 'sync', file: null, requires: ['build'], command: '/sync' },
+  { id: 'spec', file: 'spec.md', requires: [], command: '/sdd-spec' },
+  { id: 'context', file: 'context.md', requires: ['spec'], command: '/sdd-clarify' },
+  { id: 'design', file: 'design.md', requires: ['context'], command: '/sdd-design' },
+  { id: 'plan', file: 'plan.md', requires: ['design'], command: '/sdd-plan' },
+  { id: 'build', file: null, requires: ['plan'], command: '/sdd-build' },
+  { id: 'sync', file: null, requires: ['build'], command: '/sdd-sync' },
 ];
 
 /**
  * The graph as the story's carril draws it. In `build_mode: evidence` there is no
- * API contract and no sequence diagram for /design to produce, so the stage is
- * skipped rather than pending — otherwise the next step would read "/design" in a
- * carril where /design never runs — and /plan hangs off context.md instead.
+ * API contract and no sequence diagram for /sdd-design to produce, so the stage is
+ * skipped rather than pending — otherwise the next step would read "/sdd-design" in a
+ * carril where /sdd-design never runs — and /sdd-plan hangs off context.md instead.
  */
 function pipelineFor(mode) {
   if (mode !== 'evidence') return PIPELINE;
@@ -66,7 +67,7 @@ function reportAll() {
   const active = listStories(profile, 'active').filter((id) => storyIdMatcher(profile).test(id));
   const reports = active.map(buildReport).filter(Boolean);
   if (asJson) {
-    console.log(JSON.stringify({ root: profile.root, profile: profile.path, stories: reports }, null, 2));
+    console.log(JSON.stringify({ root: profile.root, profile: rel(profile.path), stories: reports }, null, 2));
     process.exit(0);
   }
   if (reports.length === 0) {
@@ -76,7 +77,7 @@ function reportAll() {
   console.log(`${reports.length} active ${reports.length === 1 ? 'story' : 'stories'}\n`);
   for (const r of reports) {
     const stage = r.artifacts.filter((a) => a.status === 'done').map((a) => a.id).pop() ?? 'inbox';
-    console.log(`  ${r.storyId.padEnd(16)} ${stage.padEnd(9)} → ${r.next?.command ?? '/commit'} ${r.detail ?? ''}`.trimEnd());
+    console.log(`  ${r.storyId.padEnd(16)} ${stage.padEnd(9)} → ${r.next?.command ?? '/sdd-commit'} ${r.detail ?? ''}`.trimEnd());
   }
   process.exit(0);
 }
@@ -95,7 +96,7 @@ function buildReport(storyId) {
   const pipeline = pipelineFor(mode);
 
   // Satisfaction per artifact. `context` is not done while unresolved markers
-  // remain: /clarify's own contract is to leave zero, so a spec still carrying
+  // remain: /sdd-clarify's own contract is to leave zero, so a spec still carrying
   // them means clarification is unfinished, not that design may start.
   const satisfied = {
     spec: Boolean(story.files.spec),
@@ -126,14 +127,14 @@ function buildReport(storyId) {
 
   // A pending artifact sitting BEHIND finished ones is a regression, not the next
   // step: something downstream was already built on top of it. Naming it matters —
-  // re-running the stage would discard that work, and /hotfix is the way back in.
+  // re-running the stage would discard that work, and /sdd-hotfix is the way back in.
   const nextIndex = next ? artifacts.indexOf(next) : -1;
   const regression = nextIndex !== -1 && artifacts.slice(nextIndex + 1).some((a) => a.status === 'done');
 
   const warnings = [];
   if (markers.length) warnings.push(`${markers.length} unresolved [NEEDS CLARIFICATION] marker(s) in spec.md`);
   if (acs.length === 0 && story.files.spec) warnings.push('spec.md has no `### AC-N:` acceptance criteria');
-  if (story.files.plan && !story.files.branch && !closed) warnings.push('no `.branch` marker — /prepare never ran');
+  if (story.files.plan && !story.files.branch && !closed) warnings.push('no `.branch` marker — /sdd-prepare never ran');
   if (story.files.plan && traceability(story.text.plan) === null) {
     warnings.push('plan.md has no `### AC → Task traceability` table');
   }
@@ -213,8 +214,7 @@ function read(path) {
 }
 
 function rel(path) {
-  const r = relative(profile.root, path);
-  return r.startsWith('..') ? path : r.split('\\').join('/');
+  return toRel(path, profile.root);
 }
 
 function activeHint() {

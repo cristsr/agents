@@ -17,12 +17,12 @@
 #     the stack pack's own documents, not here.
 #
 # What each value means, and the rules that tie several of them together:
-#   ~/.agents/skills/sdd/bootstrap/references/profile-guide.md
+#   ~/.agents/skills/sdd/sdd-bootstrap/references/profile-guide.md
 #
 # VALIDATE after every edit:
 #   node ~/.agents/scripts/validate-profile.mjs .agents/profile.yaml
 
-SCHEMA_VERSION: 2
+SCHEMA_VERSION: 3
 
 # ─────────────────────────────────────────────────────────────────────────────
 identity:
@@ -77,8 +77,9 @@ paths:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # OUTPUT_LANGUAGE is what the skills speak in chat; ARTIFACT_LANGUAGE is the prose
-# of the artifacts and follows OUTPUT_LANGUAGE when null. Three things stay English
-# regardless: structural section headings, identifiers, and the git surface.
+# of the artifacts and follows OUTPUT_LANGUAGE when null. Two things stay English
+# regardless of every key here: the structural section headings (the skills parse
+# them by name) and the git surface (history read outside the project).
 #
 # IDENTIFIER_LANGUAGE covers the whole CODE surface, not just the names: paths,
 # classes, fields, endpoints, YAML keys — plus code comments and test names. A
@@ -86,6 +87,11 @@ paths:
 # makes the file harder to read than either choice on its own. What a comment may
 # SAY (only the why, never the story's ACs) is a convention, not a language
 # setting: it lives in the `design-principles` skill, § "Comments".
+#
+# This key is the ONLY place the code's language is decided: no skill carries a
+# default of its own, so leaving it null leaves the skills with nothing to read.
+# English below is this template's suggestion, not a fallback — replace it with
+# whatever this codebase actually names things in.
 language:
   OUTPUT_LANGUAGE: null
   ARTIFACT_LANGUAGE: null
@@ -96,7 +102,7 @@ language:
 vcs:
   REPO_TOPOLOGY: mono-repo        # mono-repo | multi-repo
   BASE_BRANCH: main
-  PREP_SKILL: prepare
+  PREP_SKILL: sdd-prepare
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Which stack this project is on and where its code lives — not how the stack does
@@ -112,7 +118,10 @@ vcs:
 # TS project (Express, CLI, frontend) reads only `typescript`. The later a pack sits,
 # the more specific it is: it overrides the earlier ones per port operation and per
 # template file, and anything no pack provides falls back to each skill's own
-# generic `references/`. A single path string also works for a one-pack project.
+# generic `references/`. Always write it as a LIST, even for a single pack —
+# `[ ~/.agents/stacks/generic ]`, never a bare path: a one-pack project grows into a
+# two-pack one, and a scalar changes shape the day it does. A bare string still
+# resolves, but the validator reports it.
 # `null` (or empty) falls back to the generic references/ and inherits no adapters.
 #
 # SKILLS lists the best-practice skills the pipeline must load while drafting
@@ -152,15 +161,27 @@ stack:
 # folder where the code lives — e.g. apps/): its subdirectories are the components,
 # and a component's docs are <component>/README.md and <component>/docs/.
 #
-# Docs-as-code is optional: the default keeps documentation as per-story Markdown.
-# Adopting it means setting DOCS_UNIT_README and DOCS_UNIT_FLOWS together with
-# DESIGN_OUTPUT_MODE = full-flow, plus binding the DIAGRAM_CHECK port. Half the set
-# is worse than none — /design writes flows /sync has nowhere to put.
+# DOC_UNIT names what one document describes, which is a decision about the docs and
+# not about any tool:
+#   story     — one diagram + one component doc per item. Simple, and it ages by
+#               construction: two stories touching one flow leave two partial
+#               diagrams and no document describing the flow as it is today.
+#   use-case  — one living document per use case, which stories create, modify or
+#               deprecate. Always describes the present; the frontmatter keeps the
+#               history (introduced_by / last_modified_by).
+#
+# Under `use-case` three things travel with it and are NOT this key: the notation is
+# DIAGRAM_FORMAT, the gate that checks a diagram's identifiers against real symbols is
+# the DIAGRAM_CHECK port, and the document's shape is <STACK_REFS>/references/
+# flow-template.md — so swapping the diagramming tool is a pack, never a skill edit.
+# DOCS_UNIT_README and DOCS_UNIT_FLOWS say where the living documents go, and are
+# required under `use-case`: half the set is worse than none — /sdd-design writes flows
+# /sdd-sync has nowhere to put.
 docs:
   DOCS_ARCHITECTURE: docs/architecture/
   DOCS_MODULE: null
   API_CONTRACT_MODE: delta        # delta | full
-  DESIGN_OUTPUT_MODE: full        # full | full-flow
+  DOC_UNIT: story                 # story | use-case
   DOCS_UNIT_README: null
   DOCS_UNIT_FLOWS: null
 

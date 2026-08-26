@@ -78,7 +78,7 @@ test('in the tdd carril /design stands between context and plan', () => {
 });
 
 test('in the evidence carril /design is skipped, not pending', () => {
-  // Reporting "/design" as the next step in a carril where it never runs sends
+  // Reporting "/sdd-design" as the next step in a carril where it never runs sends
   // the developer to a stage that has nothing to produce.
   const spec = SPEC.replace('type: feat', 'type: chore\nbuild_mode: evidence');
   const { json } = status({ 'spec.md': spec, 'context.md': CONTEXT });

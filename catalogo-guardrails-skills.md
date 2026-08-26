@@ -67,7 +67,7 @@ Cada entrada se describe en dos ejes además de su propósito. Sin ellos, dos gu
 
 **Diferencia con 1.1:** la validación de esquema pregunta *"¿el argumento está bien formado?"*; la precondición de estado pregunta *"¿existe ya lo que necesito para trabajar?"*. Un `spec-0042` puede ser un identificador perfectamente válido y aun así no tener `plan.md`.
 
-**Caso de uso:** `/build` exige que exista `plan.md` antes de ejecutar tarea alguna; `/sync` exige que exista `work/done/spec-<n>/`. Si falta, la skill se detiene indicando qué etapa del pipeline hay que correr antes.
+**Caso de uso:** `/sdd-build` exige que exista `plan.md` antes de ejecutar tarea alguna; `/sdd-sync` exige que exista `work/done/spec-<n>/`. Si falta, la skill se detiene indicando qué etapa del pipeline hay que correr antes.
 
 ### 1.5 Separación Datos / Instrucciones
 **Propósito:** Impedir que contenido leído durante la ejecución se interprete como órdenes. Todo lo que la skill lee —un archivo, una página web, el output de un subagente, el título de un recurso compartido— es dato, nunca instrucción.
@@ -131,7 +131,7 @@ Cada entrada se describe en dos ejes además de su propósito. Sin ellos, dos gu
 - Prohibición explícita de parafrasear código sin citarlo
 - Toda conclusión sin evidencia se marca como hipótesis, no como hallazgo
 
-**Caso de uso:** El agente `code-explorer` devuelve su inventario de un módulo con citas verbatim; quien lo consume puede verificar cada afirmación sin volver a leer el módulo entero. Una afirmación sin cita se trata como no verificada.
+**Caso de uso:** El agente `sdd-code-explorer` devuelve su inventario de un módulo con citas verbatim; quien lo consume puede verificar cada afirmación sin volver a leer el módulo entero. Una afirmación sin cita se trata como no verificada.
 
 ---
 

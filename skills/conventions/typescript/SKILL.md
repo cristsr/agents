@@ -1,7 +1,7 @@
 ---
 name: typescript
 description: >
-  Enforces TypeScript coding conventions: guard clauses, Nullable<T> types, optional chaining,
+  Enforces TypeScript coding conventions: guard clauses, Nullable types, optional chaining,
   abstract classes over interfaces, path aliases, readonly immutability, and naming conventions.
   Use when writing or reviewing TypeScript code, creating types or interfaces, handling
   null/undefined values, naming files/classes/methods/variables, structuring imports, or asked
@@ -324,6 +324,34 @@ const DEFAULT_PAGE_SIZE = 20;
 const defaultPaginationConfig = { page: 1, size: 20 }; // object, not a primitive constant
 ```
 
+### Properties — the name carries the unit, the shape and the scale
+
+A field, a parameter or an enum member that needs a comment beside it to be
+understood is under-named. Put in the name what you were about to put in the
+comment — every caller reads the name and only this file reads the comment.
+
+```typescript
+// Wrong — three comments doing the job of three names
+interface Transfer {
+  amount: number;   // in cents
+  timeout: number;  // milliseconds
+  date: Date;       // when it was created
+}
+
+// Correct
+interface Transfer {
+  amountInCents: number;
+  timeoutMs: number;
+  createdAt: Date;
+}
+```
+
+The comment that survives sits **above the structure**, saying why it exists —
+never on its members. Two exceptions: `@ApiProperty` descriptions are contract
+metadata rather than comments, and a project that adopts **TSDoc/JSDoc** documents
+its public properties by standard, which outranks this rule. Full rule:
+`design-principles`, § "Comments".
+
 ---
 
 ## Quick Reference
@@ -340,6 +368,7 @@ const defaultPaginationConfig = { page: 1, size: 20 }; // object, not a primitiv
 | Naming — Files | `kebab-case.type.ts` | `UserService.ts`, `userservice.ts` |
 | Naming — Booleans | `is/has/can/should` prefix | `active`, `permission`, `access` |
 | Naming — Methods | Verb + noun, specific | `process()`, `handle()`, `get()` |
+| Naming — Properties | The name carries unit and shape | `amount: number; // in cents` |
 
 ## Common Issues
 

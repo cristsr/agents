@@ -28,7 +28,7 @@ enough to be checked, and a well-configured project can still hold a story whose
 artifacts contradict each other.
 
 `~/.agents/scripts/validate-skills.mjs` (Node) checks
-along seven axes:
+along eight axes:
 
 1. **Profile keys** — every key the skills reference exists in
    `contracts/sdd-profile.template.yaml` (the ones that don't come out as warnings, to review
@@ -53,6 +53,10 @@ along seven axes:
    contract exists on disk. Those paths encode the source tree's shape, so every
    move breaks some of them, and a broken one stays invisible until someone
    follows it.
+8. **Templates don't hand the pipeline to the artifact** — no template puts a note
+   naming a skill, a PHASE or a Step inside its literal ```` ```markdown ```` block.
+   A template is copied, so such a note lands in the artifact, which then records
+   who wrote a line instead of what it decided.
 
 **Announce at start:** "Validating the SDD ecosystem's consistency."
 
@@ -74,7 +78,7 @@ node "$HOME/.agents/scripts/validate-profile.mjs" .agents/profile.yaml
 It checks the schema version, that every block and key matches the template, that
 required keys hold a value, that enums and list types are respected, that the paths
 on disk resolve (`WORKING_DIRECTORY`, `STACK_REFS`, `MODULE_ROOT`), and the cross-key
-rules — a half-configured docs-as-code set, `API_CONTRACT_MODE: delta` without
+rules — a half-configured `DOC_UNIT: use-case` set, `API_CONTRACT_MODE: delta` without
 `DOCS_MODULE`, a `STORY_ID_PATTERN` that contradicts its prefix.
 
 ## Step 3: Validate this project's constitution
@@ -90,7 +94,7 @@ It checks the *form*, not the content: the front-matter (semver `version`,
 `ratified`/`last_amended` dates), that every article carries its three fields and a
 normative Principle (MUST/SHALL/NEVER), that the quality gates are binary, and that
 no article leans on code review alone for its verification. It exists because a
-constitution `/design` and `/plan` must validate against is only trustworthy if it is
+constitution `/sdd-design` and `/sdd-plan` must validate against is only trustworthy if it is
 well-formed enough to be checked mechanically.
 
 ## Step 3.5: Validate this project's live stories
@@ -104,9 +108,12 @@ node "$HOME/.agents/scripts/validate-artifacts.mjs" --all
 
 It checks each story's artifacts against the structural contract the skills share:
 the ACs (numbering, non-empty bodies, scenario shape), the front-matter `type`
-against `ITEM_TYPES`, the headings `/sync` and `/build` navigate by
+against `ITEM_TYPES`, the headings `/sdd-sync` and `/sdd-build` navigate by
 (`## Ambiguity Resolution`, `## Global Architecture Impact`, `## AC Coverage`), the
 `### AC → Task traceability` table against `spec.md`'s ACs, and the task numbering.
+It also warns when an artifact names the pipeline that produced it — a leaked
+template comment, a "(via `/sdd-sync`)", a "see PHASE 3.5" — which is a story to clean
+up, not a broken contract.
 
 This is the one step that validates **work in flight** rather than the ecosystem, so
 a finding here is a story to fix, not a skill to fix. Report it in its own line of
@@ -134,7 +141,7 @@ green run.
     skill's current name. If the host provides it, add it to the validator's
     `HOST_COMMANDS`.
   - `~/.agents/…` path that doesn't exist → the file moved: update the citation.
-  - Required profile key null → run `/bootstrap` to fill it; don't invent the value.
+  - Required profile key null → run `/sdd-bootstrap` to fill it; don't invent the value.
   - Profile path that doesn't resolve → the project moved, or the key is a leftover.
 - **Warnings (non-key tokens)** → mention them briefly; they only need action if one
   is a new profile key that was never registered in the template.

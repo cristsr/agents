@@ -347,43 +347,21 @@ whatever language the rest of the file is in.
 
 ## Common Issues
 
+The 3 that **interrupt a run** — it stops, or the call goes back to the user.
+Every other failure mode is in `references/common-issues.md`, with its cause and
+resolution.
+
 | Issue | Cause | Resolution |
 |---|---|---|
 | The skill can't be found | Misspelled path or skill in another scope | Run PHASE 1 Step 1's `find` over all three scopes (project, `~/.claude`, `~/.agents`) |
 | `SKILL.md` is a symlink | Global skills linked from `~/.claude/skills` | Resolve the real target before editing: `readlink -f`; edit the original, not the link |
-| The skill looks fine but doesn't trigger | Description technically correct but with no user language | Apply PHASE 3's debug technique and compare with what the user actually types |
-| Two evaluated skills overlap | Overlapping scopes | Report the collision and propose cross negative triggers in both |
 | The user says "just fix it" | They want to skip the report | Show the blocking summary anyway before editing — it's the only moment to decide scope |
-| Huge but coherent skill | Progressive disclosure unused | Don't ask to cut content: ask to **move** it to `references/` and link it |
-| Group C fires on a convention skill | It was classified pipeline without a real handoff | Reclassify as standalone (PHASE 1 Step 4) and drop the C findings — a contract with nothing on either side is noise |
-| The `Requires` cites an artifact no skill produces | Junction never checked in both directions | C6: report it against the skill that should produce it, naming both |
-| The neighbor changed while you were evaluating | Several skills reviewed in parallel | Re-check the junction with both sides in their final version — intermediate state produces phantom findings |
-| The catalog and the skill declare different keys | The hand-maintained table drifted | Report the discrepancy; the profile template settles it. Historically the table has been the wrong side, so don't fix it from here (C2) |
 
 ---
 
 ## Example
 
-**Input:** `/skill-evaluator ~/.claude/skills/report-builder`
+A full worked run — a skill evaluated phase by phase, with its findings — is in
+`references/example.md`. Read it when the shape of the output is in doubt.
 
-**Flow:**
-1. PHASE 1: resolves the symlink to `~/.agents/skills/report-builder`. Finds
-   `SKILL.md` (6,200 words), `references/` (2 files), `README.md`. Step 4:
-   **pipeline** — it reads `.agents/profile.yaml` and writes into `work/`.
-2. PHASE 2: B10 fails → there's a `README.md` inside the folder. B1–B9 OK.
-3. PHASE 3: D2 and D6 fail → `description: Generates reports.` No trigger phrases.
-   Diagnosis: **under-triggering**.
-4. PHASE 4: E2 fails (6,200 > 5,000 words). E3 fails → one of the `references/`
-   isn't linked from `SKILL.md`.
-5. PHASE 5: I4 fails → no error-handling section.
-6. PHASE 6: C1 fails → no `## Contract`; preconditions scattered across three
-   `CRITICAL` sections (also C5). C4 fails → Step 2 runs `git checkout develop`
-   with the branch hardcoded, while the profile declares `BASE_BRANCH`.
-7. PHASE 7: generates 3 positive and 3 negative queries from the Examples.
-8. PHASE 8: report — 1 blocking, 5 important, 1 minor. Priority 1: rewrite the
-   description with the user's phrases.
-
-**Output:**
-> "Evaluation ready: 1 blocking issue (`README.md` inside the folder), risk of
-> **under-triggering** from a generic description. The highest-impact fix is
-> rewriting the description. Should I apply the fixes?"
+---

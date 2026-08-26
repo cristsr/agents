@@ -1,89 +1,94 @@
 # Task Structure Template (generic — stack-agnostic)
 
-Every task after Task 0 must follow this exact structure:
+A task is a **vertical slice**: the whole path that closes one behavior, from its
+entry point down to the deepest new thing it needs. Not one task per layer.
+
+Every task after Task 0 follows this structure:
 
 ```markdown
-### Task N: [Component name]
+### Task N: [Behavior this slice closes]
 
 **Files:**
+
 - Create: `<component>/<exact path>/<file>.<ext>`
-- Modify: `<component>/<exact path>/<existing>.<ext>:123-145`
+- Modify: `<component>/<exact path>/<existing>.<ext>`
 - Test: `<component>/<exact path>/<file>.<test-suffix>`
 
-**Step 1: Write the failing test**
+**Contract:**
 
-In `<component>/<path>/<file>.<test-suffix>`:
+- `<Symbol>.<method>(<args>): <return>` — <what it does>
+- depends on `<PortName>.<method>` (injected)
+- throws `<ErrorName>` when <condition>
 
-```<language>
-describe('ClassName', () => {
-  it('should [behavior]', async () => {
-    // arrange
-    const input = ...;
-    // act
-    const result = await service.method(input);
-    // assert
-    expect(result).toEqual(expected);
-  });
-});
-```
+**Cases:**
 
-**Step 2: Run it and confirm it fails**
+- <input or state> → <expected result>
+- <input or state> → <expected result>
 
-> The command comes from the `TESTS.module` port — run it against the specific spec.
+**Cycle:** write the cases as failing tests → implement → green.
 
-```bash
-cd <component>
-<TESTS.module adapter, against the spec>
-cd ..
-```
-Expected: FAIL — "Cannot find module" or "X is not a function"
-
-**Step 3: Implement the minimum code**
-
-In `<component>/<path>/<file>.<ext>`:
-
-```<language>
-// minimum necessary name
-```
-
-**Step 4: Run it and confirm it passes**
-
-```bash
-<TESTS.module adapter, against the spec>
-```
-Expected: PASS
+**Verify:** `<TESTS.module adapter, against this slice's specs>` → PASS (<N> tests)
 ```
 
 ---
 
-## Notes on task design
+## What the plan fixes, and what it leaves to the build
 
-- Each task should represent a single cohesive component (service, repository, use case, port, adapter)
-- Tasks should be ordered by dependency: define interfaces before implementations
-- A task with more than 6 steps is likely too large — split it
-- Always mock external dependencies, never use real services in unit tests
+The plan fixes **what cannot be inferred**. The build writes **what follows from it**.
+
+Write verbatim — these are requirements, not scaffolding:
+
+- Signatures, symbol names, and the names of the ports and errors involved
+- Field names and types taken from the API contract or the data model
+- Any literal the requirement itself pins: an enum's members, a SQL migration, a
+  regex, a status code, a config key
+- The expected output of a command, when a task ends in one
+
+Do **not** write: method bodies, test bodies, imports, class boilerplate, mock setup.
+Those follow from the contract and the cases, and writing them here means writing the
+feature twice — once as prose no one can execute, once as code.
+
+A task is under-specified when two competent implementations of it would disagree on
+something a caller can observe. That is the line — not "does it contain code".
+
+---
+
+## Granularity
+
+- **One task = one verifiable behavior**, end to end. A use case with its port, its
+  DTO, its adapter and its wiring is *one* task, because one test run proves it.
+- **A shared foundation is its own task, first.** An entity, a migration, or a port
+  that several slices depend on is written once, before them.
+- **Split by behavior, never by layer.** If a task touches more than ~6 files or
+  closes more than 2 ACs, there is a second behavior hiding in it.
+- Order by dependency: whatever the others build on comes first.
+- Mock external dependencies; never a real service in a unit test.
+
+Every task ends in exactly one verification run. That count is the plan's time
+budget — halving the tasks halves the wall clock.
 
 ## `[P]` marker (parallel execution)
 
-If PHASE 2 of `/plan` detected independent component groups, mark every task
-header belonging to those groups with a trailing `[P]`:
+Mark a task `[P]` when it shares no file and no new symbol with the tasks of another
+group in the same plan:
 
 ```markdown
-### Task 4: Request and response DTOs [P]
+### Task 4: Reject an expired token [P]
 ```
 
-`[P]` means: this task has no dependency on tasks from a *different* `[P]`
-group in the same plan. `/build` executes the groups concurrently, delegating
-each one to its own `code-implementer` subagent (one subagent per group,
-launched in parallel), and re-verifies each group's tests before marking its
-tasks `[X]`. Tasks within the *same* group still execute in their written order.
+`/sdd-build` runs the groups concurrently, one `sdd-code-implementer` subagent each,
+and re-verifies every group before marking its tasks `[X]`. Tasks inside a group keep
+their written order.
 
-Do not mark tasks `[P]` if there is any chance one group's code imports or
-depends on the other's output.
+Do not mark `[P]` when one group imports, extends or validates against another's
+output.
 
 ## Language rules
 
-- `Task N` and `Step N` are structural — `/build` parses them, always English.
-  Task titles, step descriptions and expected outputs: `ARTIFACT_LANGUAGE`
-  (profile, language block).
-- Code, paths and commands: verbatim.
+- `Task N` is structural — `/sdd-build` parses it, always English. Task titles, the
+  contract lines, the cases and the expected outputs: `ARTIFACT_LANGUAGE` (profile,
+  language block).
+- Paths, symbols and commands: verbatim.
+- The code a task **produces** — its symbols, comments and test names — follows
+  `IDENTIFIER_LANGUAGE` (profile, language block). The plan names the symbols, so
+  this is where the codebase's language is decided.

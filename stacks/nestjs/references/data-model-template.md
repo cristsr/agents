@@ -7,7 +7,7 @@ a change to an existing one — omit entirely otherwise (no empty file).
 This is the data model contract: TypeORM entity + migration SQL, kept
 separate from `design.md` (narrative) and `docs/api.yaml` (HTTP contract)
 because it has its own audience (whoever reviews/runs the migration) and
-its own consumer in `/plan` (the entity + migration tasks read this file
+its own consumer in `/sdd-plan` (the entity + migration tasks read this file
 directly, field by field).
 
 ---
@@ -57,7 +57,7 @@ CREATE TABLE table_name (
 ## Rules
 - One `## EntityName` block per new/changed table.
 - Entity field names/types must match the SQL column names/types exactly —
-  `/plan`'s "Entity field consistency" check (PHASE 3.5) compares them directly.
+  `/sdd-plan`'s "Entity field consistency" check (PHASE 3.5) compares them directly.
 - Field names here should match `context.md` where the field already exists
   on a related entity (reuse, don't rename without reason).
 - If a field is also exposed in the API contract (`docs/api.yaml`), the

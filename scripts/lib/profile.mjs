@@ -146,6 +146,14 @@ export function listStories(profile, which = 'active') {
  * regex. Legacy prefixes are accepted alongside the current pattern.
  */
 export function storyIdMatcher(profile) {
+  return new RegExp(`^(?:${storyIdSource(profile)})$`, 'i');
+}
+
+/**
+ * The same alternation, unanchored — for callers that search for a story id
+ * INSIDE a line rather than validating a whole string (a code diff, a log).
+ */
+export function storyIdSource(profile) {
   const pattern = key(profile, 'STORY_ID_PATTERN', 'spec-<number>');
   const legacy = key(profile, 'STORY_ID_LEGACY_PREFIXES', []) ?? [];
   const toSource = (p) =>
@@ -157,5 +165,5 @@ export function storyIdMatcher(profile) {
   for (const prefix of Array.isArray(legacy) ? legacy : [legacy]) {
     if (prefix) sources.push(`${toSource(prefix)}\\d+`);
   }
-  return new RegExp(`^(?:${sources.join('|')})$`, 'i');
+  return sources.join('|');
 }

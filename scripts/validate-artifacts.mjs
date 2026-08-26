@@ -16,12 +16,12 @@
 //
 // Exit codes: 0 = valid · 1 = issues found · 2 = could not run (unknown story)
 
-import { relative } from 'node:path';
 import { loadProfile, listStories, storyIdMatcher, key } from './lib/profile.mjs';
+import { rel as toRel, machinePaths } from './lib/paths.mjs';
 import {
   readStory, frontMatter, acceptanceCriteria, clarificationMarkers,
   tasks, traceability, acCoverage, hasHeading, section,
-  buildMode, BUILD_MODES,
+  buildMode, BUILD_MODES, pipelineFootprint,
 } from './lib/story.mjs';
 
 const argv = process.argv.slice(2);
@@ -78,12 +78,12 @@ function validate(storyId) {
   // ── spec.md ───────────────────────────────────────────────────────────────
   const acs = acceptanceCriteria(story.text.spec);
   if (!story.files.spec) {
-    issue('spec.md', 'missing — every story starts here (/spec)');
+    issue('spec.md', 'missing — every story starts here (/sdd-spec)');
   } else {
     const fm = frontMatter(story.text.spec);
     const itemTypes = key(profile, 'ITEM_TYPES', ['feat', 'bug', 'debt', 'incident', 'chore']);
     if (!fm) {
-      warn('spec.md', 'no front-matter — `type` and `origin` are what /clarify and /design frame the item with');
+      warn('spec.md', 'no front-matter — `type` and `origin` are what /sdd-clarify and /sdd-design frame the item with');
     } else {
       if (!fm.type) warn('spec.md', 'front-matter has no `type`');
       else if (Array.isArray(itemTypes) && itemTypes.length && !itemTypes.includes(fm.type)) {
@@ -128,7 +128,7 @@ function validate(storyId) {
             issue('spec.md', `${ac.id} scenario "${s.name}" is missing **WHEN** or **THEN** — a scenario without both is not executable`);
           }
         });
-        // /clarify only rewrites an AC in EARS when it fails testability, so
+        // /sdd-clarify only rewrites an AC in EARS when it fails testability, so
         // neither form is mandatory — but an AC with no EARS wording and no
         // scenario is the shape ambiguity hides in. Worth naming, not failing.
         if (clarified && !ac.ears && ac.scenarios.length === 0) {
@@ -141,23 +141,23 @@ function validate(storyId) {
     const markers = clarificationMarkers(story.text.spec);
     if (markers.length) {
       const where = markers.map((m) => `line ${m.line}`).join(', ');
-      if (clarified) issue('spec.md', `${markers.length} unresolved [NEEDS CLARIFICATION] marker(s) after /clarify (${where}) — /design refuses to proceed while any remain`);
-      else warn('spec.md', `${markers.length} [NEEDS CLARIFICATION] marker(s) pending (${where}) — /clarify resolves them`);
+      if (clarified) issue('spec.md', `${markers.length} unresolved [NEEDS CLARIFICATION] marker(s) after /sdd-clarify (${where}) — /sdd-design refuses to proceed while any remain`);
+      else warn('spec.md', `${markers.length} [NEEDS CLARIFICATION] marker(s) pending (${where}) — /sdd-clarify resolves them`);
     }
 
     if (clarified && !hasHeading(story.text.spec, 'Ambiguity Resolution')) {
-      issue('spec.md', 'context.md exists but spec.md has no `## Ambiguity Resolution` — /clarify writes the decision log before the ACs');
+      issue('spec.md', 'context.md exists but spec.md has no `## Ambiguity Resolution` — /sdd-clarify writes the decision log before the ACs');
     }
   }
 
   // ── design.md ─────────────────────────────────────────────────────────────
   if (story.files.design) {
     if (!hasHeading(story.text.design, 'Global Architecture Impact')) {
-      issue('design.md', 'missing `## Global Architecture Impact` — always present, never inferred; /sync reads it to decide whether to invoke /docs');
+      issue('design.md', 'missing `## Global Architecture Impact` — always present, never inferred; /sdd-sync reads it to decide whether to invoke /sdd-docs');
     } else {
       const body = section(story.text.design, 'Global Architecture Impact') ?? '';
       if (!/\b(yes|no|sí|si|none|ninguno)\b/i.test(body)) {
-        issue('design.md', '`## Global Architecture Impact` carries no yes/no answer — /sync cannot decide whether the architecture docs need refreshing');
+        issue('design.md', '`## Global Architecture Impact` carries no yes/no answer — /sdd-sync cannot decide whether the architecture docs need refreshing');
       }
     }
     for (const heading of ['Module Components', 'Quality Gates Validation']) {
@@ -171,7 +171,7 @@ function validate(storyId) {
   if (story.files.plan) {
     const trace = traceability(story.text.plan);
     if (trace === null) {
-      issue('plan.md', 'missing the `### AC → Task traceability` table — /build refuses to start without it');
+      issue('plan.md', 'missing the `### AC → Task traceability` table — /sdd-build refuses to start without it');
     } else if (acs.length) {
       for (const ac of acs) {
         if (!trace.has(ac.id.toUpperCase())) {
@@ -188,7 +188,7 @@ function validate(storyId) {
     }
 
     if (taskList.length === 0) {
-      issue('plan.md', 'no `### Task N:` heading found — /build and /hotfix locate tasks by that exact name');
+      issue('plan.md', 'no `### Task N:` heading found — /sdd-build and /sdd-hotfix locate tasks by that exact name');
     } else {
       if (taskList[0].id !== 'Task 0') {
         issue('plan.md', `the first task is "${taskList[0].id}", not Task 0 — Task 0 verifies the working branch and is always first`);
@@ -207,8 +207,8 @@ function validate(storyId) {
     if (built || closed) {
       if (!coverage) {
         issue('plan.md', built
-          ? 'every task is [X] but there is no `## AC Coverage` section — /build appends it, and /sync reads it before closing the story'
-          : 'archived without a `## AC Coverage` section — /sync reads it before closing the story');
+          ? 'every task is [X] but there is no `## AC Coverage` section — /sdd-build appends it, and /sdd-sync reads it before closing the story'
+          : 'archived without a `## AC Coverage` section — /sdd-sync reads it before closing the story');
       } else {
         const uncovered = coverage.filter((r) => r.uncovered);
         if (uncovered.length) {
@@ -234,11 +234,37 @@ function validate(storyId) {
     }
   }
 
+  // ── the artifacts don't name the pipeline ─────────────────────────────────
+  // README § "The artifacts never name the pipeline". Reported once per artifact
+  // with the first offending line, so a template pasted whole doesn't drown the
+  // report in identical warnings.
+  const ARTIFACTS = [['spec', 'spec.md'], ['context', 'context.md'], ['design', 'design.md'], ['plan', 'plan.md']];
+  for (const [id, name] of ARTIFACTS) {
+    const marks = pipelineFootprint(story.text[id]);
+    if (!marks.length) continue;
+    const first = marks[0];
+    const more = marks.length > 1 ? `, and ${marks.length - 1} more line(s)` : '';
+    warn(name, `line ${first.line} ${first.reason}: "${truncate(first.text)}"${more} — the artifact records the decision, not who made it`);
+  }
+
+  // ── the artifacts carry no machine paths ──────────────────────────────────
+  // README § "The artifacts cite paths relative to the project". The leak is
+  // never typed: a validator or a shell prints an absolute path and the line is
+  // quoted into the artifact, where it stops being true the moment anyone else
+  // clones the repo. Same reporting shape as above — first line, then a count.
+  for (const [id, name] of ARTIFACTS) {
+    const found = machinePaths(story.text[id], profile.root);
+    if (!found.length) continue;
+    const first = found[0];
+    const more = found.length > 1 ? `, and ${found.length - 1} more line(s)` : '';
+    warn(name, `line ${first.line} cites a path from one machine ("${truncate(first.match, 50)}")${more} — write it relative to the project root`);
+  }
+
   // ── closed stories ────────────────────────────────────────────────────────
   // The equivalent of `openspec validate --archived`: a story only leaves
   // work/active with its plan fully executed.
   if (closed && taskList.length && doneTasks.length !== taskList.length) {
-    issue('plan.md', `archived with ${taskList.length - doneTasks.length} task(s) still unchecked — /sync should not have closed it`);
+    issue('plan.md', `archived with ${taskList.length - doneTasks.length} task(s) still unchecked — /sdd-sync should not have closed it`);
   }
 
   return {
@@ -286,7 +312,10 @@ function render(reports) {
   process.exit(failed ? 1 : 0);
 }
 
+function truncate(text, max = 70) {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
 function rel(path) {
-  const r = relative(profile.root, path);
-  return r.startsWith('..') ? path : r.split('\\').join('/');
+  return toRel(path, profile.root);
 }

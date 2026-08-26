@@ -13,6 +13,7 @@
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, isAbsolute } from 'node:path';
+import { rel, home } from './lib/paths.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const TEMPLATE = resolve(HERE, '..', 'contracts', 'sdd-profile.template.yaml');
@@ -105,7 +106,7 @@ function scalar(v) {
 }
 
 // ── Rules ───────────────────────────────────────────────────────────────────
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 // Keys a project cannot leave null — the pipeline cannot resolve a fallback.
 const REQUIRED = [
@@ -129,7 +130,7 @@ const ENUMS = {
   'items.STORY_ID_MODE': ['sequential', 'name', 'tracker-code'],
   'vcs.REPO_TOPOLOGY': ['mono-repo', 'multi-repo'],
   'docs.API_CONTRACT_MODE': ['delta', 'full'],
-  'docs.DESIGN_OUTPUT_MODE': ['full', 'full-flow'],
+  'docs.DOC_UNIT': ['story', 'use-case'],
   'stack.DIAGRAM_FORMAT': ['Mermaid', 'PlantUML'],
 };
 
@@ -161,9 +162,12 @@ const warn = (key, msg) => warnings.push(`${key}: ${msg}`);
 
 // ── Load ────────────────────────────────────────────────────────────────────
 const target = process.argv[2] ?? '.agents/profile.yaml';
+// What is READ is the path as given; what is SAID is always the short form —
+// an absolute path in this output is a machine's, and it gets quoted elsewhere.
+const shown = rel(target);
 if (!existsSync(target)) {
-  console.error(`FAIL: no profile at ${target}`);
-  console.error(`Copy the template and fill it in:\n  cp ${TEMPLATE} .agents/profile.yaml`);
+  console.error(`FAIL: no profile at ${shown}`);
+  console.error(`Copy the template and fill it in:\n  cp ${home(TEMPLATE)} .agents/profile.yaml`);
   process.exit(2);
 }
 
@@ -171,11 +175,11 @@ let profile;
 try {
   profile = parse(readFileSync(target, 'utf8'));
 } catch (err) {
-  console.error(`FAIL: ${target} is not valid YAML\n  ${err.message}`);
+  console.error(`FAIL: ${shown} is not valid YAML\n  ${err.message}`);
   process.exit(1);
 }
 if (!profile || typeof profile !== 'object') {
-  console.error(`FAIL: ${target} parsed to nothing — is it empty?`);
+  console.error(`FAIL: ${shown} parsed to nothing — is it empty?`);
   process.exit(1);
 }
 
@@ -183,7 +187,7 @@ let template = null;
 if (existsSync(TEMPLATE)) {
   try { template = parse(readFileSync(TEMPLATE, 'utf8')); } catch { /* structure check skipped */ }
 }
-if (!template) warn('template', `could not read ${TEMPLATE} — key-name check skipped`);
+if (!template) warn('template', `could not read ${home(TEMPLATE)} — key-name check skipped`);
 
 const projectRoot = resolve(dirname(resolve(target)), '..');
 const get = (path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), profile);
@@ -196,9 +200,14 @@ const isSet = (v) => v != null && v !== '' && !(Array.isArray(v) && v.length ===
 // gets its migration; anything else is reported as unrecognised rather than
 // guessed at.
 const MIGRATIONS = {
-  1: 'v1 was the Markdown profile with numbered sections. Migrate by running /bootstrap, '
+  1: 'v1 was the Markdown profile with numbered sections. Migrate by running /sdd-bootstrap, '
    + 'which rewrites it as YAML blocks, and carry your old values across — the key NAMES '
    + 'did not change, only their container. Skills no longer cite "section <n>".',
+  2: 'v2 named the documentation unit docs.DESIGN_OUTPUT_MODE, with the values full and '
+   + 'full-flow. Rename the key to docs.DOC_UNIT and map the value: full -> story, '
+   + 'full-flow -> use-case. Nothing else moves. The rename matters because the old key '
+   + 'now falls back to story, so a project documenting per use case would silently '
+   + 'start writing per-story artifacts.',
 };
 
 if (profile.SCHEMA_VERSION !== SCHEMA_VERSION) {
@@ -208,9 +217,9 @@ if (profile.SCHEMA_VERSION !== SCHEMA_VERSION) {
     'SCHEMA_VERSION',
     `expected ${SCHEMA_VERSION}, found ${found}. `
     + (migration
-      ? `${migration} The full guide: ~/.agents/skills/sdd/bootstrap/references/profile-guide.md § "Schema versions".`
+      ? `${migration} The full guide: ~/.agents/skills/sdd/sdd-bootstrap/references/profile-guide.md § "Schema versions".`
       : 'No migration is known for that value — compare against contracts/sdd-profile.template.yaml, '
-      + 'or re-run /bootstrap to regenerate the profile from the current schema.'),
+      + 'or re-run /sdd-bootstrap to regenerate the profile from the current schema.'),
   );
 }
 
@@ -267,9 +276,15 @@ let packPorts = null;
 const stackRefs = get('stack.STACK_REFS');
 if (isSet(stackRefs)) {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '~';
+  // The canonical form is always a list, even for a single pack: a one-pack project
+  // grows into a two-pack one, and a scalar silently changes shape when it does.
+  // A bare string still resolves — it is normalized here — but it is reported.
   const list = Array.isArray(stackRefs) ? stackRefs : [stackRefs];
+  if (!Array.isArray(stackRefs)) {
+    warn('stack.STACK_REFS', 'write it as a list even with one pack: [ ' + String(stackRefs) + ' ]');
+  }
   if (list.some((p) => typeof p !== 'string' || !p.trim())) {
-    issue('stack.STACK_REFS', 'must be a list of pack paths (a single path string also works)');
+    issue('stack.STACK_REFS', 'must be a list of pack paths');
   } else {
     const merged = {};
     for (const ref of list) {
@@ -421,14 +436,14 @@ for (const path of PATHS_ON_DISK) {
       if (typeof ref !== 'string') { issue(path, 'each entry must be a pack path string'); continue; }
       const expanded = ref.replace(/^~/, process.env.HOME ?? process.env.USERPROFILE ?? '~');
       const abs = isAbsolute(expanded) ? expanded : resolve(projectRoot, expanded);
-      if (!existsSync(abs)) issue(path, `points at a path that does not exist: ${abs}`);
+      if (!existsSync(abs)) issue(path, `points at a path that does not exist: ${rel(abs, projectRoot)}`);
     }
     continue;
   }
   if (typeof v !== 'string') continue;
   const expanded = v.replace(/^~/, process.env.HOME ?? process.env.USERPROFILE ?? '~');
   const abs = isAbsolute(expanded) ? expanded : resolve(projectRoot, expanded);
-  if (!existsSync(abs)) issue(path, `points at a path that does not exist: ${abs}`);
+  if (!existsSync(abs)) issue(path, `points at a path that does not exist: ${rel(abs, projectRoot)}`);
 }
 const wd = get('paths.WORKING_DIRECTORY');
 if (isSet(wd) && typeof wd === 'string' && !isAbsolute(wd)) {
@@ -445,24 +460,24 @@ if (isSet(prefix) && isSet(pattern) && !String(pattern).startsWith(String(prefix
   issue('items.STORY_ID_PATTERN', `does not start with STORY_ID_PREFIX ("${prefix}")`);
 }
 
-// Docs-as-code is an all-or-nothing set: half of it leaves /design writing flows
-// that /sync has nowhere to put.
+// Per-use-case docs are an all-or-nothing set: half of it leaves /sdd-design writing
+// flows that /sdd-sync has nowhere to put.
 const docsAsCode = {
-  'docs.DESIGN_OUTPUT_MODE': get('docs.DESIGN_OUTPUT_MODE') === 'full-flow',
+  'docs.DOC_UNIT': get('docs.DOC_UNIT') === 'use-case',
   'docs.DOCS_UNIT_FLOWS': isSet(get('docs.DOCS_UNIT_FLOWS')),
 };
 const on = Object.entries(docsAsCode).filter(([, v]) => v).map(([k]) => k);
 const off = Object.entries(docsAsCode).filter(([, v]) => !v).map(([k]) => k);
 if (on.length && off.length) {
-  issue('docs', `docs-as-code is half-configured — set (${on.join(', ')}) but not (${off.join(', ')})`);
+  issue('docs', `DOC_UNIT: use-case is half-configured — set (${on.join(', ')}) but not (${off.join(', ')})`);
 }
 const diagramCheck = get('ports.DIAGRAM_CHECK.run');
 const resolvedDiagram = diagramCheck != null ? diagramCheck : packPorts?.DIAGRAM_CHECK?.run ?? null;
-if (get('docs.DESIGN_OUTPUT_MODE') === 'full-flow' && !isSet(resolvedDiagram)) {
-  warn('ports.DIAGRAM_CHECK', 'docs-as-code with this port unbound — diagram identifiers go unverified');
+if (get('docs.DOC_UNIT') === 'use-case' && !isSet(resolvedDiagram)) {
+  warn('ports.DIAGRAM_CHECK', 'DOC_UNIT is use-case with this port unbound — diagram identifiers go unverified');
 }
 if (get('docs.API_CONTRACT_MODE') === 'delta' && !isSet(get('docs.DOCS_MODULE'))) {
-  issue('docs.DOCS_MODULE', 'required when API_CONTRACT_MODE is delta — /sync has no canonical api.yaml folder to merge into');
+  issue('docs.DOCS_MODULE', 'required when API_CONTRACT_MODE is delta — /sdd-sync has no canonical api.yaml folder to merge into');
 }
 if (isSet(get('docs.DOCS_UNIT_README')) && !isSet(get('docs.DOCS_UNIT_FLOWS'))) {
   warn('docs.DOCS_UNIT_FLOWS', 'a unit README without flows — C4 L4 has nowhere to land');
@@ -481,8 +496,15 @@ if (Array.isArray(evidenceTypes) && evidenceTypes.length) {
   const verify = get('ports.VERIFY.run');
   const resolvedVerify = verify != null ? verify : packPorts?.VERIFY?.run ?? null;
   if (!isSet(resolvedVerify)) {
-    warn('ports.VERIFY', 'EVIDENCE_MODE_TYPES declares eligible types but this port is unbound — an evidence-mode story would have nothing to close its ACs with, and /plan stops');
+    warn('ports.VERIFY', 'EVIDENCE_MODE_TYPES declares eligible types but this port is unbound — an evidence-mode story would have nothing to close its ACs with, and /sdd-plan stops');
   }
+}
+
+// The code's language axis has no default anywhere: the skills read this key and
+// nothing else, so a null here leaves comments, test names and identifiers
+// undeclared — and whoever writes the code picks a language per file.
+if (!isSet(get('language.IDENTIFIER_LANGUAGE'))) {
+  warn('language.IDENTIFIER_LANGUAGE', 'not declared — no skill carries a default for the code surface (identifiers, comments, test names)');
 }
 
 const survey = get('ports.CODE_SURVEY.run');

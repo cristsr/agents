@@ -95,4 +95,6 @@ Keep the artifact readable — the redaction is prose, not a dump:
 
 <!-- Language rules: section headings in English (structural — read by name);
      prose in ARTIFACT_LANGUAGE (profile, language block); paths, class
-     names, field names and signatures verbatim from the code. -->
+     names, field names and signatures verbatim from the code.
+     These comments are instructions, not content: they don't reach context.md,
+     and neither does the name of the skill or PHASE that produced it. -->

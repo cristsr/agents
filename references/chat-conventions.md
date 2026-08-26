@@ -2,24 +2,53 @@
 
 The conversational SDD skills present their work to the user in the **same six
 blocks**. "Conversational" means skills that drive a run and hand off to the next
-one: `spec`, `prepare`, `clarify`, `scan`, `design`, `plan`, `build`, `sync`,
-`commit`, `hotfix`, `refine`, `forge`, `status`, `healthcheck`, `docs`, `rules`,
-`bootstrap`, `profile`, `hexagonal-audit`. Convention skills (`typescript`,
+one: `sdd-spec`, `sdd-prepare`, `sdd-clarify`, `sdd-scan`, `sdd-design`, `sdd-plan`, `sdd-build`, `sdd-sync`,
+`sdd-commit`, `sdd-hotfix`, `sdd-refine`, `sdd-forge`, `sdd-status`, `healthcheck`, `sdd-docs`, `sdd-rules`,
+`sdd-bootstrap`, `profile`, `hexagonal-audit`. Convention skills (`typescript`,
 `error-handling`, `hexagonal-architecture`, `design-principles`) are exempt — they
 enforce rules, they don't run a conversation.
 
-**Chat prose follows `OUTPUT_LANGUAGE`**; artifact prose follows
-`ARTIFACT_LANGUAGE`. The structural tokens below stay verbatim (English):
-`[Step N]`, `✓`, `✗`, `## Summary`, `Next:`. Message samples in the skills are
-written in English as the default — render them in `OUTPUT_LANGUAGE` when that
-differs.
+## The three language axes
+
+A project writes in more than one language at once, and the profile's `language`
+block splits them on three independent keys. A skill names what it puts on each
+axis; these are the axes.
+
+| Key | Governs | Falls back to |
+|---|---|---|
+| `ARTIFACT_LANGUAGE` | the **prose** a skill writes into an artifact — ACs, descriptions, decisions, findings | `OUTPUT_LANGUAGE`, when the project doesn't declare it |
+| `OUTPUT_LANGUAGE` | everything said **to the user** in chat | — |
+| `IDENTIFIER_LANGUAGE` | **code and its names** — paths, classes, fields, endpoints, test names, comments | nothing; it has no default and may not be null |
+
+Three rules hold across every skill, whatever those keys say.
+
+**Never translate an artifact into English on your own.** Prose written in
+`ARTIFACT_LANGUAGE` stays there. A skill editing an artifact someone else produced
+writes the correction in the language the surrounding text is already in — a
+refinement never switches an artifact's language.
+
+**Structural headings are literals, not prose.** `[Step N]`, `✓`, `✗`,
+`## Summary`, `Next:`, `## Contract`, `## AC Coverage`, `Task N` and their kind are
+matched by name — by the next skill in the pipeline, or by a validator script.
+Translating one doesn't localize the document, it breaks the handoff: the section is
+there and the reader reports it missing. They stay English regardless of
+`ARTIFACT_LANGUAGE`. A skill whose validator matches further literals of its own
+lists them itself.
+
+**Identifiers are quoted, not translated.** A path, a class, a field or an endpoint
+taken from the code is copied exactly as the code spells it. When a skill *names* a
+new identifier it follows `IDENTIFIER_LANGUAGE` and matches what the codebase
+already does — no skill carries a default of its own.
+
+Message samples in the skills are written in English as the default — render them in
+`OUTPUT_LANGUAGE` when that differs.
 
 ## The six blocks
 
 1. **Announce** — the first line of the run, exactly one line:
    > Starting `/<skill>` for `spec-<number>`.
 
-   Skills with no story (`status`, `healthcheck`) announce the action only:
+   Skills with no story (`sdd-status`, `healthcheck`) announce the action only:
    > Starting `/<skill>`.
 
 2. **Progress** — one `[Step N] <verb> ...` line per step of a long run, marked
@@ -29,8 +58,8 @@ differs.
    (`AskUserQuestion` / `question`); free-text asks are quoted:
    > "<question>"
 
-   One question call at a time, except `/clarify`'s single batch of max 3 and
-   `/forge`'s relayed `/plan`/`/build` gates. Recommended options come first,
+   One question call at a time, except `/sdd-clarify`'s single batch of max 3 and
+   `/sdd-forge`'s relayed `/sdd-plan`/`/sdd-build` gates. Recommended options come first,
    labelled " (Recommended)".
 
 4. **Summary** — the closing block, `## Summary` heading with labeled lines,
@@ -54,31 +83,31 @@ differs.
 
 6. **Handoff** — every completed run ends with the next step:
    `Next: /<next-skill> spec-<number>` — or "review the changes first" when the
-   next step is a user review (as in `/design` and `/build`).
+   next step is a user review (as in `/sdd-design` and `/sdd-build`).
 
 ## Which blocks each skill uses
 
 | Skill | Announce | Progress | Question | Summary | Stop | Handoff |
 |---|---|---|---|---|---|---|
-| spec | ✓ | — | ✓ | ✓ | ✓ | ✓ → prepare / clarify |
-| prepare | ✓ | ✓ | ✓ (branch) | ✓ | ✓ | ✓ → clarify |
-| clarify | ✓ | — | ✓ (R5 + batch ≤3) | ✓ | ✓ | ✓ → design |
-| scan | ✓ | ✓ | — | ✓ | ✓ | ✓ → design |
-| design | ✓ | ✓ | ✓ (≤5) | ✓ | ✓ | ✓ → plan (after review) |
-| plan | ✓ | — | — | ✓ | ✓ | ✓ → build |
-| build | ✓ | ✓ | — | ✓ | ✓ | ✓ → sync (after review) |
-| sync | ✓ | ✓ | — | ✓ | ✓ | ✓ → commit |
-| commit | ✓ | ✓ | — | ✓ | ✓ | ✓ → PR (gh pr create) |
-| hotfix | ✓ | ✓ | — | ✓ | ✓ | ✓ → build |
-| refine | ✓ | — | ✓ | ✓ | ✓ | ✓ → next artifact |
-| forge | ✓ | — | — | ✓ | ✓ | ✓ → commit |
-| status | ✓ | — | — | ✓ | — | ✓ (suggests next step) |
+| sdd-spec | ✓ | — | ✓ | ✓ | ✓ | ✓ → sdd-prepare / sdd-clarify |
+| sdd-prepare | ✓ | ✓ | ✓ (branch) | ✓ | ✓ | ✓ → sdd-clarify |
+| sdd-clarify | ✓ | — | ✓ (R5 + batch ≤3) | ✓ | ✓ | ✓ → sdd-design |
+| sdd-scan | ✓ | ✓ | — | ✓ | ✓ | ✓ → sdd-design |
+| sdd-design | ✓ | ✓ | ✓ (≤5) | ✓ | ✓ | ✓ → sdd-plan (after review) |
+| sdd-plan | ✓ | — | — | ✓ | ✓ | ✓ → sdd-build |
+| sdd-build | ✓ | ✓ | — | ✓ | ✓ | ✓ → sdd-sync (after review) |
+| sdd-sync | ✓ | ✓ | — | ✓ | ✓ | ✓ → sdd-commit |
+| sdd-commit | ✓ | ✓ | — | ✓ | ✓ | ✓ → PR (gh pr create) |
+| sdd-hotfix | ✓ | ✓ | — | ✓ | ✓ | ✓ → sdd-build |
+| sdd-refine | ✓ | — | ✓ | ✓ | ✓ | ✓ → next artifact |
+| sdd-forge | ✓ | — | — | ✓ | ✓ | ✓ → sdd-commit |
+| sdd-status | ✓ | — | — | ✓ | — | ✓ (suggests next step) |
 | healthcheck | ✓ | — | — | ✓ | — | ✓ (remedy per finding) |
-| docs | ✓ | — | — | ✓ | ✓ | ✓ → sync |
-| rules | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| bootstrap | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ → spec / prepare |
+| sdd-docs | ✓ | — | — | ✓ | ✓ | ✓ → sdd-sync |
+| sdd-rules | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| sdd-bootstrap | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ → sdd-spec / sdd-prepare |
 | profile | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| hexagonal-audit | ✓ | ✓ | — | ✓ | ✓ | ✓ → clarify |
+| hexagonal-audit | ✓ | ✓ | — | ✓ | ✓ | ✓ → sdd-clarify |
 
 ## Validation
 

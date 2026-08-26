@@ -225,3 +225,70 @@ test('--json emits parseable output', () => {
   const { out } = check({ 'spec.md': VALID_SPEC }, { args: ['spec-0001', '--json'] });
   assert.doesNotThrow(() => JSON.parse(out));
 });
+
+// ── The artifacts don't name the pipeline ───────────────────────────────────
+// README § "The artifacts never name the pipeline". The leak is always a copy:
+// a template's instruction comment, or a note to the writer left inside the
+// block that gets written down. Neither survives a refactor of the stage names,
+// and neither means anything to whoever reads the artifact later.
+
+test('a spec citing the skill that wrote a line is warned about', () => {
+  const spec = VALID_SPEC.replace(
+    'WHEN the month closes, THE SYSTEM SHALL emit one row per settled entry.',
+    'WHEN the month closes, THE SYSTEM SHALL emit one row per settled entry (written by /clarify).',
+  );
+  const { out } = check({ 'spec.md': spec });
+  assert.match(out, /WARNINGS/);
+  assert.match(out, /names the skill that produced it/);
+});
+
+test('a template instruction comment left in an artifact is warned about', () => {
+  const spec = `${VALID_SPEC}\n<!-- Scenarios (written by /clarify, never by /spec). -->\n`;
+  const { out } = check({ 'spec.md': spec });
+  assert.match(out, /template instruction comment/);
+});
+
+test('a plan citing a PHASE of the skill that produced it is warned about', () => {
+  const spec = `${VALID_SPEC}\n> Every AC must appear in the table (see PHASE 3.5).\n`;
+  const { out } = check({ 'spec.md': spec });
+  assert.match(out, /PHASE/);
+});
+
+test('naming the STORY is traceability, not a signature', () => {
+  // The line to keep drawing: spec-0042 in an artifact is project history and
+  // stays; the skill that typed it is machinery and does not.
+  const spec = VALID_SPEC.replace(
+    '## Ambiguity Resolution',
+    '## Ambiguity Resolution',
+  ).concat('\nSupersedes the decision taken in spec-0007.\n');
+  const { code, out } = check({ 'spec.md': spec });
+  assert.equal(code, 0);
+  assert.doesNotMatch(out, /WARNINGS/);
+});
+
+// ── The artifacts cite paths relative to the project ────────────────────────
+// README § "The artifacts cite paths relative to the project". Nobody types an
+// absolute path into a spec: a validator or a shell prints one and the line is
+// quoted whole. It reads as evidence and stops being true on the next clone.
+
+test('a validator line quoted with its absolute path is warned about', () => {
+  const spec = `${VALID_SPEC}\n\`npm run rules:check\` fails with \`no rules document at C:\\Users\\dev\\project\\docs\\rules.md\`.\n`;
+  const { out } = check({ 'spec.md': spec });
+  assert.match(out, /WARNINGS/);
+  assert.match(out, /cites a path from one machine/);
+});
+
+test('a POSIX home path in a plan is the same defect', () => {
+  const plan = `${PLAN}\n\nRun the suite from /home/dev/project/apps/api.\n`;
+  const { out } = check({ 'spec.md': VALID_SPEC, 'plan.md': plan });
+  assert.match(out, /plan\.md: line \d+ cites a path from one machine/);
+});
+
+test('an endpoint and a repo-relative path are not machine paths', () => {
+  // The line to keep drawing: what an artifact is FULL of must pass, or the
+  // check gets turned off. `/api/...` is a route, `docs/…` already travels.
+  const spec = `${VALID_SPEC}\nThe route is /api/v1/entries and the contract sits in docs/api.yaml.\n`;
+  const { code, out } = check({ 'spec.md': spec });
+  assert.equal(code, 0);
+  assert.doesNotMatch(out, /WARNINGS/);
+});

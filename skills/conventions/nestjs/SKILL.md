@@ -183,6 +183,9 @@ Syntax in `references/nestjs-binding.md`.
 
 ## Output language
 
-Code, identifiers, paths and file names in English (or `IDENTIFIER_LANGUAGE`).
+Code, identifiers, paths, file names, comments and test names follow
+`IDENTIFIER_LANGUAGE` (profile, language block) — read the key. Nest's own
+decorators, tokens and file suffixes (`@Injectable()`, `.module.ts`, `.controller.ts`)
+are framework vocabulary and stay as the framework spells them.
 
 **Chat interaction follows the user's language** (`OUTPUT_LANGUAGE` in the profile).

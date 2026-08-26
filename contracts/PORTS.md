@@ -15,7 +15,7 @@ skill  ──calls──▶  PORT.operation  ◀──implements──  adapter 
 Two consequences worth stating plainly, because they are what the split buys:
 
 - **A project changes its stack without touching a skill.** Swap Jest for pytest in
-  one profile line; `/build` is unchanged, because it never knew about Jest.
+  one profile line; `/sdd-build` is unchanged, because it never knew about Jest.
 - **A skill states its degraded behavior once, in its own `Degrades` row.** What
   happens when a capability isn't available is a domain decision — the profile has no
   say in it, and cannot turn a warning into a blocker by configuration.
@@ -41,7 +41,7 @@ ports:
   CODE_SURVEY:
     run:
       - mcp:mcp__codegraph__codegraph_explore
-      - agent:code-explorer?model=sonnet
+      - agent:sdd-code-explorer?model=sonnet
       - inline
 ```
 
@@ -116,7 +116,7 @@ doesn't need it.
 | `module` | `<module>` | Runs the tests covering one module. Exit 0 = green. |
 | `full` | `<component>` | Runs a whole component's suite. Exit 0 = green. |
 
-Consumed by `/build` (the TDD cycle and the pre-review run), `/hotfix`, `/forge`.
+Consumed by `/sdd-build` (the TDD cycle and the pre-review run), `/sdd-hotfix`, `/sdd-forge`.
 `module` is the hot path — it runs on every red-green-refactor turn, so it must be
 the narrowest command the stack allows.
 
@@ -127,7 +127,7 @@ the narrowest command the stack allows.
 | `run` | `<target>` | Checks one deliverable. Exit 0 = the evidence is green. |
 | `full` | `<component>` | The closing check over a whole component. Exit 0 = green. |
 
-Consumed by `/plan`, `/build`, `/hotfix` and `/forge` **only when the story runs in
+Consumed by `/sdd-plan`, `/sdd-build`, `/sdd-hotfix` and `/sdd-forge` **only when the story runs in
 `build_mode: evidence`** — the story declares in its front matter that its acceptance
 criteria are closed with executable evidence rather than with a test written red-first.
 In `build_mode: tdd` (the default) this port is never called and `TESTS` keeps the hot
@@ -149,7 +149,7 @@ with.
 |---|---|---|
 | `run` | `<apps>` | lint + test + build over the affected apps. Exit 0 = all gates pass. |
 
-Consumed by `/sync` before closing a story. `/commit` names its result in the PR body
+Consumed by `/sdd-sync` before closing a story. `/sdd-commit` names its result in the PR body
 without running it.
 
 ### `CONTRACT_LINT` — the API contract file is syntactically valid
@@ -158,7 +158,7 @@ without running it.
 |---|---|---|
 | `run` | `<file>` | Exit 0 = parses. Any output on failure should carry the line. |
 
-Consumed by `/design` and `/refine` after writing the contract artifact.
+Consumed by `/sdd-design` and `/sdd-refine` after writing the contract artifact.
 
 ### `CONTRACT_DIFF` — classify a contract change
 
@@ -166,8 +166,8 @@ Consumed by `/design` and `/refine` after writing the contract artifact.
 |---|---|---|
 | `run` | `<old>`, `<new>` | Reports whether the change is breaking or non-breaking. |
 
-Consumed by `/sync` when merging a delta into a module's canonical contract, and named
-by `/design` when it flags a risk.
+Consumed by `/sdd-sync` when merging a delta into a module's canonical contract, and named
+by `/sdd-design` when it flags a risk.
 
 ### `DIAGRAM_CHECK` — every identifier in the diagrams names a real symbol
 
@@ -175,9 +175,9 @@ by `/design` when it flags a risk.
 |---|---|---|
 | `run` | `<file>` (optional — most projects validate the whole docs tree) | Exit 0 = no drift. |
 
-Consumed by `/design` and `/sync`. This is the gate that keeps docs-as-code honest;
+Consumed by `/sdd-design` and `/sdd-sync`. This is the gate that keeps the diagrams honest;
 without it diagrams drift into fiction, which is why the profile validator warns when
-docs-as-code is on and this port is unbound.
+`DOC_UNIT` is `use-case` and this port is unbound.
 
 ### `API_CLIENT_EXPORT` — turn the contract into an importable client collection
 
@@ -185,16 +185,16 @@ docs-as-code is on and this port is unbound.
 |---|---|---|
 | `run` | `<input>`, `<output>` | Writes the collection to `<output>`. |
 
-Consumed by `/build`. Never blocking: a missing collection costs a manual import, not
+Consumed by `/sdd-build`. Never blocking: a missing collection costs a manual import, not
 a broken story.
 
 ### `PROJECT_GRAPH` — the repo's app/lib dependency graph
 
 | Operation | Placeholders | Contract |
 |---|---|---|
-| `run` | `<out>` | Writes the graph where `/docs` can read it. |
+| `run` | `<out>` | Writes the graph where `/sdd-docs` can read it. |
 
-Consumed by `/docs` when bootstrapping, as an extra reference over the manual
+Consumed by `/sdd-docs` when bootstrapping, as an extra reference over the manual
 survey — never as the only source.
 
 ### `CODE_SURVEY` — inspect the codebase to answer a structural question
@@ -203,7 +203,7 @@ survey — never as the only source.
 |---|---|---|
 | `run` | `<module>`, `<symbol>` | Returns the module's inventory, call paths and blast radius as the adapter can. |
 
-Consumed by `/clarify` and `/scan`. (`/hexagonal-audit` does **not** use it: it runs
+Consumed by `/sdd-clarify` and `/sdd-scan`. (`/hexagonal-audit` does **not** use it: it runs
 the audit script from its own stack pack, which answers a different question.) This
 port replaces the three keys that used to describe one capability — a code graph
 setting, an explorer agent and its model — and its adapters differ in **depth, not
@@ -212,7 +212,7 @@ availability**:
 | Adapter | Returns |
 |---|---|
 | `mcp:mcp__codegraph__codegraph_explore` | symbols, call paths, blast radius — the only one that answers "what breaks if I change this" |
-| `agent:code-explorer` | a structured inventory from reading files, without call paths |
+| `agent:sdd-code-explorer` | a structured inventory from reading files, without call paths |
 | `inline` | the same inventory, but spent against the main context |
 
 A skill that needs call paths must say so and handle their absence — the port

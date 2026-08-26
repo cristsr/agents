@@ -65,3 +65,16 @@ test('the shipped template still parses against its own validator', () => {
   assert.doesNotMatch(out, /SCHEMA_VERSION/, 'the template must declare the current version');
   assert.match(out, /required/, 'and still report its deliberately-null required keys');
 });
+
+test('a null IDENTIFIER_LANGUAGE is warned about — no skill has a default for it', () => {
+  // The skills used to suggest English when the key was absent. They no longer do,
+  // so the absence has to surface here instead of being resolved per file, by
+  // whichever agent happens to be writing code.
+  const { out } = validate('SCHEMA_VERSION: 2\n\nlanguage:\n  IDENTIFIER_LANGUAGE: null\n');
+  assert.match(out, /IDENTIFIER_LANGUAGE.*not declared/s);
+});
+
+test('a declared IDENTIFIER_LANGUAGE is accepted whatever the language is', () => {
+  const { out } = validate('SCHEMA_VERSION: 2\n\nlanguage:\n  IDENTIFIER_LANGUAGE: Español\n');
+  assert.doesNotMatch(out, /IDENTIFIER_LANGUAGE/);
+});
