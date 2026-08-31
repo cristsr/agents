@@ -20,7 +20,7 @@ import { loadProfile, listStories, storyIdMatcher, key } from './lib/profile.mjs
 import { rel as toRel, machinePaths } from './lib/paths.mjs';
 import {
   readStory, frontMatter, acceptanceCriteria, clarificationMarkers,
-  tasks, traceability, acCoverage, hasHeading, section,
+  tasks, taskFiles, traceability, acCoverage, hasHeading, section,
   buildMode, BUILD_MODES, pipelineFootprint,
 } from './lib/story.mjs';
 
@@ -200,6 +200,20 @@ function validate(storyId) {
         }
       });
       notes.push(`${doneTasks.length}/${taskList.length} tasks`);
+    }
+
+    const files = taskFiles(story.text.plan);
+    if (files.length) {
+      const tree = section(story.text.plan, 'File Tree');
+      if (!tree) {
+        issue('plan.md', 'missing `### File Tree` — every task with Create/Modify/Delete/Test files needs it consolidated in the header');
+      } else {
+        for (const f of files) {
+          if (!tree.includes(f.path)) {
+            issue('plan.md', `${f.taskId}'s ${f.kind.toLowerCase()} path "${f.path}" is missing from \`### File Tree\` (line ${f.line}) — regenerate it after editing a task's Files`);
+          }
+        }
+      }
     }
 
     const coverage = acCoverage(story.text.plan);

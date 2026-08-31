@@ -12,6 +12,7 @@ Every task after Task 0 follows this structure:
 
 - Create: `<component>/src/modules/<module>/application/<name>.use-case.ts`
 - Modify: `<component>/src/modules/<module>/<module>.module.ts`
+- Delete: `<component>/src/modules/<module>/application/<obsolete>.use-case.ts`
 - Test: `<component>/src/modules/<module>/application/<name>.use-case.spec.ts`
 
 **Contract:**
@@ -52,6 +53,10 @@ Do **not** write: method bodies, `describe`/`it` bodies, imports, decorators,
 constructor boilerplate, `jest.fn()` mock setup. Those follow from the contract and
 the cases, and writing them here means writing the feature twice — once as prose no
 one can execute, once as code.
+
+A file this task removes is a `Delete:` line, never an implicit consequence of a
+`Modify:` note elsewhere — the file tree consolidated in the plan header (see
+`plan-header-template.md`) is only as accurate as the `Files:` blocks it reads.
 
 A task is under-specified when two competent implementations of it would disagree on
 something a caller can observe. That is the line — not "does it contain code".

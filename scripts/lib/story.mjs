@@ -183,6 +183,30 @@ export function traceability(text) {
   return map;
 }
 
+/**
+ * The `**Files:**` lines inside every task — `Create`/`Modify`/`Delete`/`Test`
+ * paths, the same ones `### File Tree` consolidates. Only backtick-quoted paths
+ * count, which is what naturally skips a note like
+ * `- Test: (no unit test for pure DTOs)`. A trailing `:123-145` line-range suffix
+ * (used by /sdd-hotfix's `Modify:` lines) is stripped — the tree is file-level.
+ */
+export function taskFiles(text) {
+  if (!text) return [];
+  const lines = text.split(/\r?\n/);
+  const fileLine = /^\s*-\s*(Create|Modify|Delete|Test)\s*:\s*`([^`]+)`/i;
+  const out = [];
+  for (const t of tasks(text)) {
+    const end = nextHeading(lines, t.line, 3);
+    for (let i = t.line; i < end; i++) {
+      const m = lines[i].match(fileLine);
+      if (!m) continue;
+      const path = m[2].trim().replace(/:\d+(-\d+)?$/, '');
+      out.push({ taskId: t.id, kind: m[1], path, line: i + 1 });
+    }
+  }
+  return out;
+}
+
 /** The `## AC Coverage` section /sdd-build appends: one line per AC, ✓ or ✗. */
 export function acCoverage(text) {
   if (!text) return null;

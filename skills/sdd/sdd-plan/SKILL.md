@@ -33,7 +33,11 @@ and verifies it against the artifact validator.
 
 **Announce at start:** "Generating the implementation plan for spec-<number>."
 
-**Output:** `work/active/spec-<number>/plan.md`.
+**Output:** `work/active/spec-<number>/plan.md`, whose header also carries a
+consolidated `### File Tree` — every task's `Create`/`Modify`/`Delete`/`Test` paths
+in one place, grouped by `<component>` — plus a companion
+`work/active/spec-<number>/docs/file-tree.md`: the same list rendered as a
+nested directory tree, for human review only.
 
 **Core principle:** the plan is written, not executed — every task is text `/sdd-build`
 runs later, including the git commands in Task 0.
@@ -106,6 +110,16 @@ else is checked in both.
   `references/plan-header-template.md`
 - an `### AC → Task traceability` table in that header mapping **every** AC in
   `spec.md` to at least one task — `/sdd-build` stops at its own Step 1.3 if one is missing
+- a `### File Tree` in that header, one fenced block per `<component>`, consolidating
+  every task's `Create`/`Modify`/`Delete`/`Test` paths — deduped, each leaf carrying
+  the file's full path per `references/plan-header-template.md`. Built from the same
+  pass over the tasks that builds the traceability table (PHASE 3.5); the artifact
+  check flags a task path missing from it.
+- `work/active/spec-<number>/docs/file-tree.md` — the same consolidated list, from the
+  same PHASE 3.5 pass, rendered as a nested directory tree instead of a flat
+  full-path-per-leaf block. Human review only: the validator never parses it, only the
+  `### File Tree` block above is mechanically checked. See
+  `references/plan-header-template.md` § "docs/file-tree.md" for its format.
 - `Task 0` as the first task: verifies the working branch (created and checked out by
   `/sdd-prepare`) in every affected <component>, with the branch name read from
   `work/active/spec-<number>/.branch` (step 3)
@@ -117,13 +131,16 @@ else is checked in both.
 - no final "run the suite" task — `/sdd-build` closes with `TESTS.full` (Step 3.1)
 - no task marked `[X]` — those markers belong to `/sdd-build`
 
-**Writes** — exactly one file:
+**Writes** — exactly two files:
 
 - `work/active/spec-<number>/plan.md`
+- `work/active/spec-<number>/docs/file-tree.md`
 
-Not `spec.md`, `context.md`, `design.md` or anything under the story's `docs/`
-(that's `/sdd-design` or `/sdd-refine`), not the project's source and test files (that's
-`/sdd-build`), and not the unit's living docs (that's `/sdd-sync`).
+Not `spec.md`, `context.md`, `design.md` or anything else under the story's `docs/`
+(that's `/sdd-design` or `/sdd-refine` — `docs/file-tree.md` is the one exception, since
+it is a rendering of the plan's own File Tree, not a design artifact), not the
+project's source and test files (that's `/sdd-build`), and not the unit's living docs
+(that's `/sdd-sync`).
 
 **Never** — regardless of what the plan appears to need
 
@@ -173,9 +190,9 @@ Not `spec.md`, `context.md`, `design.md` or anything under the story's `docs/`
 - `DOC_UNIT = use-case` → there is no `docs/diagram.md`; take the order
   from the `sequenceDiagram` inside each `docs/flows/*.md`.
 
-**Reverting** — `plan.md` is the only file written, and it is restorable only once the
-story workspace is tracked by git: `git checkout -- work/active/spec-<number>/plan.md`
-brings back the committed version. Before the story's first commit there is nothing to
+**Reverting** — both files are restorable only once the story workspace is tracked by
+git: `git checkout -- work/active/spec-<number>/plan.md work/active/spec-<number>/docs/file-tree.md`
+brings back the committed versions. Before the story's first commit there is nothing to
 restore, which is exactly why regenerating over a plan with `[X]` tasks asks first.
 
 **Profile keys**
@@ -276,22 +293,26 @@ Run the drafting PHASEs below, carrying in what the earlier steps resolved:
   (`/sdd-refine`), or instruct a specific mapping. Never accept a plan with an uncovered
   AC.
 - **A plan written** → verify before closing, against the file on disk. Run the
-  artifact check first — it covers the traceability table, Task 0's position and the
-  task numbering mechanically:
+  artifact check first — it covers the traceability table, the File Tree (every
+  task path must appear in it), Task 0's position and the task numbering
+  mechanically:
 
   ```bash
   node ~/.agents/scripts/validate-artifacts.mjs spec-<number>
   ```
 
-  Exit `0` → then confirm by eye the two things a script cannot know:
+  Exit `0` → then confirm by eye the three things a script cannot know:
   - no task is marked `[X]`
   - Task 0's commands contain the branch name from `.branch` and verify it
     (they do not create it)
+  - `docs/file-tree.md` exists and reflects the same files as the `### File Tree`
+    block — there is no script check for this, it is visual only
 
   Exit `1` → report the issues it lists, verbatim, and fix them before closing;
-  an uncovered AC is never accepted. Exit `2` (no `node`) → run the whole list by
-  hand, including the traceability table against `spec.md`'s ACs, and say the check
-  was manual.
+  an uncovered AC or a task path missing from the File Tree is never accepted.
+  Exit `2` (no `node`) → run the whole list by hand, including the traceability
+  table against `spec.md`'s ACs and every task's `**Files:**` against the File
+  Tree, and say the check was manual.
 
 ### Step 6 — Close
 
@@ -620,7 +641,19 @@ do NOT skip it even if the plan "looks complete".
    name and type as `docs/data-model.md` — that file is the source of truth,
    never invent a different name in the plan.
 
-Include the AC → Task table in the plan header (see
+5. **File Tree consolidation:** while walking the tasks for check 1, also collect
+   every `**Files:**` line (its `Create`/`Modify`/`Delete`/`Test` kind and path),
+   dedupe by path, and group by `<component>`. Build the `### File Tree` block from
+   that list, per `references/plan-header-template.md` — one fenced tree per
+   `<component>`, each leaf carrying the file's full path (never a basename). This
+   is not optional: a task with `**Files:**` and no matching entry in the tree is
+   what the artifact check catches next. From that same list, also write
+   `work/active/spec-<number>/docs/file-tree.md`: a nested directory tree (one
+   renders the flat, mechanically-checked block; the other renders the same list as
+   a human-readable hierarchy) — see `references/plan-header-template.md` §
+   "docs/file-tree.md" for its format.
+
+Include the AC → Task table and the File Tree in the plan header (see
 `references/plan-header-template.md`).
 
 ---
@@ -635,7 +668,8 @@ After step 5's verification passes:
      `evidence` (the resolved `VERIFY` adapter)
    - Affected <component>s in implementation order
    - Whether it includes an entity + migration
-   - Scope estimate (number of files to create/modify)
+   - Scope, from the `### File Tree`: files to create, modify, delete and test
+     (the same scope is also visible as a nested tree in `docs/file-tree.md`)
    - Skills loaded from `stack.SKILLS`
 
 2. Say:

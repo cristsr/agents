@@ -221,6 +221,59 @@ test('a ✗ in AC Coverage is an unfinished build', () => {
   assert.match(out, /✗|coverage/i);
 });
 
+// ── plan.md § File Tree ──────────────────────────────────────────────────────
+// A task's **Files:** lines are the source of truth; the File Tree is a
+// derived summary. A tree the tasks have outgrown is exactly the drift this
+// check exists to catch — the same reasoning as the traceability table above.
+
+const PLAN_WITH_FILES = PLAN.replace(
+  '### Task 1: The export use case [X]',
+  [
+    '### Task 1: The export use case [X]',
+    '',
+    '**Files:**',
+    '- Create: `apps/api/src/export/export.use-case.ts`',
+    '- Test: `apps/api/src/export/export.use-case.spec.ts`',
+  ].join('\n'),
+);
+
+test('a task with Files and no `### File Tree` in the header is rejected', () => {
+  const { code, out } = check({ 'spec.md': VALID_SPEC, 'plan.md': PLAN_WITH_FILES });
+  assert.equal(code, 1);
+  assert.match(out, /File Tree/);
+});
+
+const PLAN_WITH_TREE = PLAN_WITH_FILES.replace(
+  '### AC → Task traceability',
+  [
+    '### File Tree',
+    '',
+    '**apps/api**',
+    '',
+    '```',
+    '├── apps/api/src/export/export.use-case.ts        (create)',
+    '└── apps/api/src/export/export.use-case.spec.ts   (test)',
+    '```',
+    '',
+    '### AC → Task traceability',
+  ].join('\n'),
+);
+
+test('a File Tree consolidating every task path passes', () => {
+  const { code } = check({ 'spec.md': VALID_SPEC, 'plan.md': PLAN_WITH_TREE });
+  assert.equal(code, 0);
+});
+
+test('a File Tree missing one task path is rejected, naming it', () => {
+  const incomplete = PLAN_WITH_TREE.replace(
+    '├── apps/api/src/export/export.use-case.ts        (create)\n└── apps/api/src/export/export.use-case.spec.ts   (test)',
+    '└── apps/api/src/export/export.use-case.ts        (create)',
+  );
+  const { code, out } = check({ 'spec.md': VALID_SPEC, 'plan.md': incomplete });
+  assert.equal(code, 1);
+  assert.match(out, /export\.use-case\.spec\.ts.*missing from `### File Tree`/);
+});
+
 test('--json emits parseable output', () => {
   const { out } = check({ 'spec.md': VALID_SPEC }, { args: ['spec-0001', '--json'] });
   assert.doesNotThrow(() => JSON.parse(out));

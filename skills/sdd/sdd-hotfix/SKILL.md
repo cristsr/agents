@@ -76,7 +76,8 @@ has no legitimate reading.
 
 - `spec.md` with the AC corrected or added, and a `## Hotfixes` entry for `HOTFIX-N`
 - `plan.md` with `### Task HOTFIX-N: … [X]` appended under `## Hotfixes`, the
-  "AC → Task traceability" row updated, and `## AC Coverage` carrying **one line per
+  "AC → Task traceability" row updated, the `### File Tree` updated with
+  `HOTFIX-N`'s files, and `## AC Coverage` carrying **one line per
   AC in `spec.md`** — including the corrected or newly added one, with a concrete test
   reference and no `✗`. `/sdd-sync` gates on exactly that; a hotfix that adds an AC without
   its coverage line leaves the story unclosable
@@ -86,7 +87,7 @@ has no legitimate reading.
 
 - `work/active/spec-<number>/spec.md` — the AC and the `## Hotfixes` section only
 - `work/active/spec-<number>/plan.md` — the `HOTFIX-N` task, its `[X]`, the
-  traceability row and the `## AC Coverage` line
+  traceability row, the `### File Tree` update and the `## AC Coverage` line
 - the project's source and test files the single hotfix task names
 
 Not `context.md`, `design.md` or anything under the story's `docs/` (that's `/sdd-refine`,
@@ -252,6 +253,11 @@ but numbered `HOTFIX-N` instead of a sequential task number:
 
 Update the "AC → Task traceability" table in the header: add/update the affected AC's
 row so it includes `Task HOTFIX-N`.
+
+Update the `### File Tree` in the header too: add `HOTFIX-N`'s `Create`/`Modify`/
+`Delete`/`Test` paths to the block for the affected `<component>` (strip the
+`:123-145` line-range suffix — the tree is file-level, not line-level). A path
+already listed from an earlier task keeps its single entry; do not duplicate it.
 
 **`**Related AC:**` and the traceability row are where this fix's origin is
 recorded — the code the task writes carries none of it.** The pull is strongest

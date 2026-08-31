@@ -110,7 +110,8 @@ It checks each story's artifacts against the structural contract the skills shar
 the ACs (numbering, non-empty bodies, scenario shape), the front-matter `type`
 against `ITEM_TYPES`, the headings `/sdd-sync` and `/sdd-build` navigate by
 (`## Ambiguity Resolution`, `## Global Architecture Impact`, `## AC Coverage`), the
-`### AC → Task traceability` table against `spec.md`'s ACs, and the task numbering.
+`### AC → Task traceability` table against `spec.md`'s ACs, every task's
+`**Files:**` path against the `### File Tree`, and the task numbering.
 It also warns when an artifact names the pipeline that produced it — a leaked
 template comment, a "(via `/sdd-sync`)", a "see PHASE 3.5" — which is a story to clean
 up, not a broken contract.

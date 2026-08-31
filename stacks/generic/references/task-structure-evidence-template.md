@@ -17,6 +17,7 @@ Every task after Task 0 follows this structure:
 
 - Create: `<exact path>/<file>.<ext>`
 - Modify: `<exact path>/<existing>.<ext>`
+- Delete: `<exact path>/<obsolete>.<ext>`
 
 **Shape:**
 
@@ -45,6 +46,10 @@ ids, paths, and the expected output line. Those are the requirement.
 
 Do not transcribe the deliverable's prose. A plan that contains the finished document
 has written it twice — once where nothing can validate it, once where something can.
+
+A file this task removes is a `Delete:` line, never an implicit consequence of a
+`Modify:` note elsewhere — the file tree consolidated in the plan header (see
+`plan-header-template.md`) is only as accurate as the `Files:` blocks it reads.
 
 A task is under-specified when the check could pass on a deliverable that misses the
 point. That is the line — not "does it contain the full text".

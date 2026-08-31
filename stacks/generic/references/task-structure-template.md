@@ -12,6 +12,7 @@ Every task after Task 0 follows this structure:
 
 - Create: `<component>/<exact path>/<file>.<ext>`
 - Modify: `<component>/<exact path>/<existing>.<ext>`
+- Delete: `<component>/<exact path>/<obsolete>.<ext>`
 - Test: `<component>/<exact path>/<file>.<test-suffix>`
 
 **Contract:**
@@ -47,6 +48,10 @@ Write verbatim — these are requirements, not scaffolding:
 Do **not** write: method bodies, test bodies, imports, class boilerplate, mock setup.
 Those follow from the contract and the cases, and writing them here means writing the
 feature twice — once as prose no one can execute, once as code.
+
+A file this task removes is a `Delete:` line, never an implicit consequence of a
+`Modify:` note elsewhere — the file tree consolidated in the plan header (see
+`plan-header-template.md`) is only as accurate as the `Files:` blocks it reads.
 
 A task is under-specified when two competent implementations of it would disagree on
 something a caller can observe. That is the line — not "does it contain code".

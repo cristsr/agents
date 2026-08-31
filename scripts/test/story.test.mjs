@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   frontMatter, buildMode, BUILD_MODES, acceptanceCriteria, clarificationMarkers,
-  tasks, traceability, acCoverage, hasHeading, section,
+  tasks, taskFiles, traceability, acCoverage, hasHeading, section,
 } from '../lib/story.mjs';
 
 const SPEC = `---
@@ -112,10 +112,23 @@ const PLAN = `# Plan
 ### Task 0: Verify the working branch [X]
 ### Task 1: Request and response DTOs [X]
 
+**Files:**
+- Create: \`catalog-ms/src/dto/filter.dto.ts\`
+- Test: \`catalog-ms/src/dto/filter.dto.spec.ts\`
+
 - [ ] a checklist item inside the body, not a task
 
 ### Task 2 — Persistence adapter [P]
+
+**Files:**
+- Modify: \`catalog-ms/src/persistence/zone.repository.ts:10-25\`
+- Delete: \`catalog-ms/src/persistence/legacy.repository.ts\`
+- Test: (no unit test for pure DTOs)
+
 ### Task HOTFIX-1: Correct the rounding
+
+**Files:**
+- Modify: \`catalog-ms/src/domain/rounding.ts\`
 
 ### AC → Task traceability
 
@@ -149,6 +162,45 @@ test('tasks handles the em-dash title separator and hotfix ids', () => {
 
 test('tasks strips the markers out of the title', () => {
   assert.equal(tasks(PLAN)[1].title, 'Request and response DTOs');
+});
+
+test('taskFiles extracts Create/Modify/Delete/Test paths per task', () => {
+  const files = taskFiles(PLAN);
+  assert.deepEqual(
+    files.map((f) => [f.taskId, f.kind, f.path]),
+    [
+      ['Task 1', 'Create', 'catalog-ms/src/dto/filter.dto.ts'],
+      ['Task 1', 'Test', 'catalog-ms/src/dto/filter.dto.spec.ts'],
+      ['Task 2', 'Modify', 'catalog-ms/src/persistence/zone.repository.ts'],
+      ['Task 2', 'Delete', 'catalog-ms/src/persistence/legacy.repository.ts'],
+      ['Task HOTFIX-1', 'Modify', 'catalog-ms/src/domain/rounding.ts'],
+    ],
+  );
+});
+
+test('taskFiles strips a trailing line-range suffix', () => {
+  // /sdd-hotfix writes `Modify: \`path/to/file.ts:123-145\`` — the tree is
+  // file-level, not line-level.
+  const f = taskFiles(PLAN).find((x) => x.kind === 'Modify' && x.taskId === 'Task 2');
+  assert.equal(f.path, 'catalog-ms/src/persistence/zone.repository.ts');
+});
+
+test('taskFiles ignores a Files note with no backtick-quoted path', () => {
+  // `- Test: (no unit test for pure DTOs)` is prose, not a path — a silent match
+  // here would fabricate a File Tree entry from nothing.
+  const files = taskFiles(PLAN).filter((f) => f.taskId === 'Task 2');
+  assert.equal(files.length, 2);
+});
+
+test('taskFiles returns [] when no task has a Files block', () => {
+  assert.deepEqual(taskFiles('### Task 0: Verify the working branch\n'), []);
+  assert.deepEqual(taskFiles(null), []);
+});
+
+test('section reads the File Tree body the same way as any other heading', () => {
+  const plan = '### File Tree\n\n```\ncatalog-ms/\n└── src/dto/filter.dto.ts (create)\n```\n\n---\n';
+  assert.match(section(plan, 'File Tree'), /filter\.dto\.ts/);
+  assert.equal(section('# plan with no tree', 'File Tree'), null);
 });
 
 test('traceability maps every AC to its cell', () => {

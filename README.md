@@ -50,7 +50,7 @@ than being discovered by a skill following a dead reference.
 | `/sdd-prepare` | the item | a fresh base branch + the story's working branch (`.branch`) |
 | `/sdd-clarify` | `spec.md` | precise ACs with scenarios, a decision log, `context.md`, and the story's `build_mode` |
 | `/sdd-design` | `spec.md` + `context.md` | `design.md` + `docs/` (contract, model, diagrams) |
-| `/sdd-plan` | the approved artifacts | `plan.md` — numbered tasks, each with its verification |
+| `/sdd-plan` | the approved artifacts | `plan.md` — numbered tasks, each with its verification, plus a consolidated `### File Tree` |
 | `/sdd-build` | `plan.md` | code + green checks, tasks `[X]`, `## AC Coverage` |
 | `/sdd-sync` | the closed story | module docs reconciled, workspace moved to `work/done/` |
 | `/sdd-commit` | `work/done/` | commits + a drafted PR (never pushes) |
@@ -137,7 +137,8 @@ is read, never assumed: a project that leaves it null gets a warning from
 **Structural headings stay in English regardless.** They are a contract between
 skills, parsed by name: `## Acceptance Criteria`, `## Ambiguity Resolution`,
 `## Build Mode Rationale`, `## Technical Context`, `## Global Architecture Impact`,
-`## Design Decisions`, `### AC → Task traceability`, `## AC Coverage`, and `Task N`.
+`## Design Decisions`, `### AC → Task traceability`, `### File Tree`,
+`## AC Coverage`, and `Task N`.
 Translating one breaks the pipeline; only the text *under* it follows
 `ARTIFACT_LANGUAGE`. Front-matter keys and values are identifiers too.
 
@@ -222,7 +223,8 @@ flags a *regression* — an unfinished stage sitting behind finished ones, where
 
 **`validate-artifacts.mjs`** checks that the artifacts hold their shape: the
 structural headings above, AC numbering and scenario form, the traceability table
-against `spec.md`'s ACs, and `## AC Coverage` with zero `✗`. It also warns when an
+against `spec.md`'s ACs, every task's `**Files:**` path against the `### File Tree`,
+and `## AC Coverage` with zero `✗`. It also warns when an
 artifact names the pipeline instead of its subject, or cites a path that only exists
 on one machine (the two sections above). It validates only what exists, so a story at
 the context stage is not faulted for having no plan.
