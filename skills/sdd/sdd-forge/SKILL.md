@@ -133,8 +133,9 @@ patches no code and fixes no failing stage by hand.
   story looks small, never inserts one the tier omits, and never reorders them: `/sdd-sync`
   closes a build, and a build with no plan behind it is still a build. An unattended run
   does not improvise its flow.
-- **Forbidden:** changing the tier. The tier is the story's decision: `/sdd-clarify` and
-  `/sdd-plan` may raise it, the developer alone may lower it, and forge may do neither —
+- **Forbidden:** changing the tier. The tier is the story's decision, and `/sdd-route`
+  is the only skill that writes it — raising on evidence, lowering on the developer's
+  answer. Forge may do neither —
   a chain that rewrote its own flow mid-run would invalidate every preflight row above it.
 
 **Escalates** — the chain has no interaction point of its own. The branch name is

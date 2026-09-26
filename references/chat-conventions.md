@@ -2,7 +2,7 @@
 
 The conversational SDD skills present their work to the user in the **same six
 blocks**. "Conversational" means skills that drive a run and hand off to the next
-one: `sdd-spec`, `sdd-prepare`, `sdd-clarify`, `sdd-scan`, `sdd-design`, `sdd-plan`, `sdd-build`, `sdd-sync`,
+one: `sdd-spec`, `sdd-route`, `sdd-prepare`, `sdd-scan`, `sdd-clarify`, `sdd-design`, `sdd-plan`, `sdd-build`, `sdd-sync`,
 `sdd-commit`, `sdd-hotfix`, `sdd-refine`, `sdd-forge`, `sdd-status`, `healthcheck`, `sdd-docs`, `sdd-rules`,
 `sdd-bootstrap`, `profile`, `hexagonal-audit`. Convention skills (`typescript`,
 `error-handling`, `hexagonal-architecture`, `design-principles`) are exempt — they
@@ -91,25 +91,27 @@ The tier decides which stages exist, so "the next skill" is a function of `spec.
 front matter (`tier: fast | standard | full`, absent meaning `full`), never of this
 table alone — `contracts/TIERS.md` carries the rule the cells abbreviate:
 
-- `/sdd-spec` hands off to `/sdd-prepare` in every tier; the stage after it is
-  `/sdd-build` in `fast` — no clarification pass, no design, no plan — and
-  `/sdd-clarify` in `standard` and `full`.
-- `/sdd-clarify` hands off to `/sdd-design` in `full` under the `tdd` carril and to
-  `/sdd-plan` everywhere else — `standard`, and `full` under `evidence` — and refuses to
-  run on a `fast` story, which never reaches the pass that asks.
+- `/sdd-spec` hands off to `/sdd-route` in every tier. Its initial run infers the tier,
+  then hands off to `/sdd-prepare`; after it, `fast` goes to `/sdd-build` — no survey,
+  no clarification pass, no design, no plan — and `standard` and `full` go to
+  `/sdd-scan`, then `/sdd-clarify`.
+- `/sdd-clarify` hands off to `/sdd-route` — its review run — which hands off to
+  `/sdd-design` in `full` under `tdd` and to `/sdd-plan` everywhere else: `standard`,
+  and `full` under `evidence`.
 - `/sdd-plan` exists in `full` and `standard` only: `fast` builds straight from
   `spec.md`, where `## Change Surface` and `## AC Coverage` stand in for the plan.
 
-A skill announces the tier only where it decided it: `/sdd-spec` names the tier it
-inferred in the `Summary` block's `Produced` and `Counts` lines — the six blocks are
+A skill announces the tier only where it decided it: `/sdd-route` names the tier it
+inferred or confirmed in the `Summary` block's `Produced` and `Counts` lines — the six blocks are
 fixed, and the tier is a value in an existing line, not a seventh block.
 
 | Skill | Announce | Progress | Question | Summary | Stop | Handoff |
 |---|---|---|---|---|---|---|
-| sdd-spec | ✓ | — | ✓ | ✓ | ✓ | ✓ → sdd-prepare, then by tier |
-| sdd-prepare | ✓ | ✓ | ✓ (branch) | ✓ | ✓ | ✓ → sdd-build (fast) / sdd-clarify |
-| sdd-clarify | ✓ | — | ✓ (R5 + batch ≤3) | ✓ | ✓ | ✓ → sdd-design (full+tdd) / sdd-plan (standard, full+evidence) |
-| sdd-scan | ✓ | ✓ | — | ✓ | ✓ | ✓ → sdd-design |
+| sdd-spec | ✓ | — | ✓ | ✓ | ✓ | ✓ → sdd-route |
+| sdd-route | ✓ | — | ✓ (evidence, lowering, confirm — one call) | ✓ | ✓ | ✓ → sdd-prepare (initial) / sdd-design (full+tdd) / sdd-plan (standard, full+evidence) |
+| sdd-prepare | ✓ | ✓ | ✓ (branch) | ✓ | ✓ | ✓ → sdd-build (fast) / sdd-scan |
+| sdd-scan | ✓ | ✓ | ✓ (components) | ✓ | ✓ | ✓ → sdd-clarify (first survey) / by status (refresh) |
+| sdd-clarify | ✓ | — | ✓ (R5 + batch ≤3) | ✓ | ✓ | ✓ → sdd-route |
 | sdd-design | ✓ | ✓ | ✓ (≤5) | ✓ | ✓ | ✓ → sdd-plan (after review) |
 | sdd-plan | ✓ | — | — | ✓ | ✓ | ✓ → sdd-build (full, standard) |
 | sdd-build | ✓ | ✓ | — | ✓ | ✓ | ✓ → sdd-sync (after review) |
@@ -124,7 +126,7 @@ fixed, and the tier is a value in an existing line, not a seventh block.
 | sdd-rules | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | sdd-bootstrap | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ → sdd-spec / sdd-prepare |
 | profile | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| hexagonal-audit | ✓ | ✓ | — | ✓ | ✓ | ✓ → sdd-clarify |
+| hexagonal-audit | ✓ | ✓ | — | ✓ | ✓ | ✓ → sdd-route |
 
 ## Validation
 

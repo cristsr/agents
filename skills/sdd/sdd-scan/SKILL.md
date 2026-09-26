@@ -1,41 +1,42 @@
 ---
 name: sdd-scan
 description: >
-  Refreshes an item's context.md — re-surveys the affected components and
-  rewrites the inventory — without touching spec.md or re-resolving any
-  ambiguity. Use when the user says "/sdd-scan spec-XXXX", "refresh the context",
-  "regenerate context.md", "the code changed since I clarified", "survey the
-  module again", or when a long-running item needs its inventory brought
-  up to date before /sdd-design or /sdd-plan. Do NOT use as the pipeline's survey
-  step — /sdd-clarify already produces context.md along with the precise spec.md.
-  Do NOT use to resolve ambiguities or edit ACs (use /sdd-clarify or /sdd-refine), to
-  design (use /sdd-design), or to plan (use /sdd-plan).
+  Surveys the code a story touches and writes its context.md — the affected
+  components, their entities, ports, DTOs and conventions, and the detected
+  documentation gaps — without touching spec.md or deciding anything. Runs as
+  the pipeline's survey step before /sdd-clarify, and again later to refresh the
+  inventory when the code moved.
+  Use when the user says "/sdd-scan spec-XXXX", "survey the module", "survey the
+  codebase for this story", "refresh the context", "regenerate context.md", "the
+  code changed since I clarified", "releva el módulo", or right after
+  /sdd-prepare hands off to it.
+  Do NOT use to resolve ambiguities or edit ACs (use /sdd-clarify or
+  /sdd-refine), to decide the tier (use /sdd-route), to design (use
+  /sdd-design), or to plan (use /sdd-plan).
 ---
 
 # scan
 
 ## Overview
 
-A **refresh** skill, not a pipeline step. It re-surveys the affected components and
-rewrites `work/active/spec-<number>/context.md` with the updated inventory.
+The only skill that surveys the code for a story and the only one that writes
+`work/active/spec-<number>/context.md`. It runs in two situations:
 
-`/sdd-clarify` already produces `context.md` in its I phase, along with the precise
-`spec.md`. `/sdd-scan` exists for the case where **the code changed and the ACs didn't**:
-an item left open for several days, a base branch that moved forward, a module
-refactored in the meantime.
+- **First survey** — no `context.md` yet: the pipeline's survey step, between
+  `/sdd-prepare` and `/sdd-clarify`, which reads the inventory as evidence.
+- **Refresh** — `context.md` exists and **the code changed while the ACs didn't**: an
+  item left open for days, a base branch that moved forward, a module refactored in the
+  meantime.
 
 **`context.md` is an artifact of the `full` and `standard` flows only.** A `tier: fast`
-story declares a flow with no clarification pass and no context inventory, so this skill
-refuses at the gate below instead of producing one: the artifact is not part of the flow
-the story declared, and nothing is deleted. The way to an inventory for that story is
-raising the tier with `/sdd-refine spec-<number>`: the clarification pass then
-establishes `context.md`, and this skill is what keeps it current.
+story has no survey, so this skill refuses at the gate below instead of producing one.
+The way to an inventory for that story is raising the tier with `/sdd-route spec-<number>`.
 
 **It never touches `spec.md`.** It doesn't resolve ambiguities, doesn't edit ACs,
 doesn't ask about constraints. If what changed is the item and not the code, the right
 skill is `/sdd-clarify` (or `/sdd-refine` if a design already exists).
 
-**Announce at start:** "Refreshing the context for spec-<number>."
+**Announce at start:** "Surveying spec-<number> — <first survey | refresh>."
 
 ---
 
@@ -62,30 +63,22 @@ the expensive part of the run.
 | You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
 | An item id was given | the input carries an id matching `STORY_ID_PATTERN` | Ask: "Which item do you want to refresh?" |
 | The item is still open | `work/active/spec-<number>/` exists | If it's under `work/done/spec-<number>/`, `/sdd-sync` already closed it: there is nothing downstream that would read a refreshed context. Report it and stop |
-| `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find the item. Run `/spec spec-<number>` first." (a legacy `hu.md` counts) |
-| The story's tier writes a `context.md` | `spec.md`'s front matter carries no `tier: fast` (absent means `full`) | Stop: "`spec-<number>` is a `tier: fast` story — that flow has no clarification pass, so it has no `context.md` and `/sdd-scan` has nothing to refresh. Nothing is deleted. If the story needs a context inventory, raise the tier with `/sdd-refine spec-<number>`." |
-| `context.md` exists | `[ -f work/active/spec-<number>/context.md ]` | Redirect: "This item hasn't been clarified yet. Run `/clarify spec-<number>` — it produces `context.md` along with the precise `spec.md`. `/sdd-scan` only refreshes one that already exists." |
+| `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find the item. Run `/sdd-spec spec-<number>` first." (a legacy `hu.md` counts) |
+| The story's tier has a survey | `spec.md`'s front matter carries no `tier: fast` (absent means `full`) | Stop: "`spec-<number>` is a `tier: fast` story — that flow has no survey and no `context.md`. Nothing is deleted. If the story needs one, raise the tier with `/sdd-route spec-<number>`." |
 
-Read the tier row **before** the `context.md` row, and read `spec.md`'s front matter
-before either: a `fast` story has no `context.md` by construction, so the existence check
-below it would answer with a redirect to `/sdd-clarify`, a stage that tier never runs.
-The order of the two rows is the difference between a correct refusal and a wrong
-instruction.
+Whether `context.md` exists decides the run — **first survey** or **refresh** — and is
+never a reason to stop.
 
-**Produces** — indistinguishable from what `/sdd-clarify` leaves, by design, in the flows
-that have a `context.md` (`full`, `standard`)
+**Produces** — what `/sdd-clarify`, `/sdd-route`, `/sdd-design` and `/sdd-plan` read
 
-- `work/active/spec-<number>/context.md` regenerated whole from
-  `<STACK_REFS>/references/context-template.md`, with the same inventory per affected
-  <component> and the same **detected gaps** section, always present even when empty.
-  `/sdd-design` and `/sdd-plan` read `context.md` without knowing which skill wrote it, so the
-  shape has to match `/sdd-clarify`'s exactly. A `tier: fast` story never reaches this
-  bullet: that flow has no `context.md` to produce (the gate in `Requires`)
-- every hand-written note from the previous `context.md` preserved (Step 4) — only what
-  came from the code is replaced
+- `work/active/spec-<number>/context.md` written whole from
+  `<STACK_REFS>/references/context-template.md`: the inventory per affected <component>
+  and a **detected gaps** section, always present even when empty
+- on a refresh, every hand-written note from the previous `context.md` preserved
+  (Step 4) — only what came from the code is replaced
 - `spec.md` byte for byte unchanged
-- a **delta** report in chat (Step 5): what was added, changed and removed since the
-  previous survey. This is the run's actual product; the full inventory is on disk
+- a report in chat (Step 5): the inventory summary on a first survey, the **delta** on a
+  refresh
 
 **Writes** — nothing outside this list
 
@@ -104,13 +97,13 @@ the project's source code or its living docs.
 - **Forbidden:** editing an AC, writing into `## Ambiguity Resolution`, or removing a
   `[NEEDS CLARIFICATION]` marker. `/sdd-scan` re-reads the code; it decides nothing.
 - **Forbidden:** per-unknown precedent queries. This is an inventory, not an ambiguity
-  investigation — that's `/sdd-clarify`'s job, and it costs what `/sdd-clarify` costs.
+  investigation — that's `/sdd-clarify`'s job, which does make decisions.
 
 **Escalates**
 
 - The affected <component>s, when `MODULE_ROOT`'s subdirectories don't map to
-  <component>s with certainty
-  and the previous `context.md` no longer matches the item's scope (Step 2).
+  <component>s with certainty against `spec.md` — on a first survey, or on a refresh
+  whose previous `context.md` no longer matches the item's scope (Step 2).
 - A module the survey can't locate: ask for the path or keywords (Step 3), and record
   it as a gap if the answer doesn't resolve it.
 - A refresh that **contradicts a decision** already recorded in `spec.md`'s
@@ -118,8 +111,7 @@ the project's source code or its living docs.
   point at `/sdd-clarify` or `/sdd-refine`; write the refreshed context anyway, but never
   resolve the contradiction here.
 
-**Degrades** — the same fallback chain as `/sdd-clarify`, minus the precedent half it
-doesn't run
+**Degrades**
 
 - `CODE_SURVEY` resolving to an adapter without call paths → the inventory is
   unaffected (every adapter returns it); say in the wrap-up which depth you got.
@@ -129,7 +121,7 @@ doesn't run
   `<STACK_REFS>/<file>` resolves across the listed packs most specific first, then to
   the same local `references/`.
 
-**Reverting** — `context.md` is regenerated whole, so a refresh you didn't want is
+**Reverting** — `context.md` is written whole, so a refresh you didn't want is
 undone with `git checkout -- work/active/spec-<number>/context.md` once the story
 workspace is tracked. Before the story's first commit there is nothing to restore,
 which is why Step 4 carries the hand-written notes across instead of trusting git.
@@ -161,19 +153,21 @@ all of them, before anything else:
 ```bash
 [ -f work/active/spec-<number>/spec.md ] && echo "OK" || echo "MISSING"
 grep -E '^tier:' work/active/spec-<number>/spec.md || echo "TIER ABSENT (full)"
-[ -f work/active/spec-<number>/context.md ] && echo "CTX OK" || echo "CTX MISSING"
+[ -f work/active/spec-<number>/context.md ] && echo "REFRESH" || echo "FIRST SURVEY"
 ```
-
-The tier line comes before the `context.md` line for the reason the `Requires` note
-gives: in a `tier: fast` story the missing file is the tier's shape, not unfinished
-clarification, and the run stops there.
 
 ## Step 2 — Determine what to survey
 
-1. Read `spec.md` (ACs and framing) and the current `context.md`.
-2. The components to survey come from the current `context.md`. If the item's scope
-   changed since then, re-derive them from `MODULE_ROOT` against the
-   `spec.md` content, and report which ones are added or dropped.
+1. Read `spec.md` (ACs and framing) and, on a refresh, the current `context.md`.
+2. **First survey:** list `MODULE_ROOT`'s subdirectories as the <component>s (a
+   `README.md` there is the catalog) and match them against `spec.md`. If they can't be
+   identified with certainty, ask — it can't be deferred, without a component there's
+   nothing to survey:
+   > "Which <COMPONENT_TERM>(s) does this item affect? (e.g. `apps/ledger`)"
+
+   **Refresh:** the components come from the current `context.md`. If the item's scope
+   changed since then, re-derive them the same way and report which were added or
+   dropped.
 3. Verify (read-only, never mutate git) that each component sits on a fresh base:
 
 ```bash
@@ -217,14 +211,17 @@ Pour the inventory into `<STACK_REFS>/references/context-template.md` (if no pac
 `STACK_REFS` provides it: the local `references/context-template.md`) and overwrite
 `work/active/spec-<number>/context.md`.
 
-Keep from the previous `context.md` any note that doesn't come from the code
-(observations added by hand). Everything surveyed gets replaced.
+On a refresh, keep from the previous `context.md` any note that doesn't come from the
+code (observations added by hand). Everything surveyed gets replaced.
 
 Always include the **detected gaps** section.
 
-## Step 5 — Report the delta
+## Step 5 — Report
 
-What's valuable about a refresh is **what changed**, not the whole inventory:
+**First survey** — a short inventory summary: components, key artifacts found, gaps.
+Then: "Next: `/sdd-clarify spec-<number>`."
+
+**Refresh** — what's valuable is **what changed**, not the whole inventory:
 
 ```
 Context for spec-<number> refreshed — <C> component(s).
@@ -244,22 +241,21 @@ If something that changed **contradicts a decision** recorded in `spec.md`'s
 it explicitly and suggest `/sdd-clarify` or `/sdd-refine`. Don't fix it here — `/sdd-scan` doesn't
 decide.
 
-Stop — do not start the next stage: `/sdd-design` in `full` under `tdd`, and `/sdd-plan`
-in `standard` or in `full` under `evidence`.
+Stop — do not start the next stage. After a refresh, `/sdd-status spec-<number>` names it.
 
 ---
 
 ## Common Issues
 
-The 4 that **interrupt a run** — it stops, or the call goes back to the user.
+The ones that **interrupt a run** — it stops, or the call goes back to the user.
 Every other failure mode is in `references/common-issues.md`, with its cause and
 resolution.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| The story is `tier: fast` | That tier runs no clarification pass, so its flow never has a `context.md` | Stop. Delete nothing — the artifact is absent because the story's flow does not include it. Raising the tier with `/sdd-refine spec-<number>` is the way to an inventory; `/sdd-clarify` then establishes it |
-| `context.md` doesn't exist | The item was never clarified (and its tier runs a clarification pass) | Redirect to `/clarify spec-<number>`, which produces it |
-| `spec.md` doesn't exist | `/sdd-spec` never ran | STOP: run `/spec spec-<number>` first |
+| The story is `tier: fast` | That tier has no survey, so its flow never has a `context.md` | Stop. Delete nothing. Raising the tier with `/sdd-route spec-<number>` is the way to an inventory |
+| `spec.md` doesn't exist | `/sdd-spec` never ran | STOP: run `/sdd-spec spec-<number>` first |
+| The components can't be identified | `spec.md` names no module and `MODULE_ROOT` doesn't settle it | Ask which <component>s the item affects (Step 2) |
 | The item is already in `work/done/` | `/sdd-sync` closed it | Stop — nothing downstream reads a refreshed context once the story is archived |
 
 ---

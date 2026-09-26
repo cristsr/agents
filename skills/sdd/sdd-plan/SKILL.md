@@ -43,7 +43,7 @@ nested directory tree, for human review only.
 runs later, including the git commands in Task 0.
 
 **Two carriles.** `spec.md`'s front matter declares the story's `build_mode`
-(resolved by `/sdd-clarify`, absent means `tdd`), and it decides which artifacts are
+(resolved by `/sdd-route`, absent means `tdd`), and it decides which artifacts are
 required, how the implementation order is derived, which task template applies and
 what closes an AC:
 
@@ -143,13 +143,12 @@ skill (step 0).
 - no final "run the suite" task — `/sdd-build` closes with `TESTS.full` (Step 3.1)
 - no task marked `[X]` — those markers belong to `/sdd-build`
 
-**Writes** — two files, plus the one edit the tier escalation owns:
+**Writes** — two files:
 
 - `work/active/spec-<number>/plan.md`
 - `work/active/spec-<number>/docs/file-tree.md`
-- **only when raising a `standard` story to `full`** (`Escalates`): `tier: full` in
-  `spec.md`'s front matter and the reason appended to its `## Tier Rationale` — the two
-  writes that escalation consists of, and nothing else in `spec.md`
+
+Never `spec.md` — its route (`tier`, `build_mode`) is `/sdd-route`'s.
 
 Everything else is off limits: `context.md` and `design.md` are `/sdd-design`'s or
 `/sdd-refine`'s (`docs/file-tree.md` is the one exception under `docs/`, since it is a
@@ -183,16 +182,12 @@ test files are `/sdd-build`'s, and the unit's living docs are `/sdd-sync`'s.
   mode value, a `type` outside `EVIDENCE_MODE_TYPES`, or a missing/empty
   `## Build Mode Rationale`. Stop and report which of the three failed — this is the
   guardrail's last mechanical line, and it is not negotiable at plan time. The fix is
-  `/sdd-refine` on `spec.md`, or widening `EVIDENCE_MODE_TYPES` in the profile if the
+  `/sdd-route` on the story, or widening `EVIDENCE_MODE_TYPES` in the profile if the
   project's deliverables genuinely warrant it.
 - A `standard` story whose analysis turns up a contract, a schema or a second component:
-  **raise the tier here.** Write `tier: full` into `spec.md`'s front matter — never delete
-  the field, since the escalation is part of the record — append the reason to
-  `## Tier Rationale`, and hand back to `/sdd-design`: the plan now depends on design
-  artifacts that do not exist yet, and planning them inline would be writing the stage the
-  tier omitted. Raising is autonomous because it *adds* work; lowering is never this
-  skill's decision, because a plan regenerated for a lower tier discards artifacts a stage
-  already produced.
+  **stop without saving a plan** and hand off to `/sdd-route spec-<number>` with the
+  signal found — it raises the tier to `full`, and `/sdd-design` then runs. Planning the
+  design inline would be writing the stage the tier omitted.
 
 **Degrades**
 
@@ -293,7 +288,7 @@ Exit `1` on a `build_mode` or `tier` issue → stop and quote it verbatim (`Esca
 `2` (no `node`) → check the three conditions and the tier by eye and say the gate ran
 manually.
 
-**Why /sdd-plan re-checks what /sdd-clarify already decided:** `/sdd-clarify` may not have run
+**Why /sdd-plan re-checks what /sdd-route already decided:** `/sdd-route` may not have run
 (the field can be hand-written), and this is the last gate before an entire plan gets
 written against the wrong carril. The tier widens that same gap one axis up: a `standard`
 story planned as `full` writes tasks against artifacts the design stage never produced, and a
@@ -795,7 +790,7 @@ resolution.
 | No `design.md`, the mode is `tdd` and the tier is `full` | `/sdd-design` never ran | Stop as always — at `full` in `tdd` the design is the input, and `evidence` is not the way around that. At `standard` the missing design is the tier, not a skipped stage |
 | `.branch` missing at Requires | `/sdd-prepare` never ran | Stop and ask the user to run `/prepare spec-<number>` first — Task 0 verifies the branch, it doesn't create it |
 | An AC cannot be mapped with the artifacts at hand | The design leaves it uncovered | Show the escalation to the user and ask; `/sdd-refine` the design or instruct the mapping — never save a plan with an uncovered AC |
-| `tier: standard` and the analysis turns up a contract or a schema change | The design stage never ran at that tier, and the change now needs an API contract or a data model | Raise the tier in `spec.md` — write `tier: full`, append the reason to `## Tier Rationale` — and hand back to `/sdd-design`. Never plan the contract inline against a design that does not exist |
+| `tier: standard` and the analysis turns up a contract or a schema change | The design stage never ran at that tier, and the change now needs an API contract or a data model | Stop without saving a plan and hand off to `/sdd-route`, which raises the tier; `/sdd-design` then runs. Never plan the contract inline against a design that does not exist |
 | A plan regenerated after a tier change | The old `plan.md` was written for the other flow — a `full` granularity against a `standard` story, or a flat sequence against a `full` one | Regenerate it whole under the new tier; never reconcile the two plans by choosing one. Overwriting a plan with `[X]` tasks still asks first (step 2) |
 
 ---

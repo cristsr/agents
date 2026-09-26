@@ -15,19 +15,13 @@ type: <feat | bug | debt | incident | chore>
 origin: <tracker:<key> | audit:<reference> | manual>
 ---
 
-<!-- A third front-matter field, `build_mode`, may appear here — but /sdd-spec never
-     writes it. It is resolved by /sdd-clarify (P2b) and only ever written with the
-     value `evidence`, alongside a `## Build Mode Rationale` section; its absence
-     means `tdd`, which is the default for every item. Same rule as the
-     `#### Scenario:` blocks: /sdd-spec transcribes what arrived, /sdd-clarify decides. -->
-
-<!-- A fourth field, `tier`, is the other axis and the OPPOSITE rule: /sdd-spec DOES
-     write it, inferred in Step 2b from what arrived, and only ever when the reading is
-     not `full` — the absence of the field is `full`, the whole pipeline, which is what
-     every story predating the axis carries. A reduced tier adds two sections, shown
-     below: `## Tier Rationale` always, and `## Change Surface` for `fast` only, which
-     is also the tier where /sdd-build later appends `## AC Coverage` to this file
-     instead of to a plan. See `tier-inference.md`. -->
+<!-- Two more front-matter fields may appear here, `tier` and `build_mode` — but
+     /sdd-spec never writes either. Both are the story's route, decided by /sdd-route
+     right after this pass, and each is written only when it is not the default:
+     absent `tier` means `full`, absent `build_mode` means `tdd`. The routing sections
+     below (`## Tier Rationale`, `## Build Mode Rationale`, `## Change Surface`) are
+     shown so the file's order is visible; /sdd-route writes them too, and /sdd-build
+     later appends `## AC Coverage` to this file in a `fast` story. -->
 
 
 # <story-id>: <title>
@@ -50,9 +44,9 @@ that the working branch still gates the build>
 
 ## Build Mode Rationale
 
-<!-- ONLY in the `evidence` carril, written by /sdd-clarify. See that skill. It sits
+<!-- ONLY in `build_mode: evidence`, written by /sdd-route. It sits
      below `## Tier Rationale` and above `## Change Surface`: the tier decides which
-     stages exist, the carril only how a criterion is closed, and each rationale goes
+     stages exist, the build mode only how a criterion is closed, and each rationale goes
      above the section it justifies. -->
 
 ## Change Surface
@@ -217,12 +211,8 @@ intent without forcing an alien mold.
 **confirm it** with the user before writing — the type determines the framing and
 getting it wrong produces an artifact that contradicts itself.
 
-**`tier`:** the one front-matter field this skill *does* write, and the only one it
-writes without asking. Inferred from the input alone (never from the code) and rendered
-by the reading in `tier-inference.md`; written **only when it is not `full`**, because
-the absence of the field *is* `full`. A reduced tier forces two sections — see their
-notes above — and `fast` forces exactly one acceptance criterion. When the reading is
-`full`, leave the field out: declaring the default suggests the axis was contested.
+**`tier` and `build_mode`:** never written here — they are `/sdd-route`'s, together
+with their sections.
 
 **`## AC Coverage`:** never written here. It is the section that closes a `fast` story
 and the build appends it, in this file, once the criterion's check is green.

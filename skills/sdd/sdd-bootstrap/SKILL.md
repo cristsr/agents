@@ -12,7 +12,7 @@ description: >
   that `.agents/profile.yaml` is missing or invalid. Do NOT use to only validate
   an existing profile (use /healthcheck), to edit individual user story artifacts
   (use /sdd-refine), to create project rules (use /sdd-rules), or to survey the codebase
-  (use /sdd-clarify).
+  (use /sdd-scan).
 ---
 
 # bootstrap
@@ -257,7 +257,7 @@ A one-line key summarizing them would only be a second version to keep in sync.
 3. List the key values the skills will read from it.
 4. If `DOCS_ARCHITECTURE` points at a folder that doesn't exist yet, suggest
    running `/sdd-docs` (bootstrap mode) so the pointers resolve.
-5. Suggest running `/sdd-clarify` if there are active items.
+5. Suggest running `/sdd-status` if there are active items — it names each one's next step.
 
 ---
 

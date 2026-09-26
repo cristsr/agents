@@ -13,7 +13,8 @@ description: >
   "corrige el contexto", "cambia un AC", or has reviewed an artifact and wants to
   make targeted or guided corrections.
   Do NOT use to regenerate from scratch (use /sdd-spec, /sdd-clarify, or /sdd-design).
-  Do NOT use to modify plan.md (use /sdd-plan to regenerate it).
+  Do NOT use to modify plan.md (use /sdd-plan to regenerate it), or to change
+  the tier or build mode (use /sdd-route).
 ---
 
 # refine
@@ -111,35 +112,10 @@ Not `plan.md` — ever, in any mode (see `Never`). Not the project's source or t
 - A structural change when `plan.md` already has `[X]` tasks: ask which case it is —
   a post-build defect from a clarification gap is `/sdd-hotfix`, a genuinely larger scope
   is a full `/sdd-plan` regeneration (PHASE 4).
-- A change to `spec.md`'s **`build_mode`** — it switches the carril the whole pipeline
-  follows. Confirm explicitly, and say what it drags along: entering `evidence`
-  requires a non-empty `## Build Mode Rationale` and an eligible `type`
-  (`EVIDENCE_MODE_TYPES`), leaving it back to `tdd` requires the design artifacts
-  `/sdd-plan` will then demand. In both directions an existing `plan.md` is written for
-  the other carril and must be regenerated. Run
-  `node ~/.agents/scripts/validate-artifacts.mjs spec-<number>` after applying it.
-- A change to `spec.md`'s **`tier`** — it decides which stages the story has, and the two
-  directions are not symmetric. Confirm explicitly, and say what it drags along.
-  **Raising** (`standard` → `full`, or a lower tier stepped back up) is safe: it re-runs a
-  stage that never ran, adding the design artifacts — `design.md`, `<api-artifact>`, the
-  diagram and `docs/data-model.md` — and discarding nothing. **Lowering discards work**:
-  entering `fast` means `plan.md` — and `context.md`, and `design.md` plus `docs/` when
-  the story had them — must be **deleted**, because that tier writes none of them; and
-  since `/sdd-refine` never writes `plan.md` (see `Never`), naming those files so the
-  developer deletes them is as far as this skill goes. Entering `standard` means
-  `design.md` and `docs/` must go the same way. The field is never written without a
-  non-empty `## Tier Rationale` beside it, and a target tier the story's `type` is not
-  open to (`FAST_TIER_TYPES`, `STANDARD_TIER_TYPES`) is refused by
-  `validate-artifacts.mjs` —
-  widening either list is a deliberate edit of `.agents/profile.yaml`, never a decision
-  taken inside one conversation. In either direction an existing `plan.md` was written
-  for the flow the story is leaving, so it is invalid for the new one and is never
-  reconciled by choosing one over the other: the direction decides its fate — to `fast`
-  it is deleted with the rest, because that tier writes no plan; to `standard` it may be
-  kept only if it is regenerated flat, with no `[P]` groups; to `full` it is regenerated
-  alongside the design artifacts the raise adds. That is exactly the invalidation a
-  `build_mode` change forces.
-  Run `node ~/.agents/scripts/validate-artifacts.mjs spec-<number>` after applying it.
+- A change to `spec.md`'s **`tier`** or **`build_mode`** — or to `## Tier Rationale`,
+  `## Build Mode Rationale` or `## Change Surface`. Those are the story's route, and
+  `/sdd-route` owns them: stop and redirect to `/sdd-route spec-<number>` with the
+  change the developer asked for.
 - Guided Mode stops after **5 sections** and asks whether to continue.
 
 **Degrades**
@@ -279,12 +255,12 @@ Read the artifact. Review **one section at a time** in this order:
 
 ### For spec.md:
 1. The framing block (User Story / Defect / Technical Debt / Incident / Maintenance)
-2. The tier axis, if `spec.md` carries it: the front-matter `tier` field, `## Tier Rationale`,
-   and `## Change Surface` in `fast` — the rules per direction are in the mutable table of
-   `references/refine-guide.md`
-3. Acceptance Criteria — review them one by one: show each AC's text and ask whether it's correct
-4. Technical Context (if the section exists)
-5. Out of Scope (if the section exists)
+2. Acceptance Criteria — review them one by one: show each AC's text and ask whether it's correct
+3. Technical Context (if the section exists)
+4. Out of Scope (if the section exists)
+
+The routing sections (`tier`, `build_mode` and their rationales) are skipped — they are
+`/sdd-route`'s.
 
 > Note: when refining `spec.md`, there is no external AC reference to validate against — the ACs themselves are what's being corrected. Apply judgment: flag changes that look like scope creep vs. wording fixes.
 
@@ -391,7 +367,6 @@ Consult `references/refine-guide.md` for the full coherence rules. Summary:
 | Change made in | Check |
 |----------------|-------|
 | spec.md — AC added or removed | Warn: "This change is structural. If context.md already exists, run `/scan spec-<number>` to regenerate it." |
-| spec.md — `tier` changed | Warn: "The story's stages changed. Delete the artifacts the new tier does not produce; an existing `plan.md` is invalid for the new flow — regenerated whole in `standard` or `full`, deleted in `fast`, which writes no plan." |
 | spec.md — wording correction only | No downstream action required. |
 | context.md — field renamed | Warn if `<api-artifact>` references the old name |
 | design.md — endpoint description changed | Warn: "This change is structural. Run `/plan spec-<number>` to update the plan." |
@@ -411,7 +386,6 @@ Consult `references/refine-guide.md` for the full coherence rules. Summary:
 |-----------------|---------|
 | spec.md (wording only) | "Story updated at `work/active/spec-<number>/spec.md`. The changes are minor — the existing artifacts are still valid." |
 | spec.md (AC added/removed/major) | "Story updated at `work/active/spec-<number>/spec.md`. The changes are structural — run `/scan spec-<number>` to regenerate the context." |
-| spec.md (tier changed) | "Tier updated at `work/active/spec-<number>/spec.md`. The story's stages changed: delete the artifacts the new tier does not produce. To `standard` or `full`, regenerate the plan with `/plan spec-<number>`; to `fast`, delete `plan.md` and run `/build spec-<number>`, which takes `spec.md` directly." |
 | context.md | "Context updated at `work/active/spec-<number>/context.md`. When you're ready, run `/design spec-<number>`." |
 | design.md (minor change) | "Design updated at `work/active/spec-<number>/design.md`. The changes are minor — you can continue with the existing plan and run `/build spec-<number>`." |
 | design.md (structural change) | "Design updated at `work/active/spec-<number>/design.md`. The changes are structural — run `/plan spec-<number>` to regenerate the plan before building." |

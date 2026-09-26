@@ -1,8 +1,10 @@
 # Decision log format — worked entries
 
 The shape of each `## Ambiguity Resolution` entry in `spec.md`, one example per
-kind: autonomous at high, medium and low confidence, consulted, and the two that
-are always present whichever way P2b and P2c went — the build mode and the tier.
+kind: autonomous at high, medium and low confidence, and consulted.
+
+`/sdd-route` appends two more entries after this skill's — the tier and the build
+mode. Those are its own; never write them here.
 
 ---
 
@@ -25,20 +27,4 @@ are always present whichever way P2b and P2c went — the build mode and the tie
 - **AC-6 · autonomous (low):** Format of the batch identifier? → **ULID**.
   *Rationale:* time-sortable, no coordination required.
   *No precedent:* the repo has no batch-identifier convention yet.
-```
-
-Two entries are always present, whichever way P2b and P2c went — the **build mode**
-and the **tier**:
-
-```markdown
-- **Build mode · consulted:** TDD or evidence for this item? → **evidence**
-  (developer's decision).
-  *Rationale:* the deliverable is a set of `SKILL.md` files; there is no unit that
-  can fail first. *Check:* `VERIFY.run` → `node ~/.agents/scripts/validate-skills.mjs`.
-
-- **Tier · autonomous (high):** `standard` or `full` for this item? → **full**
-  (raised).
-  *Rationale:* the survey found the new field crossing a public payload, so the
-  story touches a contract.
-  *Source:* `CODE_SURVEY` — `src/payees/dto/payee-payload.dto.ts:exported`.
 ```

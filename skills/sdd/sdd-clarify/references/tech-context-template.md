@@ -5,8 +5,8 @@ developer declared** in R5 — what is written in no file and cannot be deduced 
 code.
 
 Everything surveyed from the repository (module, entities, providers, DTOs, ports,
-gaps) goes to **`context.md`**, not here. Since `/sdd-clarify` produces both artifacts in
-the same pass, there is no reason to duplicate the inventory in `spec.md`.
+gaps) goes to **`context.md`**, not here. Since `/sdd-scan` already wrote `context.md` before
+this pass, there is no reason to duplicate the inventory in `spec.md`.
 
 **If the developer declared nothing, omit the whole section.** An empty section, or
 one padded with inferences, is worse than its absence: it invites `/sdd-design` to treat

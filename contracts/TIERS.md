@@ -5,10 +5,14 @@ A story declares how much of the pipeline it runs. That declaration is the story
 which stages exist for that story:
 
 ```
-/sdd-spec → /sdd-prepare → /sdd-clarify → /sdd-design → /sdd-plan → /sdd-build → /sdd-sync → /sdd-commit
-                            └──────────────────┬──────────────────┘
-                            the block a reduced tier omits
+/sdd-spec → /sdd-route → /sdd-prepare → /sdd-scan → /sdd-clarify → /sdd-route → /sdd-design → /sdd-plan → /sdd-build → /sdd-sync → /sdd-commit
+                                        └───────────────────────────┬───────────────────────────┘
+                                                 the block a reduced tier omits
 ```
+
+`/sdd-route` is the only skill that writes the tier or the build mode. Its first run
+infers the tier from the input; its second run — the review, after clarification —
+confirms or raises it and resolves the build mode.
 
 This file is the interface. The profile gates who may enter a reduced tier. The
 skills are the domain.
@@ -37,7 +41,7 @@ behavior, and a story only carries the field when it is *not* the default.
 |---|---|---|---|
 | Applies to | features, multi-component changes, schema or contract changes, critical integrations | a change circumscribed to one component, with no contract or schema change | a defect, a small refactor or a one-line/one-function change with a single criterion |
 | `spec.md` | as always | + `## Tier Rationale` | + `## Tier Rationale` + `## Change Surface` |
-| `/sdd-clarify` → `context.md` | yes | yes | **no** |
+| `/sdd-scan` → `context.md`, `/sdd-clarify`, the `/sdd-route` review | yes | yes | **no** |
 | `/sdd-design` → `design.md` + `docs/` | yes | **no** | **no** |
 | `/sdd-plan` → `plan.md` | yes | yes — atomic tasks, no `[P]` groups, no diagram or contract work | **no** |
 | `/sdd-build` | from `plan.md` | from `plan.md` | from `spec.md`, and it writes the close |
@@ -51,8 +55,8 @@ orders the work, and the build closes it. This is what the absence of `tier` mea
 
 ### `standard`
 
-`/sdd-clarify` still runs — the ambiguities still have to be resolved and `context.md`
-is still what `/sdd-plan` reads — but there is no `design.md`, no API contract, no data
+`/sdd-scan` and `/sdd-clarify` still run — the ambiguities still have to be resolved and
+`context.md` is still what `/sdd-plan` reads — but there is no `design.md`, no API contract, no data
 model and no sequence diagram. `/sdd-plan` produces a simple breakdown: one task per
 dependency, each with its files, its contract and its verification, and no `[P]` groups.
 
@@ -62,7 +66,8 @@ is a contract change even when it is one line, and a contract change is designed
 
 ### `fast`
 
-The story goes `spec → build`: no clarification pass, no design, no plan. The whole
+The story goes `spec → route → build`: no survey, no clarification pass, no design, no
+plan. The whole
 ceremony is replaced by three things written into `spec.md` before any code exists:
 
 - exactly **one** acceptance criterion,
@@ -161,8 +166,8 @@ reports it and the next stage refuses to run.
 
 ## Inferring the tier
 
-The tier is inferred **once, when the specification is written**, from the input alone —
-`/sdd-spec` never surveys the codebase. Only the item's `type`, its acceptance criteria
+The tier is inferred **once, right after the specification is written**, from the input
+alone — `/sdd-route`'s initial run, before anything has surveyed the codebase. Only the item's `type`, its acceptance criteria
 and what the input says about the change are available, so the inference is a reading of
 the request, not a measurement of the repository.
 
@@ -183,15 +188,15 @@ A `[NEEDS CLARIFICATION]` marker disqualifies `fast` and nothing else: an item w
 input is silent about something that changes the implementation needs the clarification
 pass, and `standard` keeps it.
 
-**The inference is written down, not announced as a question.** `/sdd-spec` writes the
+**The inference is written down, not announced as a question.** `/sdd-route` writes the
 field and the rationale, and reports the tier in its closing summary; the developer
-overrides it by asking, or afterwards with `/sdd-refine` on `spec.md`. Like every other
+overrides it by asking, or afterwards with a `/sdd-route` change run. Like every other
 inferred value in this pipeline, the decision is what reaches the artifact.
 
-**The inference is provisional, and it is corrected upwards.** `/sdd-spec` cannot see
-the code; `/sdd-clarify` can, because it runs the `CODE_SURVEY` port. What the survey
-finds may raise the tier — a "one-line fix" that turns out to touch three components is
-`full`.
+**The inference is provisional, and it is corrected upwards.** The initial run cannot see
+the code; the review run can, because `/sdd-scan` wrote `context.md` in between. What the
+survey finds may raise the tier — a "one-line fix" that turns out to touch three
+components is `full`.
 
 ---
 
@@ -199,9 +204,9 @@ finds may raise the tier — a "one-line fix" that turns out to touch three comp
 
 | From → To | Who may do it | Rule |
 |---|---|---|
-| `standard` → `full` | `/sdd-clarify`, `/sdd-plan` | autonomous — it *adds* work. The field is written as `tier: full` (never deleted: the escalation is part of the record) and `## Tier Rationale` gains the reason. `/sdd-clarify` then hands off to `/sdd-design` |
-| `fast` → `standard` or `full` | nobody, at the moment it is discovered | `/sdd-build` **stops and reports**. It may not write `spec.md`, and the change it found is evidence for a stage that no longer exists. The way back is `/sdd-refine` on `spec.md`, which writes the new tier — and the passes that tier declares then run: `/sdd-clarify` for `standard`, `/sdd-design` for `full`. `/sdd-clarify` cannot be the first step, because a `fast` story stops at its gate |
-| anything → a lower tier | the developer only | `/sdd-clarify` **asks**, and never takes the decision on its own — the same standing as the `evidence` question. `/sdd-refine` applies it on request. Lowering requires deleting the artifacts the lower tier does not produce, and an existing `plan.md` must be regenerated |
+| `standard` → `full` | `/sdd-route` | autonomous — it *adds* work. The field is written as `tier: full` (never deleted: the escalation is part of the record) and `## Tier Rationale` gains the reason. The review run raises it on the survey's evidence; `/sdd-plan`, when its analysis finds the signal, stops and hands off to `/sdd-route` instead of writing it |
+| `fast` → `standard` or `full` | `/sdd-route`, once the build reports it | `/sdd-build` **stops and reports** — it may not write `spec.md`. A `/sdd-route` change run writes the new tier, and the passes that tier declares then run: `/sdd-scan`, `/sdd-clarify`, the review, and `/sdd-design` for `full` |
+| anything → a lower tier | the developer only | `/sdd-route` **asks**, and never takes the decision on its own — the same standing as the `evidence` question. On the answer it writes the field and names the artifacts the lower tier does not produce, for the developer to delete; an existing `plan.md` must be regenerated |
 
 **Raising is cheap; lowering is expensive.** Raising a tier re-runs a stage that never
 ran; lowering one discards artifacts that stages already produced, which is why it is

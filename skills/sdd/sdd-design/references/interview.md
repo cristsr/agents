@@ -21,7 +21,7 @@ Extract the story number from the caller's input, then read:
    - Existing entities with their fields
    - Existing DTOs available for reuse
    - The project's injection patterns
-   - Gaps detected by /sdd-clarify
+   - Gaps detected by /sdd-scan
 
 3. Read the conventions doc under `DOCS_ARCHITECTURE` (e.g.
    `docs/architecture/conventions.md`) — apply naming and code conventions

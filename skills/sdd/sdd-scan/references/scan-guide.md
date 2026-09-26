@@ -1,6 +1,6 @@
 # Scan Guide (generic — stack-agnostic)
 
-Reference for the survey step of `/sdd-scan` (Step 3) and `/sdd-clarify` (R4), in both the
+Reference for the survey step of `/sdd-scan` (Step 3), in both the
 CodeGraph mode and its fallback: use it to read the specific files the graph returns
 (or the subagent locates), with progressive disclosure — read only the sections needed
 per file type.

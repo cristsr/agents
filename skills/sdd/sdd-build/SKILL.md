@@ -136,8 +136,8 @@ repository, and the build is the first place the real surface becomes visible �
 change that does not fit its declared scope is evidence that the tier was wrong, never a
 reason to widen the scope. It is a stop: this skill may not extend `## Change Surface`,
 may not add or reword an AC, and may not write `spec.md`'s front matter to raise the
-tier. The way back is `/sdd-refine` on `spec.md`, which raises the tier — and the passes
-that tier declares then run: `/sdd-clarify` for `standard`, `/sdd-design` for `full`.
+tier. The way back is `/sdd-route` on the story, which raises the tier — and the passes
+that tier declares then run: `/sdd-scan` and `/sdd-clarify`, then `/sdd-design` for `full`.
 That is the only route from here: the front matter is not this skill's to write, and a
 `fast` story cannot reach the survey that would justify a bigger tier until the tier is
 raised. The Stop table in Step 2 carries the same rule in the place an executor looks
@@ -210,7 +210,7 @@ else, in this order, because each answers a different question about the run:
 
 2. **Then the `build_mode`** — it is local. It tells you which port each criterion's
    verification calls, and what Step 3.4 must point at. Don't re-litigate it:
-   `/sdd-clarify` decided it and `/sdd-plan` re-checked its guardrail — if the work you
+   `/sdd-route` decided it and `/sdd-plan` re-checked its guardrail — if the work you
    are about to do contradicts the field, that is a critical gap (Step 2's table), not
    something to resolve by picking one.
 
@@ -414,8 +414,8 @@ The only valid reasons to stop mid-execution:
 | Test — or a `VERIFY` check — fails repeatedly (more than twice) | Stop, show the error, ask for guidance |
 | Instruction is ambiguous or contradictory | Stop, quote the instruction, ask for clarification |
 | Plan has a critical gap that prevents starting | Stop, describe the gap, wait for resolution |
-| **`fast` only:** the change needs a file or symbol outside `## Change Surface` | Stop, report the surface and the file that overflowed it. Do **not** widen `## Change Surface`, do not touch `spec.md` — the tier was inferred from an input, not measured, and this is where the real surface shows up. The way back is `/sdd-refine` on `spec.md`, which raises the tier; the passes that tier declares then run — `/sdd-clarify` for `standard`, `/sdd-design` for `full` |
-| **`fast` only:** a second acceptance criterion turns out to be necessary | Stop, report it. An AC may not be added, split or reworded by this skill, and a story with two criteria is not a `fast` story. Same way back: `/sdd-refine` on `spec.md` raises the tier, and the passes it declares then run |
+| **`fast` only:** the change needs a file or symbol outside `## Change Surface` | Stop, report the surface and the file that overflowed it. Do **not** widen `## Change Surface`, do not touch `spec.md` — the tier was inferred from an input, not measured, and this is where the real surface shows up. The way back is `/sdd-route`, which raises the tier; the passes that tier declares then run — `/sdd-scan` and `/sdd-clarify`, then `/sdd-design` for `full` |
+| **`fast` only:** a second acceptance criterion turns out to be necessary | Stop, report it. An AC may not be added, split or reworded by this skill, and a story with two criteria is not a `fast` story. Same way back: `/sdd-route` raises the tier, and the passes it declares then run |
 
 **Ask for clarification rather than guessing.**
 
@@ -612,8 +612,8 @@ resolution.
 | An AC ends up `✗` in `## AC Coverage` | The tasks are done but no test exercises that AC's behavior | STOP at Step 3.4 — report the uncovered ACs and ask; `/sdd-sync` will refuse to close the story anyway |
 | An `evidence` task's baseline run starts red | The deliverable was already broken before this task | Stop: a later green would prove nothing. Report it — fixing the pre-existing break is its own decision |
 | `plan.md` is written in the other carril than `spec.md` declares | The mode changed after the plan was written | Critical gap: stop at Step 1 and ask for `/plan spec-<number>` to be regenerated. Never reconcile it by choosing one yourself |
-| A `fast` change needs a file outside `## Change Surface` | The tier was inferred from the input; the real surface was bigger than the request showed | Stop and report the file. Widen neither the surface nor the tier by hand — `/sdd-refine` on `spec.md` raises the tier, and the passes it declares then run |
-| A `fast` story turns out to need a second acceptance criterion | A single-criterion story was inferred, and it isn't one | Stop and report it. This skill may not add or reword an AC; the story is `standard` at least, so the fix is `/sdd-refine` on `spec.md` to raise the tier — never an invented task list here |
+| A `fast` change needs a file outside `## Change Surface` | The tier was inferred from the input; the real surface was bigger than the request showed | Stop and report the file. Widen neither the surface nor the tier by hand — `/sdd-route` raises the tier, and the passes it declares then run |
+| A `fast` story turns out to need a second acceptance criterion | A single-criterion story was inferred, and it isn't one | Stop and report it. This skill may not add or reword an AC; the story is `standard` at least, so the fix is `/sdd-route` to raise the tier — never an invented task list here |
 
 ---
 

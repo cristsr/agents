@@ -1,0 +1,48 @@
+{
+  "skill": "sdd-scan",
+  "models": ["haiku", "sonnet", "opus"],
+  "baseline": [],
+  "triggers": {
+    "should": [
+      "/sdd-scan spec-0042",
+      "survey the module for spec-0042",
+      "the code changed since I clarified spec-0042, refresh the context",
+      "releva el módulo de spec-0042",
+      "regenerate context.md for spec-0042"
+    ],
+    "should_not": [
+      { "query": "clarify story spec-0042", "owner": "sdd-clarify" },
+      { "query": "which tier should spec-0042 run at?", "owner": "sdd-route" },
+      { "query": "design spec-0042", "owner": "sdd-design" },
+      { "query": "audit the architecture of the project", "owner": "hexagonal-audit" }
+    ]
+  },
+  "evals": [
+    {
+      "id": 1,
+      "query": "/sdd-scan spec-0042 with no context.md yet; spec.md names apps/ledger",
+      "files": [],
+      "expected_behavior": [
+        "Runs as a first survey, never redirects to /sdd-clarify",
+        "Writes context.md with the detected gaps section",
+        "Leaves spec.md unchanged and hands off to /sdd-clarify"
+      ]
+    },
+    {
+      "id": 2,
+      "query": "/sdd-scan spec-0043 with an existing context.md holding a hand-written note",
+      "files": [],
+      "expected_behavior": [
+        "Runs as a refresh and preserves the hand-written note",
+        "Reports the delta, not the full inventory"
+      ]
+    },
+    {
+      "id": 3,
+      "query": "/sdd-scan spec-0031 on a tier: fast story",
+      "files": [],
+      "expected_behavior": ["Stops and points at /sdd-route to raise the tier"]
+    }
+  ],
+  "runs": []
+}

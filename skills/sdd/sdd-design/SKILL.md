@@ -8,9 +8,9 @@ description: >
   model if a table changes, and design.md. /sdd-sync reconciles it into the unit's
   living docs.
   Use when the user says "/sdd-design spec-XXXX", "design the story", "create the
-  design", "technical specification", or has completed /sdd-clarify and wants to
-  define what to build.
-  Do NOT use before /sdd-clarify is complete. Do NOT use for planning tasks (use /sdd-plan).
+  design", "technical specification", or /sdd-route has routed the story to
+  design.
+  Do NOT use before /sdd-clarify and /sdd-route are complete. Do NOT use for planning tasks (use /sdd-plan).
   Do NOT use for system-wide architecture (C4 Level 1/2 — actors, external
   systems, apps/microservices) — that's /sdd-docs, invoked by /sdd-sync.
 ---
@@ -66,19 +66,19 @@ the design at the start, not halfway through a contract.
 > **This skill does not run in `build_mode: evidence`.** When `spec.md`'s front matter
 > declares that carril, the story has no API contract, no sequence diagram and no data
 > model to produce, and `/sdd-plan` does not require any of them — the pipeline goes
-> `/clarify → /sdd-plan`. If you are invoked on such a story, say so and stop; the story is
-> not missing a step. Changing the carril is `/sdd-refine` on `spec.md`, not a design run.
+> `/sdd-route → /sdd-plan`. If you are invoked on such a story, say so and stop; the story
+> is not missing a step. Changing the build mode is `/sdd-route`, not a design run.
 >
 > **This skill runs only at `tier: full`.** `standard` and `fast` have no design to produce
 > either: no API contract, no data model and no sequence diagram, and `/sdd-plan` requires
 > none of them at `standard` — at `fast` it never runs at all. What the omitted design costs
-> is paid elsewhere, and deliberately: `standard` keeps `/sdd-clarify`'s `context.md` and an
+> is paid elsewhere, and deliberately: `standard` keeps `/sdd-scan`'s `context.md` and an
 > atomic plan whose contracts are signatures and invariants, and `fast` keeps
 > `## Change Surface` in `spec.md` — the files and symbols the change is confined to —
 > closing the story with `## AC Coverage` in that same artifact. If you are invoked on
 > either tier, say so and stop; the story is not missing a step. The way in is raising the
-> tier: `/sdd-refine` on `spec.md`, not a design run, because the tier is what decides
-> whether this stage exists.
+> tier with `/sdd-route`, not a design run, because the tier is what decides whether this
+> stage exists.
 
 **Requires**
 
@@ -117,7 +117,7 @@ matches). One marker or one placeholder left is a stop.
 - `work/active/spec-<number>/docs/` — `<api-artifact>`, `diagram.md`,
   `component.md`, `flows/*.md`, `data-model.md`, `research.md`
 
-Not `spec.md` or `context.md` (that's `/sdd-clarify`, or `/sdd-refine` for a correction), not
+Not `spec.md` or `context.md` (that's `/sdd-clarify` and `/sdd-scan`, or `/sdd-refine` for a correction), not
 `plan.md` (that's `/sdd-plan`), not the unit's living docs (that's `/sdd-sync` — this skill
 only *reads* them, in drafting PHASE 4 step 2), and not `DOCS_ARCHITECTURE`: C4
 Level 1/2 belongs to `/sdd-docs`.
@@ -346,7 +346,7 @@ resolution.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| context.md not found | /sdd-clarify never ran | Tell the user to run /sdd-clarify first |
+| context.md not found | /sdd-scan never ran | Tell the user to run /sdd-scan, then /sdd-clarify and /sdd-route |
 | `spec.md` has `[NEEDS CLARIFICATION]` markers | Unresolved ambiguities | STOP: run `/clarify spec-<number>` before designing |
 | A Quality Gate fails (⚠️) | The design violates a principle | Adjust the design to pass it, or record a justified exception in `design.md` and approve it in PHASE 5 |
 | You can't even list the unknowns in PHASE 2 | Missing context, or a spec that contradicts itself | Stop before drafting: show the blocker, fix the input (`/sdd-refine`/`/sdd-clarify`), then re-run |

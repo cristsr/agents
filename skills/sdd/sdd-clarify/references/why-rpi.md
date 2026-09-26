@@ -17,15 +17,15 @@ cosmetic — each phase needs the complete result of the previous one:
 
 | Phase | Does | Does **not** do |
 |---|---|---|
-| **R — Research** | Gathers all evidence at once: ambiguities, authority sources, story assets, module inventory, code precedent, and what only the developer knows | Decides nothing, writes nothing |
+| **R — Research** | Gathers all evidence at once: ambiguities, authority sources, story assets, the survey in `context.md`, code precedent, and what only the developer knows | Decides nothing, writes nothing |
 | **P — Plan** | Decides **every** unknown with the problem and the terrain in view, and escalates in a single batch what no source determines | Writes nothing to disk |
-| **I — Implement** | Writes the decision log, the precise ACs, and `context.md` | Decides nothing new |
+| **I — Implement** | Writes the decision log and the precise ACs | Decides nothing new |
 
 **Why a single research pass:**
-- A decision about an AC may rest on a port the inventory just found. Splitting the
-  survey from the decision wastes that evidence.
-- Graph queries — inventory and precedent — are fired **in the same batch**, in
-  parallel.
+- A decision about an AC may rest on a port the inventory found. The inventory is
+  already on disk — `/sdd-scan` wrote `context.md` before this run — so none of that
+  evidence is lost, and it is read in full before anything is decided.
+- Precedent queries are fired **in the same batch**, in parallel.
 - The escalation budget is applied against the **complete** list of unknowns: the ones
   coming from the ACs and the ones coming from the code, together and prioritized once.
 - A constraint the developer mentions ("don't touch X's contract") arrives **before**
