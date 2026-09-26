@@ -40,31 +40,86 @@ than being discovered by a skill following a dead reference.
 
 ## Flow
 
+The whole chain, which is what `full` — the default tier — runs:
+
 ```
 /sdd-spec → /sdd-prepare → /sdd-clarify → /sdd-design → /sdd-plan → /sdd-build → /sdd-sync → /sdd-commit
 ```
 
 | Skill | Input | Output |
 |---|---|---|
-| `/sdd-spec` | raw text or a tracker export (feature, bug, debt, incident, chore) | `spec.md`, typed |
+| `/sdd-spec` | raw text or a tracker export (feature, bug, debt, incident, chore) | `spec.md`, typed, with the execution tier it inferred |
 | `/sdd-prepare` | the item | a fresh base branch + the story's working branch (`.branch`) |
-| `/sdd-clarify` | `spec.md` | precise ACs with scenarios, a decision log, `context.md`, and the story's `build_mode` |
-| `/sdd-design` | `spec.md` + `context.md` | `design.md` + `docs/` (contract, model, diagrams) |
-| `/sdd-plan` | the approved artifacts | `plan.md` — numbered tasks, each with its verification, plus a consolidated `### File Tree` |
-| `/sdd-build` | `plan.md` | code + green checks, tasks `[X]`, `## AC Coverage` |
+| `/sdd-clarify` | `spec.md` | precise ACs with scenarios, a decision log, `context.md`, and the story's `build_mode` — plus the tier it confirms or raises |
+| `/sdd-design` | `spec.md` + `context.md` | `design.md` + `docs/` (contract, model, diagrams) — `full` only |
+| `/sdd-plan` | the approved artifacts | `plan.md` — numbered tasks, each with its verification, plus a consolidated `### File Tree` — `full` and `standard` |
+| `/sdd-build` | `plan.md` — or `spec.md` in the `fast` tier | code + green checks — `plan.md`'s tasks `[X]` and its `## AC Coverage`, or in `fast` the criterion closed in `spec.md`'s `## AC Coverage` |
 | `/sdd-sync` | the closed story | module docs reconciled, workspace moved to `work/done/` |
 | `/sdd-commit` | `work/done/` | commits + a drafted PR (never pushes) |
 
-Two stages are conditional: `/sdd-prepare` only if the base isn't fresh, and `/sdd-design`
-only in the TDD carril (see "Build modes"). `/sdd-clarify` absorbed the old survey step —
-it produces the precise `spec.md` **and** `context.md` in one pass.
+A stage is conditional in two ways: the carril, which drops `/sdd-design` in `evidence`
+(see "Build modes"), and the tier, which drops `/sdd-clarify`, `/sdd-design` and
+`/sdd-plan` as it narrows (see "Execution tiers"). `/sdd-prepare` is the one condition
+that belongs to the repository rather than to the story: it runs only when the base
+isn't fresh.
 
-**Support skills:** `/sdd-forge` (chains plan → build → sync unattended) · `/sdd-hotfix`
+`/sdd-clarify` absorbed the old survey step — it produces the precise `spec.md` **and**
+`context.md` in one pass.
+
+**How much of that chain a story runs is its execution tier** (see "Execution tiers").
+`full` — the default, and the absence of the field — is the line above. `standard` drops
+`/sdd-design`. `fast` goes `/sdd-spec → /sdd-prepare → /sdd-build → /sdd-sync`.
+
+**Support skills:** `/sdd-forge` (runs the chain the tier declares, unattended) · `/sdd-hotfix`
 (post-build defect traced to an ambiguous AC) · `/sdd-refine` (targeted artifact
 corrections) · `/sdd-scan` (refresh `context.md` alone) · `/sdd-status` (where a story sits) ·
 `/healthcheck` (validate the ecosystem) · `/sdd-rules` (the project's non-negotiables) ·
 `/sdd-docs` (C4 Level 1/2) · `/sdd-bootstrap` (the profile) · `/hexagonal-audit` (turns
 architecture debt into draft stories).
+
+## Execution tiers
+
+A story declares **how much of the pipeline it runs** in `spec.md`'s front matter.
+`/sdd-spec` infers it from the input when the specification is written — never by asking,
+and never by reading the code, which is `/sdd-clarify`'s survey — and writes it with its
+reason. **The absence of the field means `full`**, so every story predating this axis
+keeps every stage it had.
+
+```yaml
+tier: fast                # fast | standard; absent → full
+```
+
+| | `full` (default) | `standard` | `fast` |
+|---|---|---|---|
+| Applies to | features, multi-component changes, schema or contract changes, critical integrations | a change circumscribed to one component, with no contract or schema change | a defect or small refactor with a single criterion |
+| `/sdd-clarify` | required | required | skipped |
+| `/sdd-design` | required | skipped | skipped |
+| `/sdd-plan` | required | required — a flat, atomic breakdown, no `[P]` groups | skipped |
+| `/sdd-build` reads | `plan.md` | `plan.md` | `spec.md`, and it closes there |
+| `## AC Coverage` lives in | `plan.md` | `plan.md` | `spec.md` |
+
+`fast` is not "the pipeline with the checks turned off". It replaces the omitted stages
+with three things written into `spec.md` before any code exists: **exactly one**
+acceptance criterion, a `## Change Surface` naming the files and symbols the change is
+confined to, and the **check** that closes it. `/sdd-build` executes it, runs the check
+and appends `## AC Coverage` to that file; a change that reaches outside the declared
+surface stops the build instead of widening it. The working branch, the pre-close suite,
+the provenance check and the archive run in every tier.
+
+**The guardrail — four layers, only the first configurable**, the same shape as
+`build_mode`'s. The item's `type` must be in `FAST_TIER_TYPES` / `STANDARD_TIER_TYPES`
+(profile, defaults `[bug, debt, chore]` and `[feat, bug, debt, incident, chore]`);
+`spec.md` must carry a non-empty `## Tier Rationale`; `validate-artifacts.mjs` rejects
+the story mechanically when either fails; and a reduced tier whose check cannot run
+**stops** rather than closing by eye. Features stop at `standard` and incidents at
+`full`: a new capability, or a production remediation, is rarely one symbol wide.
+
+**The inference is provisional and moves one way.** `/sdd-clarify` and `/sdd-plan` may
+*raise* a tier — they add work, never remove it — writing the reason into
+`## Tier Rationale`. Lowering is the developer's decision: `/sdd-clarify` asks and never
+takes it, `/sdd-refine` applies it. The contract is
+`~/.agents/contracts/TIERS.md`; the reading that picks the value is
+`sdd-spec/references/tier-inference.md`.
 
 ## Build modes
 
@@ -83,14 +138,16 @@ by construction (a pure refactor, an infra chore, a data migration).
 
 | | `tdd` (default) | `evidence` |
 |---|---|---|
-| `/sdd-design` | required | skipped |
+| `/sdd-design` | required | skipped — as in every reduced tier (see "Execution tiers") |
 | Implementation order | the sequence diagram | dependencies between deliverables |
 | Per-task cycle | red → implement → green | (baseline) → change → check green |
 | Verification port | `TESTS` | `VERIFY` |
 | An `## AC Coverage` line points at | a test | the command that proves it |
 
 Unchanged in both: `Task 0`, the AC → Task traceability table, the `[P]` groups, and
-the rule that a `✗` in `## AC Coverage` is an unfinished build.
+the rule that a `✗` in `## AC Coverage` is an unfinished build. Those three are plan
+constructs, so they exist wherever a plan does — `full` and `standard`; a `fast` story
+keeps the same closing rule without them, in `spec.md`.
 
 **The guardrail — three layers, only the first configurable.** The relaxed carril is
 deliberately hard to reach: the item's `type` must be in `EVIDENCE_MODE_TYPES`
@@ -136,7 +193,8 @@ is read, never assumed: a project that leaves it null gets a warning from
 
 **Structural headings stay in English regardless.** They are a contract between
 skills, parsed by name: `## Acceptance Criteria`, `## Ambiguity Resolution`,
-`## Build Mode Rationale`, `## Technical Context`, `## Global Architecture Impact`,
+`## Build Mode Rationale`, `## Tier Rationale`, `## Change Surface`,
+`## Technical Context`, `## Global Architecture Impact`,
 `## Design Decisions`, `### AC → Task traceability`, `### File Tree`,
 `## AC Coverage`, and `Task N`.
 Translating one breaks the pipeline; only the text *under* it follows
@@ -224,14 +282,20 @@ flags a *regression* — an unfinished stage sitting behind finished ones, where
 **`validate-artifacts.mjs`** checks that the artifacts hold their shape: the
 structural headings above, AC numbering and scenario form, the traceability table
 against `spec.md`'s ACs, every task's `**Files:**` path against the `### File Tree`,
-and `## AC Coverage` with zero `✗`. It also warns when an
+and `## AC Coverage` with zero `✗` — in `plan.md`, or in `spec.md` for a `fast` story,
+which has no plan to close in. It checks both axes of the front matter too: `build_mode`'s
+guardrails (`EVIDENCE_MODE_TYPES`, `## Build Mode Rationale`) and the tier's (the
+allowlist, `## Tier Rationale`, one criterion for `fast`, `## Change Surface` with a
+declared check, and no `[NEEDS CLARIFICATION]` marker — the pass that would resolve one
+is the stage the tier omits). It also warns when an
 artifact names the pipeline instead of its subject, or cites a path that only exists
 on one machine (the two sections above). It validates only what exists, so a story at
 the context stage is not faulted for having no plan.
 Exit codes: `0` valid · `1` issues · `2` could not run.
 
-It runs at the gates each skill declares — `/sdd-status`, `/sdd-plan`'s close, `/sdd-sync`'s
-`Requires`, and `/healthcheck --all`.
+It runs at the gates each skill declares — `/sdd-plan`'s Step 0 and `/sdd-build`'s Step 0,
+`/sdd-forge`'s preflight, `/sdd-sync`'s `Requires`, and `/healthcheck --all`. `/sdd-status`
+never runs it: it reports the stage and names the command as the next step.
 
 ```bash
 node ~/.agents/scripts/validate-code-provenance.mjs [<base-ref>] [--working] [--json]
@@ -261,7 +325,7 @@ scripts/      the validators and the sync tools
   lib/        the parsers they share (story, profile, skills, prose)
   hooks/      the guard scripts targets.yaml wires into each provider
   test/       node:test suites — `npm test`
-contracts/    PORTS.md · sdd-profile.template.yaml
+contracts/    PORTS.md · TIERS.md · sdd-profile.template.yaml · artifacts/<artifact>/ (one per artifact)
 references/   chat-conventions.md, shared by every skill
 ```
 
@@ -278,17 +342,29 @@ source skill into `~/.claude/skills/<name>` — it only manages links pointing i
 source tree, never silently replacing a real directory it finds there.
 
 Agents declare a `tier` and semantic `capabilities`, naming no concrete model or tool;
-`agents/targets.yaml` translates that into each host's native format. Installed files
+`agents/targets.yaml` translates that into each host's native format. That `tier` is the
+**model** tier (`reasoning` / `balanced` / `fast`) and has nothing to do with a story's
+execution tier, which is the `tier` of `spec.md`'s front matter — two axes on two
+different objects, which is why they are spelled in the same word and never read by the
+same script. Installed files
 carry a `GENERATED` marker and the script refuses to overwrite anything without it —
 **always edit the source**.
 
 Stack packs are **config + templates only**; all knowledge lives in skills. A project
 lists them in `STACK_REFS`, ordered base → specific, and a later pack overrides an
-earlier one per port operation and per template file. Without `STACK_REFS`, each skill
-falls back to its own generic `references/`.
+earlier one per port operation and per template file. A template resolves most specific
+pack first, then to the **floor** the artifact's own contract carries
+(`contracts/artifacts/<artifact>/`) — so a project with no pack, or a pack with nothing
+for that path, still resolves one.
 
-**Contracts** sit in `contracts/` rather than inside a skill because the packs and the
-validators read them: filing them under `/sdd-bootstrap` would have a validator and three
-stack packs reaching into one skill's folder for something that is not its property.
-The rule: what the tooling validates against lives there; what a single skill consults
-lives in that skill's `references/`.
+**Contracts** sit in `contracts/` rather than inside a skill because more than one skill
+reads them: filing them under `/sdd-bootstrap` would have a validator and three stack packs
+reaching into one skill's folder for something that is not its property. The rule: **what
+more than one skill must agree on lives there; what a single skill consults on its own
+lives in that skill's `references/`.** Two kinds live there:
+
+- `PORTS.md` · `sdd-profile.template.yaml` — what the tooling validates against.
+- `artifacts/<artifact>/` — one pipeline artifact's rules: what it requires, how it is
+  generated, how it is checked, who may change it afterwards and who reads it. The
+  producer, every consumer and the validators read the same file, which is the point;
+  the layout, the front matter and the required sections are `contracts/artifacts/README.md`.

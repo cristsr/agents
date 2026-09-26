@@ -31,6 +31,14 @@ existing `[X]`s) or `/sdd-refine` (which touches neither code nor plan.md), this
 3. Executes only that task, with TDD discipline
 4. Updates the AC → Task traceability and the plan's `## AC Coverage`
 
+Each of those four steps is an edit to, or an addition beside, an **already-built plan**:
+that is the whole mechanism. A `tier: fast` story has no plan — no tasks, no
+traceability, and its close lives in `spec.md` — so there is nothing to append to and no
+plan to keep consistent. That case is a `Requires` stop (see the next section), and the
+answer is `/sdd-refine` on `spec.md` followed by a re-run of `/sdd-build`, never an
+invented task list. In `standard` the skill works as documented here: the tier writes a
+plan.
+
 **Announce at start:** "Applying a hotfix on spec-<number>."
 
 ---
@@ -48,9 +56,9 @@ listed under **Profile keys** in the `Contract` below.
 ## Contract
 
 What this skill needs, what it leaves behind, and what it may not do. **Check every
-`Requires` row before PHASE 1** — a hotfix on a story that was never built, or that is
-already closed, is the wrong tool, and the cost of finding out afterwards is an edited
-`spec.md`.
+`Requires` row before PHASE 1** — a hotfix on a story that was never built, on one
+already closed, or on a `tier: fast` story that has no plan to patch, is the wrong tool,
+and the cost of finding out afterwards is an edited `spec.md`.
 
 `<flow-artifact>` = `docs/diagram.md` if `DOC_UNIT = story` (the default), or
 `docs/flows/*.md` if `use-case`. `<api-artifact>` = `docs/api.delta.yaml` if
@@ -64,9 +72,19 @@ only for the coherence warning in PHASE 6.
 | You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
 | The story is still open | `work/active/spec-<number>/` exists | If it's under `work/done/spec-<number>/`, `/sdd-sync` already closed and archived it: stop and ask whether to reopen the workspace (move it back) or open a new item — never hotfix inside `work/done/` |
 | `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: there are no ACs to correct, which is the whole premise of a hotfix |
+| The story is not `tier: fast` | `spec.md`'s front matter has no `tier: fast` (absent means `full`) | Stop: "spec-<number> ran at `tier: fast`, so there is no plan to append a `Task HOTFIX-N` to. Correct or add the criterion with `/sdd-refine spec-<number>` and re-run `/sdd-build` — a fast story is closed by its own criterion, not by a hotfix task." |
 | `plan.md` exists | `[ -f work/active/spec-<number>/plan.md ]` | Stop: "Nothing has been built for spec-<number> yet. Use `/sdd-refine` to correct the relevant artifact and continue with `/sdd-plan` and `/sdd-build` normally — `/sdd-hotfix` is only for post-build defects." |
 | It really is post-build | `grep -c '\[X\]' work/active/spec-<number>/plan.md` ≥ 1 | Stop: "The plan hasn't been executed yet (`/sdd-build` ran no tasks). Fix it with `/sdd-refine` and follow the normal flow — no `/sdd-hotfix` needed yet." |
 | Not on a base branch | `git branch --show-current` ∉ {`main`, `master`, `BASE_BRANCH`} | Stop: "You're on `<branch>`, a base branch. Switch to the story's working branch before continuing." |
+
+**Why `fast` is not a smaller hotfix but no hotfix at all.** This skill is an
+*incremental patch on an already-built plan*: it appends one task to that plan, executes
+it and updates the plan's traceability and `## AC Coverage`. A `tier: fast` story writes
+no plan — no tasks, no traceability table, no `File Tree`, and the close lives in
+`spec.md` — so there is nothing to patch and no correct way to invent it. The tier's
+whole premise is that the flow has one criterion, and a second change to it is a change
+to the criterion, which is `/sdd-refine`'s job on `spec.md` followed by a re-run of
+`/sdd-build`. In `standard` the skill works exactly as documented below: there is a plan.
 
 The branch row is strict here, as in `/sdd-build`'s: the working branch is created by
 `/sdd-prepare`, not by the plan — `Task 0` only verifies it — so being on the base branch
@@ -108,6 +126,9 @@ and PHASE 6 warns instead of editing), and not the unit's living docs (that's `/
 
 - The gap implies a new <component>, endpoint or table (PHASE 1, size check): the story
   was badly sized — ask, and recommend `/sdd-refine` + a full `/sdd-plan` instead.
+- The story ran at `tier: fast` (see `Requires`): the flow has no plan to append a
+  `HOTFIX-N` task to, so the corpus of this skill does not exist. Redirect to
+  `/sdd-refine` on `spec.md` (correct or add the criterion) + `/sdd-build`.
 - The corrected AC contradicts another existing AC: show both, confirm before applying.
 - The AC wording itself: always confirmed with `AskUserQuestion` before `spec.md` is
   touched (PHASE 1, step 4).
@@ -208,6 +229,11 @@ hotfix flow.
 
 `N` continues the numbering of the last existing `HOTFIX-N` in the file
 (starts at 1 if it's the first).
+
+A `tier: fast` story never reaches this phase — the `Requires` row stops it — so no
+`## Hotfixes` section is ever written into a spec the tier governs. Specs written before
+a lowering to `fast` may still carry one; it stays as the record of what happened, and
+nothing in the fast flow reads or extends it.
 
 ---
 
@@ -347,12 +373,13 @@ fix didn't break anything that was already passing).
 
 ## Common Issues
 
-The 4 that **interrupt a run** — it stops, or the call goes back to the user.
+The 5 that **interrupt a run** — it stops, or the call goes back to the user.
 Every other failure mode is in `references/common-issues.md`, with its cause and
 resolution.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
+| The story ran at `tier: fast` | The tier writes no plan, so there is no task to append a `HOTFIX-N` to | Stop at `Requires` and redirect: `/sdd-refine spec-<number>` on `spec.md` + `/sdd-build`. Never invent a plan or a task list to give the hotfix something to patch |
 | plan.md doesn't exist | The flow never reached `/sdd-plan` | Redirect to the normal `/sdd-refine` + `/sdd-plan` + `/sdd-build` |
 | plan.md with no `[X]` task | `/sdd-build` hasn't run yet | Redirect to `/sdd-refine` — no hotfix needed |
 | The corrected AC contradicts another existing AC | The original AC had a different intent than the one reported | Show both ACs, confirm with the user before applying |

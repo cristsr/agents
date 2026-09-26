@@ -140,6 +140,8 @@ const LISTS = [
   'items.STORY_ID_LEGACY_PREFIXES',
   'items.ITEM_TYPES',
   'items.EVIDENCE_MODE_TYPES',
+  'items.FAST_TIER_TYPES',
+  'items.STANDARD_TIER_TYPES',
   'intake.INTAKE_FORMATS',
   'mcp.EXPECTED',
   'stack.SKILLS',
@@ -497,6 +499,33 @@ if (Array.isArray(evidenceTypes) && evidenceTypes.length) {
   const resolvedVerify = verify != null ? verify : packPorts?.VERIFY?.run ?? null;
   if (!isSet(resolvedVerify)) {
     warn('ports.VERIFY', 'EVIDENCE_MODE_TYPES declares eligible types but this port is unbound — an evidence-mode story would have nothing to close its ACs with, and /sdd-plan stops');
+  }
+}
+
+// The other axis, same shape: a reduced tier is opt-in per item type, and the opt-in
+// only means something if the type exists, if it is coherent with the tier above it,
+// and if something can actually close the criterion the reduced flow leaves behind.
+const fastTypes = get('items.FAST_TIER_TYPES');
+const standardTypes = get('items.STANDARD_TIER_TYPES');
+for (const [name, types] of [['items.FAST_TIER_TYPES', fastTypes], ['items.STANDARD_TIER_TYPES', standardTypes]]) {
+  if (!Array.isArray(types) || !Array.isArray(itemTypes)) continue;
+  const unknown = types.filter((t) => !itemTypes.includes(t));
+  if (unknown.length) {
+    issue(name, `lists type(s) absent from ITEM_TYPES: ${unknown.join(', ')} — no item can ever carry them`);
+  }
+}
+if (Array.isArray(fastTypes) && Array.isArray(standardTypes)) {
+  const stranded = fastTypes.filter((t) => !standardTypes.includes(t));
+  if (stranded.length) {
+    warn('items.FAST_TIER_TYPES', `lists type(s) that STANDARD_TIER_TYPES excludes: ${stranded.join(', ')} — a type may skip the design stage but not the clarification one`);
+  }
+}
+if (Array.isArray(fastTypes) && fastTypes.length) {
+  // TESTS is bound per operation, not through `run`: `module` is the hot path a fast
+  // story closes with, `full` its pre-close suite. Either is enough to close a story.
+  const bound = (op) => isSet(get(`ports.TESTS.${op}`) ?? packPorts?.TESTS?.[op] ?? null);
+  if (!bound('module') && !bound('full')) {
+    warn('ports.TESTS', 'FAST_TIER_TYPES declares eligible types but this port is unbound — a fast-tier story closes its criterion by running its check, and with nothing bound it stops instead of degrading');
   }
 }
 

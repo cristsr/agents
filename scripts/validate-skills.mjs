@@ -8,15 +8,26 @@
 //      ports.yaml, and the skills that call them — a port must appear in all three
 //   4. Every local references/<file> path referenced by a skill exists in that skill
 //   5. Every <STACK_REFS>/<file> template exists in the generic pack (the fallback
-//      floor every project shares); an <STACK_REFS>/architecture/ reference is an
-//      error — packs carry no guides, the framework concretion lives in the skill
+//      floor every project shares) or is a floor an artifact contract provides; an
+//      <STACK_REFS>/architecture/ reference is an error — packs carry no guides, the
+//      framework concretion lives in the skill
 //   6. No template puts a note about the pipeline inside its literal block: a
 //      template is copied, so such a note lands in the artifact and makes it name
 //      the skill or PHASE that produced it
+//  12. Every artifact contract holds its shape: floors that exist, headings a script
+//      actually greps for, and the sections a reader looks for by name
 // Usage: node validate-skills.mjs
 
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
-import { discoverSkills, duplicateNames } from './lib/skills.mjs';
+import { discoverSkills, duplicateNames, isDir } from './lib/skills.mjs';
+import {
+  CONTRACT_SECTIONS,
+  allContractFiles,
+  artifactDocs,
+  contractTemplates,
+  discoverContracts,
+  floorPaths,
+} from './lib/contracts.mjs';
 import { invocations, agentsPaths, templateNotes } from './lib/prose.mjs';
 import { rel } from './lib/paths.mjs';
 import { dirname, join, resolve } from 'node:path';
@@ -52,10 +63,7 @@ const agentFiles = () =>
     .filter((n) => n.endsWith('.md'))
     .map((n) => join(ROOT, 'agents', n));
 
-const contractFiles = () =>
-  readdirSync(CONTRACTS)
-    .filter((n) => n.endsWith('.md') || n.endsWith('.yaml'))
-    .map((n) => join(CONTRACTS, n));
+const contractFiles = () => allContractFiles(CONTRACTS);
 
 // The scripts cite the tree too — in a comment, or in the very error message that
 // tells a developer where the template they are missing lives. A dead path there
@@ -64,6 +72,29 @@ const scriptFiles = () =>
   readdirSync(join(ROOT, 'scripts'))
     .filter((n) => n.endsWith('.mjs'))
     .map((n) => join(ROOT, 'scripts', n));
+
+// The stack packs cite the tree as well — the port catalog in a comment, the contract a
+// template floors. Since a pack now points at a contract instead of carrying a
+// byte-identical copy of its template, a dead path there is followed by whoever edits
+// that layer next.
+function packFiles() {
+  const out = [];
+  for (const pack of PACKS) walk(join(STACKS, pack));
+  return out;
+
+  function walk(dir) {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (e.isDirectory()) walk(join(dir, e.name));
+      else if (/\.(?:md|ya?ml)$/.test(e.name)) out.push(join(dir, e.name));
+    }
+  }
+}
 
 // Skill files, excluding the two meta skills (they teach the format, they don't
 // carry it) — same `-not -path '*/skill-creator/*' ...` the bash script used.
@@ -228,15 +259,22 @@ for (const f of skillFiles(SKILLS)) {
 // carry (config + templates). Packs no longer hold architecture/ guides — the
 // per-framework concretion lives in the framework skill's own references/, so an
 // `<STACK_REFS>/architecture/` reference here is a mistake, not a miss.
+//
+// The floor is the generic pack's copy, or — since an artifact contract may own the
+// template itself — a path some contract declares in its `floors`. Both resolve for a
+// project with no pack at all, which is the case the check exists for. The contracts
+// are scanned alongside the skills so a floor key with a typo is caught as well as a
+// citation with one.
 const stackRe = /<STACK_REFS>\/([A-Za-z0-9_./-]+\.(?:md|sh))/g;
-for (const f of skillFiles(SKILLS)) {
+const contractFloorPaths = floorPaths(discoverContracts(CONTRACTS));
+for (const f of [...skillFiles(SKILLS), ...artifactDocs(CONTRACTS)]) {
   const text = readFileSync(f, 'utf8');
   for (const m of text.matchAll(stackRe)) {
     const ref = m[1];
     if (ref.startsWith('architecture/')) {
       report(`ISSUE [${f}]: ${ref} — packs no longer hold architecture/ guides; the framework concretion lives in the framework skill's references/`);
-    } else if (!isFile(join(STACKS, 'generic', ref))) {
-      report(`ISSUE [${f}]: ${ref} missing from the generic pack — a project with no specific pack cannot resolve it`);
+    } else if (!isFile(join(STACKS, 'generic', ref)) && !contractFloorPaths.has(ref)) {
+      report(`ISSUE [${f}]: ${ref} is neither in the generic pack nor a floor an artifact contract declares — a project with no specific pack cannot resolve it`);
     }
   }
 }
@@ -295,7 +333,7 @@ const HOST_COMMANDS = new Set([
 // where the slash separates two words and names no command at all.
 {
   const skillNames = new Set(skillDirs().map((s) => s.name));
-  for (const f of [...skillFiles(SKILLS), ...agentFiles()]) {
+  for (const f of [...skillFiles(SKILLS), ...agentFiles(), ...artifactDocs(CONTRACTS)]) {
     for (const cmd of invocations(readFileSync(f, 'utf8'))) {
       if (skillNames.has(cmd) || HOST_COMMANDS.has(cmd)) continue;
       report(`ISSUE [${f}]: invokes /${cmd}, which is not a skill in this ecosystem — a rename left the prose behind, or the command belongs to the host (add it to HOST_COMMANDS)`);
@@ -308,7 +346,7 @@ const HOST_COMMANDS = new Set([
 // Those paths encode the source tree's shape, so every move breaks some of them
 // — and a broken one is invisible until someone follows it. Paths carrying a
 // placeholder (`<name>`, `{name}`) are patterns, not destinations, and are skipped.
-for (const f of [...skillFiles(SKILLS), ...agentFiles(), ...contractFiles(), ...scriptFiles()]) {
+for (const f of [...skillFiles(SKILLS), ...agentFiles(), ...contractFiles(), ...scriptFiles(), ...packFiles()]) {
   for (const ref of agentsPaths(readFileSync(f, 'utf8'))) {
     if (!existsSync(join(ROOT, ref))) {
       report(`ISSUE [${f}]: cites ~/.agents/${ref}, which does not exist`);
@@ -323,7 +361,7 @@ for (const f of [...skillFiles(SKILLS), ...agentFiles(), ...contractFiles(), ...
 // instruction belongs OUTSIDE the fence, or inside an HTML comment, which the
 // templates already declare is not content. This catches it at the source; the
 // artifact side is validate-artifacts.mjs's warning.
-for (const f of [...skillFiles(SKILLS), ...packTemplates()]) {
+for (const f of [...skillFiles(SKILLS), ...packTemplates(), ...contractTemplates(CONTRACTS)]) {
   if (!/template.*\.md$/i.test(f)) continue;
   for (const note of templateNotes(readFileSync(f, 'utf8'))) {
     report(`ISSUE [${f}]: line ${note.line} puts a note about the pipeline inside the literal block — it would be copied into the artifact: "${note.text}"`);
@@ -371,6 +409,69 @@ for (const f of skillFiles(SKILLS)) {
     report(`ISSUE [${f}]: description is ${n} characters — the hard limit is ${DESC_MAX}`);
   } else if (n > DESC_NOTE) {
     console.log(`note: ${rel(f, ROOT)} description at ${n}/${DESC_MAX} — little room left`);
+  }
+}
+
+// --- 12. Every artifact contract holds its shape ---
+// A contract is read by the skill that produces the artifact, by every skill that
+// consumes it and by this validator. It states the artifact — never who calls it, which
+// is the caller's own `Contract` block to declare and the place a rename is caught. What
+// is checked here is the artifact's own front matter (the name matching its folder, the
+// floors it provides, the headings a script greps for) and the sections a reader looks for
+// by name, so one artifact's rules are found the same way every time. A contract nobody
+// can trust is worse than the five scattered places it replaced.
+{
+  const artifactValidator = readFileSync(join(ROOT, 'scripts', 'validate-artifacts.mjs'), 'utf8');
+  for (const contract of discoverContracts(CONTRACTS)) {
+    const where = rel(contract.file, ROOT);
+    const { data, error, raw } = contract.frontMatter;
+    if (error) { report(`ISSUE [${where}]: ${error}`); continue; }
+
+    for (const [packPath, floor] of Object.entries(data.floors ?? {})) {
+      if (/^\/|\.\./.test(packPath)) report(`ISSUE [${where}]: floor key "${packPath}" must be a pack-relative path`);
+      if (!isFile(join(contract.dir, floor))) report(`ISSUE [${where}]: floor "${packPath}" maps to ${floor}, which is not in this contract's folder`);
+    }
+
+    // `headings` is the drift guard. The names a script looks up literally are
+    // declared here, so a rename on either side fails the build instead of leaving a
+    // validator checking for a heading nothing writes any more.
+    for (const heading of data.headings ?? []) {
+      if (!artifactValidator.includes(heading)) {
+        report(`ISSUE [${where}]: declares the heading "${heading}", which scripts/validate-artifacts.mjs does not check — a gate nobody runs is documentation`);
+      }
+    }
+
+    // The front matter is read as data, where an angle bracket reads as a tag rather
+    // than as the slot it stands for — check 10's rule, applied to the contracts.
+    for (const hit of new Set((raw ?? '').match(/<[A-Za-z/][^>\n]*>/g) ?? [])) {
+      report(`ISSUE [${where}]: front matter carries "${hit}" — use braces, or reword`);
+    }
+
+    for (const section of CONTRACT_SECTIONS) {
+      if (!new RegExp(`^##\\s+${section}\\s*$`, 'm').test(contract.text)) {
+        report(`ISSUE [${where}]: missing \`## ${section}\` — a contract states what it requires, how it is generated, how it is checked, who may change it and who reads it`);
+      }
+    }
+  }
+}
+
+// --- 13. Every reference a skill ships is named somewhere in its own body ---
+// A reference nobody points at never loads: the body is what the loader reads, so
+// progressive disclosure only works while the last hop is written down. The defect is
+// quiet and it is the one a refactor introduces — a section moves into a reference and
+// the link that used to point at that section moves with it instead of staying behind.
+// Matched by file name, not by full path: citing `audit-smells.md` from another skill's
+// prose is still a hop a reader can follow.
+{
+  for (const { dir } of skillDirs()) {
+    const body = join(dir, 'SKILL.md');
+    const refs = join(dir, 'references');
+    if (!isFile(body) || !isDir(refs)) continue;
+    const text = readFileSync(body, 'utf8');
+    for (const entry of readdirSync(refs)) {
+      if (!entry.endsWith('.md') || text.includes(entry)) continue;
+      report(`ISSUE [${rel(body, ROOT)}]: references/${entry} is never named in the skill's own body — a file nothing points at is a file that never loads`);
+    }
   }
 }
 

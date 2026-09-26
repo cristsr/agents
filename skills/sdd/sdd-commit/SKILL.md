@@ -25,9 +25,9 @@ turns it into real commits on the current branch, and drafts the PR.
 
 **Announce at start:** "Preparing commits for spec-<number>."
 
-**Output:** N commits executed on the current branch (one per logical unit,
-aligned with `plan.md`'s tasks) + PR title and body printed in the chat +
-a ready-to-run `gh pr create` command.
+**Output:** N commits executed on the current branch (one per logical unit, aligned
+with `plan.md`'s tasks where the tier wrote a plan) + PR title and body printed in the
+chat + a ready-to-run `gh pr create` command.
 
 **Core principle:** the user decides what gets published — `/sdd-commit` runs
 `git add`/`git commit` locally (reversible, invisible to others until
@@ -62,14 +62,16 @@ mutates the repository, so a failed precondition stops the run before the first
 |---|---|
 | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
 | `WORKDIR_DONE` (`work/done/spec-<number>/`) exists | If only `WORKDIR_ACTIVE` (`work/active/spec-<number>/`) exists → stop: "Run `/sync spec-<number>` first — `/sdd-commit` works on the already-archived story, not on `work/active/`." If neither exists → stop and ask for the correct story number |
-| That folder contains `spec.md` (or its legacy `hu.md`) and `plan.md` | Say which one is missing and ask before continuing: `spec.md` feeds the PR body, `plan.md` feeds the commit grouping. Never invent ACs or groups |
+| That folder contains `spec.md` (or its legacy `hu.md`) and — in `full` and `standard` — `plan.md` | Say which one is missing and ask before continuing: `spec.md` feeds the PR body in every tier, and `plan.md` feeds the commit grouping where the tier wrote one. `tier: fast` (spec.md front matter, absent → `full`) writes no plan and closes in `spec.md`'s `## AC Coverage`: there the grouping comes from that single criterion — one logical group, hence one commit. Never invent ACs or groups |
 | `git branch --show-current` ∉ {`main`, `master`, `BASE_BRANCH`} | Stop and ask the user to switch to the story's working branch. The two literals are checked **on top of** the profile's key, exactly as `/sdd-build` and `/sdd-hotfix` do: a project whose `BASE_BRANCH` is `develop` still must never take commits on `main`, and this is the one skill that writes history |
 | `git status --porcelain` is not empty | Nothing to commit. Check `git log` — the commits may already exist from an earlier run; report what you found and stop instead of drafting a PR for an empty change |
 
 **Produces** — the next step belongs to the user, not to another skill
 
-- N commits on the current branch, one per logical group of `plan.md`'s tasks,
-  each one created only after the index was verified (Step 3)
+- N commits on the current branch, one per logical group of `plan.md`'s tasks —
+  or one for the whole story when the tier wrote no plan, since a `fast` story has a
+  single criterion and therefore a single group. Each one created only after the index
+  was verified (Step 3)
 - every group accounted for: committed, or explicitly listed as unrelated and left
   uncommitted (Step 5). No group goes unmentioned
 - the PR title and body printed in the chat, plus a ready-to-run `gh pr create`
@@ -124,8 +126,11 @@ Testing section says the gates were not run. Never report a pass you didn't see.
 
 From `work/done/spec-<number>/` (already archived by `/sdd-sync`):
 
-- `spec.md` — goal (As/I want/So that) and ACs → feed the PR body.
-- `plan.md` — executed tasks → feed the commit grouping.
+- `spec.md` — goal (As/I want/So that) and ACs → feed the PR body. This is the one input
+  in every tier, `fast` included.
+- `plan.md` — executed tasks → feed the commit grouping. `full` and `standard` only: a
+  `fast` story has none, and its `spec.md`'s `## AC Coverage` — one line for its single
+  criterion — stands in for the tasks, grouping the story into one commit.
 
 ## Step 2: Inventory the working tree
 
@@ -172,8 +177,8 @@ don't push forward "to save time".
 
 ### Executing the groups
 
-For each logical group (aligned with `plan.md`'s tasks, never one giant
-commit):
+For each logical group (aligned with `plan.md`'s tasks where the tier wrote a plan —
+never one giant commit; a `fast` story has exactly one group, so exactly one commit):
 
 1. Run the index checklist above.
 2. `git commit -m "..."` using conventional-commit format:

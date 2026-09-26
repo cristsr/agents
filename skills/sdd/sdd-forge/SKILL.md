@@ -16,27 +16,35 @@ description: >
 
 ## Overview
 
-Chains a story's implementation pipeline: `/sdd-plan` → `/sdd-build` → `/sdd-sync`, straight
-through and **without pausing** between stages. It's a thin orchestrator — it
-reimplements nothing: it invokes the `plan`, `build` and `sync` skills in order and
-consolidates the final report. Human review lands **at the end**, over already-built
-code and already-reconciled documentation — right before `/sdd-commit`.
+Chains a story's implementation pipeline straight through and **without pausing**
+between stages. It's a thin orchestrator — it reimplements nothing: it invokes the
+`plan`, `build` and `sync` skills and consolidates the final report.
+
+The story's **tier** — `spec.md` front matter, absent → `full` — decides which of those
+stages exist, and forge runs exactly those, in order. `full` and `standard` run the
+three: `/sdd-plan` → `/sdd-build` → `/sdd-sync`. `fast` runs the two: `/sdd-build` →
+`/sdd-sync`, because that tier writes no `plan.md` and closes in `spec.md`.
+
+Human review lands **at the end**, over already-built code and already-reconciled
+documentation — right before `/sdd-commit`.
 
 **Safety boundary:** forge goes as far as the documentation (docs-only). **It doesn't
 touch git**: commits and the PR belong to `/sdd-commit`, which remains a manual step.
 That's the checkpoint where the user reviews before anything enters the branch.
 
-**Announce at start:** "Forging spec-<number>: /sdd-plan → /sdd-build → /sdd-sync without pauses."
+**Announce at start:** "Forging spec-<number>: /sdd-plan → /sdd-build → /sdd-sync without pauses." — in a `fast` story, announce the two stages it actually runs: "/sdd-build → /sdd-sync without pauses."
 
 **Output:**
-- `work/active/spec-<number>/plan.md` (produced by `/sdd-plan`).
+- `work/active/spec-<number>/plan.md` (produced by `/sdd-plan`) — in `full` and `standard`;
+  a `fast` story has no plan.
 - The implemented code with its tests green (produced by `/sdd-build`).
 - Module docs reconciled and the story archived in `work/done/spec-<number>/`
   (produced by `/sdd-sync`).
 
-**Core principle:** a single invocation replaces three. The gates belonging to
-`/sdd-plan`, `/sdd-build` and `/sdd-sync` are respected; forge only chains them, **fails early**
-if an input is missing, and **stops at the edge of git** (it never commits or pushes).
+**Core principle:** a single invocation replaces the stages the tier declares. The gates
+belonging to `/sdd-plan`, `/sdd-build` and `/sdd-sync` are respected; forge only chains
+them, **fails early** if an input is missing, and **stops at the edge of git** (it never
+commits or pushes).
 
 ---
 
@@ -64,35 +72,42 @@ default), otherwise `docs/api.yaml`.
 
 **Requires** — the preflight; verified in this order, all of them, before Step 1
 
-Read `spec.md`'s `build_mode` first (absent → `tdd`): the rows marked **(tdd only)**
-are skipped in the evidence carril, which has no design artifacts by construction, and
-the **(evidence only)** row replaces them.
+Read `spec.md`'s `tier` **first** (absent → `full`): the tier decides which stages exist
+at all, so it is what makes a preflight row apply. Then read `build_mode` (absent →
+`tdd`): the rows marked **(tdd only)** are skipped in the evidence carril, which has no
+design artifacts by construction, and the `VERIFY` check in the row below replaces them.
 
 | Condition | Check | If it fails |
 |---|---|---|
 | You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
 | `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find `work/active/spec-<number>/spec.md`. Run `/spec spec-<number>` first." |
-| `context.md` exists | `[ -f work/active/spec-<number>/context.md ]` | Stop: "Run `/clarify spec-<number>` first." |
-| `design.md` exists **(tdd only)** | `[ -f work/active/spec-<number>/design.md ]` | Stop: "Run `/design spec-<number>` first." |
-| The API contract exists **(tdd only)** | `[ -f work/active/spec-<number>/docs/<api-artifact> ]` | Same stop as `design.md` — `/sdd-plan` reads it as the source of truth for every DTO task |
-| The build mode holds up **(evidence only)** | `node ~/.agents/scripts/validate-artifacts.mjs spec-<number>` reports no `build_mode` issue, and the `VERIFY` port resolves | Abort with the validator's message — forge runs unattended, so a carril that doesn't hold up must never reach `/sdd-plan` |
+| `context.md` exists **(not `fast`)** | `[ -f work/active/spec-<number>/context.md ]` | Stop: "Run `/clarify spec-<number>` first." A `fast` story runs no clarification pass, so this row does not apply to it |
+| `design.md` exists **(`full` + tdd only)** | `[ -f work/active/spec-<number>/design.md ]` | Stop: "Run `/design spec-<number>` first." Only `full` writes a design: `standard` and `fast` have none to require |
+| The API contract exists **(`full` + tdd only)** | `[ -f work/active/spec-<number>/docs/<api-artifact> ]` | Same stop as `design.md` — `/sdd-plan` reads it as the source of truth for every DTO task |
+| The build mode and the tier hold up | `node ~/.agents/scripts/validate-artifacts.mjs spec-<number>` reports no `build_mode` issue and no `tier` issue, and (for an `evidence` story) the `VERIFY` port resolves | Abort with the validator's message — forge runs unattended, so a carril or a tier that doesn't hold up must never reach `/sdd-plan` |
 | No unresolved ambiguity | `spec.md` has zero `[NEEDS CLARIFICATION]` markers | Stop: "Resolve the ambiguities with `/clarify spec-<number>` before forging." Building on ambiguities produces incorrect DTOs |
-| No plan is already under execution | `plan.md` is absent, or present with **no** task marked `[X]` | Stop and hand over: a plan with `[X]` tasks is `/build spec-<number>` to resume, or `/hotfix spec-<number>` for a targeted fix — never a re-forge, which would regenerate the plan and discard its execution state |
-| The working branch exists (prepare ran) | `[ -f work/active/spec-<number>/.branch ]` | Stop: "Run `/prepare spec-<number>` first — it creates and checks out the working branch that `/sdd-plan`'s Task 0 verifies and `/sdd-build` requires." |
+| No plan is already under execution | `full` and `standard`: `plan.md` is absent, or present with **no** task marked `[X]`. `fast`: `plan.md` is **absent** | Stop and hand over: a plan with `[X]` tasks is `/build spec-<number>` to resume, or `/hotfix spec-<number>` for a targeted fix — never a re-forge, which would regenerate the plan and discard its execution state. In `fast` there is no plan to read: a file is a leftover no stage of that tier reads, or the tier is wrong |
+| The working branch exists (prepare ran) | `[ -f work/active/spec-<number>/.branch ]` | Stop: "Run `/prepare spec-<number>` first — it creates and checks out the working branch that `/sdd-plan`'s Task 0 verifies (in `full` and `standard`) and `/sdd-build` requires." |
 | The working tree is usable | `git status --porcelain` — and `git branch --show-current` | See "the branch" below |
 
 **The branch.** By forge time the working branch must already exist: `/sdd-prepare`
-created it and checked it out (recording it in `.branch`), and `/sdd-plan`'s `Task 0`
-only verifies it. So being on `BASE_BRANCH` at forge time means `/sdd-prepare` never ran —
-forge stops and suggests it. It also stops if the tree is dirty (uncommitted work would
-ride along). What forge *does* guarantee before handing over to `/sdd-build` is that the
-plan opens with a `Task 0` verifying the working branch; if `/sdd-plan` produced a plan
-without it, that is a Step 1 abort (see Step 1).
+created it and checked it out (recording it in `.branch`). So being on `BASE_BRANCH` at
+forge time means `/sdd-prepare` never ran — forge stops and suggests it. It also stops
+if the tree is dirty (uncommitted work would ride along).
+
+In `full` and `standard` the guarantee forge hands to `/sdd-build` is the plan's opening
+`Task 0`, which verifies the working branch; if `/sdd-plan` produced a plan without it,
+that is a Step 1 abort (see Step 1). In `fast` the branch is guaranteed by `/sdd-prepare`
+and checked by `/sdd-build`'s own preconditions — there is no `Task 0` to carry it, and
+none is missing.
 
 **Produces** — nothing of its own; each stage produces under its own Contract
 
 - `work/active/spec-<number>/plan.md` with `Task 0` first and every task `[X]`, plus
   the `## AC Coverage` section with zero `✗` lines (from `/sdd-plan` and `/sdd-build`)
+  — in `full` and `standard`. In `fast` the close travels in the artifact the tier kept:
+  `spec.md`'s `## AC Coverage`, one line per AC and no `✗`, appended by `/sdd-build`,
+  which is read before the workspace is archived
 - the implemented code on the working branch, with the test suite green (from `/sdd-build`)
 - the unit's living docs reconciled and the workspace moved to
   `work/done/spec-<number>/` (from `/sdd-sync`)
@@ -111,14 +126,26 @@ patches no code and fixes no failing stage by hand.
 - **Forbidden:** reimplementing a stage. If `/sdd-plan`, `/sdd-build` or `/sdd-sync` stops on its
   own gate, forge propagates the report as is and aborts — it never works around the
   gate, never continues to the next stage, and never masks the failure.
-- **Forbidden:** skipping a stage. The chain is always the three, in order.
+- **Forbidden:** adding, skipping or reordering a stage **relative to what the tier
+  declares**. Forge runs the chain the story declares — three stages for `full` and
+  `standard` (`/sdd-plan` → `/sdd-build` → `/sdd-sync`), two for `fast` (`/sdd-build` →
+  `/sdd-sync`) — and it runs it in that order. It never drops a declared stage because the
+  story looks small, never inserts one the tier omits, and never reorders them: `/sdd-sync`
+  closes a build, and a build with no plan behind it is still a build. An unattended run
+  does not improvise its flow.
+- **Forbidden:** changing the tier. The tier is the story's decision: `/sdd-clarify` and
+  `/sdd-plan` may raise it, the developer alone may lower it, and forge may do neither —
+  a chain that rewrote its own flow mid-run would invalidate every preflight row above it.
 
 **Escalates** — the chain has no interaction point of its own. The branch name is
 resolved once, by `/sdd-prepare`, before the chain starts.
 
 - Every stop is an **abort**, not a question: a failed `Requires` row (including a
   missing `.branch`), a `/sdd-plan` that stopped on a gate, a red build, or a `/sdd-sync`
-  clash. Forge reports and ends the run; it does not ask whether to continue anyway.
+  clash. Forge reports and ends the run; it does not ask whether to continue anyway. A
+  tier that no longer matches the chain — a `plan.md` sitting in a `fast` story, a
+  `design.md` in a `standard` one — is that same class of abort: forge hands the decision
+  back, it does not resolve it.
 
 **Degrades** — none of its own. Each stage degrades per its own Contract
 (`TESTS`, `API_CLIENT_EXPORT`, `CI_GATES`, `CONTRACT_DIFF`, `DIAGRAM_CHECK`
@@ -143,10 +170,17 @@ Step 4 report instead of swallowing it.
 
 ## Step 1: Run /sdd-plan
 
-Invoke the `plan` skill with `spec-<number>` and wait for it to finish. It must leave
-`work/active/spec-<number>/plan.md`.
+**Skipped entirely in `fast`.** That tier writes no `plan.md`, so there is nothing for
+this step to produce and no post-condition below to check: `/sdd-build` reads `spec.md`'s
+`## Change Surface` for its scope and the single criterion for its work. What forge owes
+the close there is the gate, not the artifact — a valid `## AC Coverage` in `spec.md` by
+the end of the run (see Step 3 and Step 4). Go straight to Step 2.
 
-Verify it was produced, isn't empty, and opens with `Task 0`:
+In `full` and `standard`, invoke the `plan` skill with `spec-<number>` and wait for it to
+finish. It must leave `work/active/spec-<number>/plan.md`.
+
+Verify it was produced, isn't empty, and opens with `Task 0`: **both post-conditions hold
+only when this step ran** — they describe a plan, and only these two tiers have one.
 
 ```bash
 [ -s work/active/spec-<number>/plan.md ] && echo OK || echo "PLAN FAILED"
@@ -163,22 +197,25 @@ grep -c '^### Task 0' work/active/spec-<number>/plan.md
 
 ## Step 2: Run /sdd-build
 
-With `plan.md` present and non-empty, invoke the `build` skill with `spec-<number>`.
-`/sdd-build` executes **all** the plan's tasks autonomously and marks each one `[X]` on
-completion.
+Invoke the `build` skill with `spec-<number>`. In `full` and `standard`, with `plan.md`
+present and non-empty, `/sdd-build` executes **all** the plan's tasks autonomously and
+marks each one `[X]` on completion. In `fast` there is no plan: it executes the single
+criterion `spec.md` declares and appends `## AC Coverage` to `spec.md` — the section that
+closes the story.
 
-- Don't interrupt between tasks — that's `/sdd-build`'s semantics.
-- If the run is still on `BASE_BRANCH`, `/sdd-build`'s own branch gate lets it through
-  precisely because `Task 0` is pending, and Task 0 is the first thing it executes.
-  `/sdd-build` re-checks the branch right after Task 0 and stops there if it's still on
-  the base — forge doesn't duplicate that check, it inherits it.
+- Don't interrupt between tasks — that's `/sdd-build`'s semantics. In `fast` the same
+  applies to the one criterion: forge doesn't split it into stages the tier doesn't have.
+- The branch gate is `/sdd-build`'s own in every tier, and forge inherits it instead of
+  duplicating it. In `full` and `standard` Task 0 verifies the working branch and is the
+  first thing it executes; in `fast` the preconditions it checks at Step 0 are the only
+  branch gate there is, and they already see a branch `/sdd-prepare` created.
 - **Within the chain, don't stop at the review pause `/sdd-build` normally closes with.**
   If `/sdd-build` finished every task with the tests **green**, continue straight to
   Step 3 (`/sdd-sync`). Human review comes at the end of the pipeline, before `/sdd-commit`,
   not between build and sync.
-- If a task fails unrecoverably, `/sdd-build` stops and reports; forge **aborts before
-  `/sdd-sync`** and propagates that report as is, without masking it. Documentation is
-  never reconciled on top of a broken build.
+- If a `/sdd-build` run fails unrecoverably, it stops and reports; forge **aborts before
+  `/sdd-sync`** and propagates that report as is, without masking it. The story is never
+  closed on top of a broken build.
 
 ## Step 3: Run /sdd-sync
 
@@ -187,6 +224,12 @@ the design delta per the profile's modes: the contract is merged if
 `API_CONTRACT_MODE = delta`, the flows are replaced if `DOC_UNIT = use-case`,
 Markdown diagrams are copied if `full`; it stacks decisions, and archives the story
 under `work/done/`.
+
+In a tier that produced no design — `standard` and `fast` — there is no delta to
+reconcile and none of that runs: sync stacks no decisions from a `design.md` that does
+not exist, promotes nothing, and goes to the archive. Only `full` hands it documentation.
+What sync owes every tier is the close itself: the `## AC Coverage` gate — in `plan.md`
+for `full` and `standard`, in `spec.md` for `fast` — and the archive.
 
 - `/sdd-build` already ran the tests green: tell `/sdd-sync` the gates already passed so it
   **doesn't ask for them again** (its Step 2 asks before re-running lint/test/build;
@@ -199,12 +242,19 @@ under `work/done/`.
 
 When it finishes, consolidate into a single summary:
 
-1. **Plan:** how many tasks `/sdd-plan` generated.
-2. **Build:** how many ended up `[X]` and the test result (green/red).
+1. **Plan:** how many tasks `/sdd-plan` generated — in `full` and `standard`. In `fast`
+   the stage did not run: report the tier and the criterion's `## Change Surface` instead
+   (what the change was confined to, and the check that proves it), never a task count
+   there is no plan to back.
+2. **Build:** how many ended up `[X]` and the test result (green/red) — in `fast`, that
+   the single criterion is closed and which check proved it.
 3. **Sync:** what was reconciled (contract/`<api-artifact>` · model · diagrams, per the
-   profile's modes) and that the story was archived in `work/done/spec-<number>/`.
+   profile's modes — or "no design artifacts in this tier") and that the story was
+   archived in `work/done/spec-<number>/`.
 4. **Final state** of the story.
-5. **Next step — the edge of git (manual):** "All forged and documented. Review the
+5. **The close**, naming the artifact it lives in: `plan.md`'s `## AC Coverage` for `full`
+   and `standard`, `spec.md`'s for `fast`.
+6. **Next step — the edge of git (manual):** "All forged and documented. Review the
    changes; once they're OK, `/commit spec-<number>` groups the commits and leaves the
    PR drafted."
 
@@ -215,15 +265,16 @@ to `/sdd-commit`.
 
 ## Common Issues
 
-The 6 that **interrupt a run** — it stops, or the call goes back to the user.
+The 7 that **interrupt a run** — it stops, or the call goes back to the user.
 Every other failure mode is in `references/common-issues.md`, with its cause and
 resolution.
 
 | Issue | Cause | Resolution |
 |---|---|---|
-| `design.md` missing at preflight | `/sdd-design` never ran or wasn't approved | STOP; run `/design spec-<number>` first |
+| `design.md` missing at preflight | `/sdd-design` never ran or wasn't approved in a `full` story | STOP; run `/design spec-<number>` first |
 | Dirty working tree at preflight | uncommitted work would ride into the new branch | STOP; commit or stash it, then forge |
 | `plan.md` already has `[X]` tasks | the story was built (or partly built) before | Don't re-forge — `/sdd-build` resumes it, `/sdd-hotfix` fixes it |
+| A `fast` story carries a `plan.md` | the flow declares no plan for that tier, so the file is either a leftover from an earlier stage or the tier is wrong | STOP; don't build against it. The close belongs to `## AC Coverage` in `spec.md`: either drop the file, or — if the change really needs a plan — the story is not `fast`. Forge doesn't touch the tier: `/sdd-refine` on `spec.md` raises it — and the passes that tier declares then run, `/sdd-clarify` for `standard` and `/sdd-design` for `full` — while the developer decides any other change |
 | Empty `plan.md` after `/sdd-plan` | `/sdd-plan` stopped on a gate | Abort forge; resolve what `/sdd-plan` reported (e.g. `/sdd-clarify`) and retry |
 | `plan.md` without `Task 0` | the plan was written or edited by hand | Abort; regenerate with `/sdd-plan` — nothing would create the working branch |
 | `spec.md` with `[NEEDS CLARIFICATION]` | unresolved ambiguities | STOP; `/clarify spec-<number>` before forging |
@@ -232,7 +283,7 @@ resolution.
 
 ## Example
 
-A full worked run — the three stages chained without pauses — is in
+A worked run of the whole chain — the stages chained without pauses — is in
 `references/example.md`. Read it when the shape of the output is in doubt.
 
 ---

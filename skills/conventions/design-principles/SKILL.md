@@ -191,9 +191,10 @@ body or a TODO. Three reasons, and each one is enough:
 - **The number moves.** `/sdd-refine` renumbers ACs and `/sdd-hotfix` adds them. A
   comment saying `AC-3` keeps claiming AC-3 after AC-3 became AC-4 — it does not
   break, it lies.
-- **Traceability already has a home.** The `### AC → Task traceability` table in
-  `plan.md` and `## AC Coverage` are where an AC maps to what proves it. A
-  comment duplicating that adds a second source of truth that nothing validates.
+- **Traceability already has a home.** Wherever the tier keeps it — `plan.md`'s
+  `### AC → Task traceability` table for `full` and `standard`, `spec.md`'s
+  `## AC Coverage` for `fast` — an AC maps to what proves it. A comment
+  duplicating that adds a second source of truth that nothing validates.
 
 What replaces it: say *what the rule is*, not which AC asked for it. "Settled
 entries only" survives every renumbering; "AC-3" survives none. If the rule is

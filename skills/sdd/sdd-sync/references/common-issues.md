@@ -5,7 +5,7 @@ These are the rest: what to do when the run can continue.
 
 | Issue | Cause | Resolution |
 |---|---|---|
-| `plan.md` has no `## AC Coverage` section at all | Plan built before this convention existed | Don't infer coverage from the `[X]` markers — ask the user to confirm the ACs are met before closing |
+| `## AC Coverage` is missing at all — from `plan.md` in `full` and `standard`, from `spec.md` in `fast` | The build never closed, or the plan was built before this convention existed | In `fast` the close simply never happened: the build is unfinished, suggest `/sdd-build spec-<number>`. In the tiers that write a plan, don't infer coverage from the `[X]` markers — ask the user to confirm the ACs are met before closing |
 | No `docs/` folder in the story | Story with no API/diagram changes | Skip Step 3, note it in the final summary |
 | `design.md` has no "Design Decisions" section | Story with no significant decisions | Skip Step 4 silently — not every story has a decision worth recording |
 | `docs/decisions.md` doesn't exist yet | No story with decisions has ever closed in this repo | Create it in Step 4 with the standard header — no need to wait for a separate bootstrap skill |

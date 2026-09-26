@@ -78,3 +78,24 @@ test('a declared IDENTIFIER_LANGUAGE is accepted whatever the language is', () =
   const { out } = validate('SCHEMA_VERSION: 2\n\nlanguage:\n  IDENTIFIER_LANGUAGE: Español\n');
   assert.doesNotMatch(out, /IDENTIFIER_LANGUAGE/);
 });
+
+test('a fast-tier type absent from ITEM_TYPES is an error', () => {
+  // Same rule as EVIDENCE_MODE_TYPES: a list that names a type no item can carry is
+  // an allowlist that gates nothing.
+  const { out } = validate('SCHEMA_VERSION: 3\n\nitems:\n  ITEM_TYPES: [feat, bug]\n  FAST_TIER_TYPES: [bug, typo]\n');
+  assert.match(out, /FAST_TIER_TYPES.*absent from ITEM_TYPES/s);
+});
+
+test('a type allowed to skip everything but not to skip the design is warned about', () => {
+  // The two reduced tiers are ordered: a type that may go `fast` may also stop at
+  // `standard`, which is strictly more work.
+  const { out } = validate('SCHEMA_VERSION: 3\n\nitems:\n  ITEM_TYPES: [feat, bug, debt]\n  FAST_TIER_TYPES: [bug, debt]\n  STANDARD_TIER_TYPES: [feat, bug]\n');
+  assert.match(out, /FAST_TIER_TYPES.*STANDARD_TIER_TYPES/s);
+});
+
+test('fast-tier types with no TESTS adapter are warned about', () => {
+  // A fast story closes its criterion by running its check; with nothing bound it
+  // stops, so the declaration and the wiring have to agree.
+  const { out } = validate('SCHEMA_VERSION: 3\n\nitems:\n  ITEM_TYPES: [feat, bug]\n  FAST_TIER_TYPES: [bug]\n');
+  assert.match(out, /ports\.TESTS/);
+});

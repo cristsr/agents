@@ -46,6 +46,17 @@ identity:
 # The other two guardrails are not configurable: spec.md must carry a non-empty
 # `## Build Mode Rationale`, and validate-artifacts.mjs fails the story when either
 # check is broken. See ~/.agents/README.md § "Build modes".
+#
+# FAST_TIER_TYPES and STANDARD_TIER_TYPES are the same guardrail for the OTHER axis,
+# which decides which stages a story runs rather than how it is verified: `fast`
+# (spec -> build, with no clarification, no design and no plan) and `standard` (no
+# design). Each list says which item types may enter that reduced tier; a `type`
+# outside it is refused by validate-artifacts.mjs. `feat` is deliberately absent from
+# FAST_TIER_TYPES and `incident` is absent from both reduced tiers — a new capability
+# or a production remediation is rarely a one-symbol change.
+#
+# The tier itself has no default key: a story with no `tier` field is `full`, which is
+# what every story written before this axis existed is. See ~/.agents/contracts/TIERS.md.
 items:
   STORY_ID_MODE: sequential       # sequential | name | tracker-code
   STORY_ID_PREFIX: spec-
@@ -55,6 +66,8 @@ items:
   TRACKER: null
   ITEM_TYPES: [feat, bug, debt, incident, chore]
   EVIDENCE_MODE_TYPES: [debt, chore, incident]
+  FAST_TIER_TYPES: [bug, debt, chore]
+  STANDARD_TIER_TYPES: [feat, bug, debt, incident, chore]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Where raw items come from. INTAKE_FIELD_MAP maps each spec.md field to its label
@@ -172,8 +185,9 @@ stack:
 #
 # Under `use-case` three things travel with it and are NOT this key: the notation is
 # DIAGRAM_FORMAT, the gate that checks a diagram's identifiers against real symbols is
-# the DIAGRAM_CHECK port, and the document's shape is <STACK_REFS>/references/
-# flow-template.md — so swapping the diagramming tool is a pack, never a skill edit.
+# the DIAGRAM_CHECK port, and the document's shape is the `flow-md` artifact contract's
+# floor (<STACK_REFS>/references/flow-template.md when a pack overrides it) — so
+# swapping the diagramming tool is a pack, never a skill edit.
 # DOCS_UNIT_README and DOCS_UNIT_FLOWS say where the living documents go, and are
 # required under `use-case`: half the set is worse than none — /sdd-design writes flows
 # /sdd-sync has nowhere to put.

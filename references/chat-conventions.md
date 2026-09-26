@@ -87,14 +87,31 @@ Message samples in the skills are written in English as the default — render t
 
 ## Which blocks each skill uses
 
+The tier decides which stages exist, so "the next skill" is a function of `spec.md`'s
+front matter (`tier: fast | standard | full`, absent meaning `full`), never of this
+table alone — `contracts/TIERS.md` carries the rule the cells abbreviate:
+
+- `/sdd-spec` hands off to `/sdd-prepare` in every tier; the stage after it is
+  `/sdd-build` in `fast` — no clarification pass, no design, no plan — and
+  `/sdd-clarify` in `standard` and `full`.
+- `/sdd-clarify` hands off to `/sdd-design` in `full` under the `tdd` carril and to
+  `/sdd-plan` everywhere else — `standard`, and `full` under `evidence` — and refuses to
+  run on a `fast` story, which never reaches the pass that asks.
+- `/sdd-plan` exists in `full` and `standard` only: `fast` builds straight from
+  `spec.md`, where `## Change Surface` and `## AC Coverage` stand in for the plan.
+
+A skill announces the tier only where it decided it: `/sdd-spec` names the tier it
+inferred in the `Summary` block's `Produced` and `Counts` lines — the six blocks are
+fixed, and the tier is a value in an existing line, not a seventh block.
+
 | Skill | Announce | Progress | Question | Summary | Stop | Handoff |
 |---|---|---|---|---|---|---|
-| sdd-spec | ✓ | — | ✓ | ✓ | ✓ | ✓ → sdd-prepare / sdd-clarify |
-| sdd-prepare | ✓ | ✓ | ✓ (branch) | ✓ | ✓ | ✓ → sdd-clarify |
-| sdd-clarify | ✓ | — | ✓ (R5 + batch ≤3) | ✓ | ✓ | ✓ → sdd-design |
+| sdd-spec | ✓ | — | ✓ | ✓ | ✓ | ✓ → sdd-prepare, then by tier |
+| sdd-prepare | ✓ | ✓ | ✓ (branch) | ✓ | ✓ | ✓ → sdd-build (fast) / sdd-clarify |
+| sdd-clarify | ✓ | — | ✓ (R5 + batch ≤3) | ✓ | ✓ | ✓ → sdd-design (full+tdd) / sdd-plan (standard, full+evidence) |
 | sdd-scan | ✓ | ✓ | — | ✓ | ✓ | ✓ → sdd-design |
 | sdd-design | ✓ | ✓ | ✓ (≤5) | ✓ | ✓ | ✓ → sdd-plan (after review) |
-| sdd-plan | ✓ | — | — | ✓ | ✓ | ✓ → sdd-build |
+| sdd-plan | ✓ | — | — | ✓ | ✓ | ✓ → sdd-build (full, standard) |
 | sdd-build | ✓ | ✓ | — | ✓ | ✓ | ✓ → sdd-sync (after review) |
 | sdd-sync | ✓ | ✓ | — | ✓ | ✓ | ✓ → sdd-commit |
 | sdd-commit | ✓ | ✓ | — | ✓ | ✓ | ✓ → PR (gh pr create) |

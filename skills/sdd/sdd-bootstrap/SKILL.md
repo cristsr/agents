@@ -46,12 +46,12 @@ contract every other SDD skill depends on**.
 
 **Produces** — this is what every other skill looks for
 
-- `.agents/profile.yaml` with `SCHEMA_VERSION: 2` and the ten blocks: `identity`,
+- `.agents/profile.yaml` with `SCHEMA_VERSION: 3` and the ten blocks: `identity`,
   `items`, `intake`, `paths`, `language`, `vcs`, `stack`, `docs`, `mcp`, `ports`
 - every **enum** key carrying a listed value, never absent: `STORY_ID_MODE`,
-  `REPO_TOPOLOGY`, `ITEM_TYPES`, `EVIDENCE_MODE_TYPES`, `API_CONTRACT_MODE`,
-  `DOC_UNIT`, `DIAGRAM_FORMAT`. A skill matches these verbatim and has no
-  fallback for a missing one
+  `REPO_TOPOLOGY`, `ITEM_TYPES`, `EVIDENCE_MODE_TYPES`, `FAST_TIER_TYPES`,
+  `STANDARD_TIER_TYPES`, `API_CONTRACT_MODE`, `DOC_UNIT`, `DIAGRAM_FORMAT`. A skill
+  matches these verbatim and has no fallback for a missing one
 - `IDENTIFIER_LANGUAGE` set to a real language — it is the one key with no fallback
   anywhere in the ecosystem
 - `WORKING_DIRECTORY` as an **absolute** path — every skill checks `pwd` against it
@@ -86,8 +86,10 @@ the whole pipeline reading a shape that never existed.
 
 **Profile keys** — this skill writes the entire file, so the authoritative key list is
 the template (`~/.agents/contracts/sdd-profile.template.yaml`) and the reasoning behind
-each value is `references/profile-guide.md`. It *reads* an existing profile only to
-ask what to change.
+each value is `references/profile-guide.md`. Two of those keys gate the reduced
+execution tiers, and the contract they configure — which stages each tier runs, and what
+no tier ever relaxes — is `~/.agents/contracts/TIERS.md`. It *reads* an existing profile
+only to ask what to change.
 
 ## CRITICAL: the profile is configuration, not documentation
 
@@ -136,10 +138,12 @@ A one-line key summarizing them would only be a second version to keep in sync.
 
      | Key | Default when creating from scratch |
      |---|---|
-     | `SCHEMA_VERSION` | `2` |
+     | `SCHEMA_VERSION` | `3` |
      | `STORY_ID_MODE` | `sequential` (`/sdd-spec` resolves the id through this key) |
      | `ITEM_TYPES` | `[feat, bug, debt, incident, chore]` |
      | `EVIDENCE_MODE_TYPES` | `[debt, chore, incident]` |
+     | `FAST_TIER_TYPES` | `[bug, debt, chore]` |
+     | `STANDARD_TIER_TYPES` | `[feat, bug, debt, incident, chore]` |
      | `REPO_TOPOLOGY` | `mono-repo` |
      | `API_CONTRACT_MODE` | `delta` |
      | `DOC_UNIT` | `story` |
@@ -166,8 +170,14 @@ A one-line key summarizing them would only be a second version to keep in sync.
    | Identifier language | `IDENTIFIER_LANGUAGE` | The language of the **code**: paths, classes, fields, endpoints, plus comments and test names. Don't propose one — look at how the codebase already names things and offer that. It has **no fallback anywhere**, so it may not be left null |
    | Which MCP servers the pipeline relies on | `mcp.EXPECTED` | `[]` if none |
    | Which item types may leave the TDD carril | `EVIDENCE_MODE_TYPES` | Default `[debt, chore, incident]` is deliberately restrictive. Widen it only when the deliverables genuinely aren't runtime code, and say out loud that this is the guardrail's first layer. `[]` disables the carril |
+   | Which item types may enter each reduced tier | `FAST_TIER_TYPES`, `STANDARD_TIER_TYPES` | The **other** axis of the same shape: `tier` decides which stages run (`fast` = no clarification, no design, no plan; `standard` = no design) where `build_mode` decides how an AC is closed. Defaults `[bug, debt, chore]` and `[feat, bug, debt, incident, chore]`. `feat` is deliberately absent from `FAST_TIER_TYPES` — a new capability with one criterion is still a capability — and `incident` from both reduced tiers, because a production remediation is rarely confined to one symbol. `[]` disables that tier. Widening either list is a deliberate, auditable edit of the profile, never a decision taken inside one conversation; the axis they configure is `~/.agents/contracts/TIERS.md` |
    | How the API contract is shipped | `API_CONTRACT_MODE`, `DOCS_MODULE` | `delta` (each story contributes to a canonical `<module>/api.yaml`) or `full` (each story ships its own). Under `delta`, `DOCS_MODULE` is **required** — offer the pattern derived from `MODULE_ROOT` (e.g. `apps/<app>/docs/`) |
    | What one document describes | `DOC_UNIT` + `DOCS_UNIT_README`, `DOCS_UNIT_FLOWS`, `DIAGRAM_CHECK` | `story` (default) or `use-case` — living documents per use case, which needs **all four**; half the set is worse than none — the validator refuses it, so settle it here rather than letting PHASE 2 stumble on it |
+
+   There is no **DEFAULT_TIER** key, on purpose: a story with no `tier` field is
+   `full`, which is what every story written before this axis existed is. The default
+   is the absence of the field, exactly as it is for `build_mode` (`tdd`) — so what a
+   profile configures is who may *enter* a reduced tier, never which tier is the norm.
 
 4. Survey the repo to pre-fill what the code already answers (stack, test
    framework, module root, DI pattern, base branch) instead of asking for it —

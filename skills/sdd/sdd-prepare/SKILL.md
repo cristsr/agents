@@ -3,8 +3,8 @@ name: sdd-prepare
 description: >
   Puts every component affected by a story onto a fresh base branch (checkout +
   pull) and then creates and checks out the story's working branch off it,
-  recording the branch name in work/active/spec-{number}/.branch so /sdd-plan's Task 0
-  and /sdd-build can rely on it without asking. Runs right after /sdd-spec, before /sdd-clarify.
+  recording the branch name in work/active/spec-{number}/.branch so /sdd-build's
+  branch gate can rely on it without asking. Runs right after /sdd-spec, before /sdd-clarify.
   Use when the user says "/sdd-prepare", "/sdd-prepare spec-XXXX", "prepare the branches",
   "checkout and pull", "bring the base up to date", "leave the base ready", or
   right after /sdd-spec to leave the repo ready before scanning.
@@ -20,8 +20,18 @@ Puts every component affected by a story onto a fresh base branch
 (`BASE_BRANCH` from the profile) via `checkout` + `pull`, then **creates and
 checks out the story's working branch** off that fresh base and records the name
 in the story workspace. The pipeline (clarify → design → plan → build) runs on
-the working branch from here on; `/sdd-plan`'s `Task 0` only verifies it, and
-`/sdd-build` refuses to run on the base.
+the working branch from here on; the branch gates `/sdd-build` in every tier, and
+`/sdd-plan`'s `Task 0` verifies it only where a plan exists — `/sdd-build` refuses
+to run on the base.
+
+**It is tier-independent, and `fast` runs it too.** The tier (`fast` · `standard` ·
+`full`, absent → `full`; `~/.agents/contracts/TIERS.md` is its contract) decides which
+*planning* stages exist, never whether the story works on its own branch: it removes
+planning, and the branch is what every tier keeps. In `fast` this skill is the only stage
+between the specification and the build — there is no `plan.md` for a `Task 0` to live
+in, so the `.branch` marker this skill writes is what the branch gate of `/sdd-build`
+reads instead. Reading no flow axis is what makes that true: nothing here branches on the
+tier, and the same run serves all three.
 
 **Announce at start:** "Preparing the base and the working branch for <components>."
 
@@ -50,11 +60,18 @@ wrong branch everywhere downstream.
 |---|---|---|
 | You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
 | This project uses this skill for prep | `PREP_SKILL` names `prepare` (or is unset) | Hand over: run the skill the profile names, and stop |
-| The affected <component>s are known | resolved from `context.md`, `spec.md` or `MODULE_ROOT` (Step 0) | Ask which ones, and wait — never guess a repo to check out |
+| The affected <component>s are known | resolved from `context.md`, `spec.md` or `MODULE_ROOT` (Step 0); a story with no `context.md` is resolved from the other two, by design (the note below) | Ask which ones, and wait — never guess a repo to check out |
 | The story's workspace exists | `[ -d work/active/spec-<number>/ ]`, when an id was given | Stop **before running any git command**: "`spec-<number>` has no workspace. Run `/spec spec-<number>` first." Step 3 writes `.branch` into that folder as its last action, so a missing one fails after the branches have already moved |
 | The <component>'s working tree is clean | `git status --porcelain` is empty | Stop **for that <component>** and continue with the rest — see Step 1 |
 
 The last row is per-<component>, not global: one dirty repo blocks itself, not the run.
+
+The affected <component>s come from `context.md`, `spec.md` or `MODULE_ROOT` (Step 0),
+and **two tiers reach Step 0 without a `context.md`**: `fast` never has one, because its
+flow runs no clarification pass at all, and `standard` has none until `/sdd-clarify`
+runs — which is after this skill. So the question Step 0 asks about components is the
+expected path in those runs, not a defect: with no inventory to read, `spec.md` and
+`MODULE_ROOT` are the sources by design.
 
 **Produces** — this is what `/sdd-clarify` and `Task 0` rely on
 
@@ -64,7 +81,9 @@ The last row is per-<component>, not global: one dirty repo blocks itself, not t
 - the story's **working branch** created off `BASE_BRANCH` and checked out in every
   affected <component>, with the branch name recorded in
   `work/active/spec-<number>/.branch`. `/sdd-plan`'s `Task 0` verifies it instead of
-  creating it, and `/sdd-build` requires it
+  creating it, and `/sdd-build` requires it. In `fast` there is no `Task 0` and no plan
+  to hold one: the branch gate of `/sdd-build` is the marker's only reader, and that gate
+  is what the tier keeps in place of the plan
 - for every <component> that couldn't get there, an explicit line saying why. There is
   no silent partial success: the report names each <component> either as prepared or as
   blocked
@@ -98,11 +117,15 @@ command instead of by intention. A pull that can't fast-forward stops the <compo
   and don't resolve it.
 - The working branch name (Step 3) — always asked, never invented. This is the one
   question `/sdd-plan` used to own; prepare owns it now, so `/sdd-plan` and `/sdd-build` never ask.
+  In `fast` it is the only question before the build: that tier has no clarification pass
+  to ask the others.
 
 **Degrades**
 
 - `context.md` absent (the normal case — `/sdd-prepare` runs before `/sdd-clarify`) → derive
-  the <component>s from `spec.md` and `MODULE_ROOT`.
+  the <component>s from `spec.md` and `MODULE_ROOT`. In `fast` it is the only case there
+  is: that tier writes no `context.md` at all, so the fallback is the tier's normal path
+  rather than a degradation.
 - `MODULE_ROOT` (stack block) inconclusive → ask, same as `/sdd-clarify` does.
 - No item id in the input (a bare `/sdd-prepare`) → refresh the base only, and report
   that owning the working branch (creating it and recording `.branch`) needs the story
@@ -139,7 +162,8 @@ back. The pull is fast-forward only, so local history is never rewritten.
    A bare `/sdd-prepare` with no id is valid — skip to the last bullet.
 2. To identify the affected <component>s, in this order:
    - `work/active/spec-<number>/context.md` if it exists (because `/sdd-clarify` already
-     ran) — it's the source of truth, it was surveyed against the code.
+     ran; a `fast` story never has one, since its flow runs no clarification pass) — it's
+     the source of truth, it was surveyed against the code.
    - Otherwise `work/active/spec-<number>/spec.md` (the normal run: `/sdd-prepare` goes
      right after `/sdd-spec`) — the <component>s named in the item and its keywords, read
      against `MODULE_ROOT`.
@@ -258,7 +282,7 @@ resolution.
 |-------|-------|------------|
 | Dirty working tree in a component | Uncommitted work | STOP for that component; don't touch it — let the user resolve it and retry |
 | `--ff-only` refuses the pull | Local divergence from the remote | Stop and report; human decision |
-| Component can't be identified | Missing `context.md` or the user didn't say which | Ask explicitly — don't guess |
+| Component can't be identified | Missing `context.md` or the user didn't say which | Ask explicitly — don't guess. A `fast` story (and a `standard` one before `/sdd-clarify`) has no `context.md` by design, so its absence alone is not the cause: ask, and derive from `spec.md` and `MODULE_ROOT` |
 | `/prepare spec-XXXX` with an id that has no workspace | Typo in the id, or `/sdd-spec` never ran | Stop before any git command — the `Requires` row catches it. Otherwise the branches move and `.branch` fails to write at the very end |
 
 ---

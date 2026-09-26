@@ -60,9 +60,18 @@ listed under **Profile keys** in the `Contract` below.
 
 ## Contract
 
-What this skill needs, what it guarantees to `/sdd-design`, and what it may not do.
+What this skill needs, what it guarantees to the stage that follows it (`/sdd-design`
+in `full` under the `tdd` carril, `/sdd-plan` in `standard` and in `full` under
+`evidence`), and what it may not do.
 **Check every `Requires` row before any other work** — a failed precondition stops
 the run at the start, not after the survey has been paid for.
+
+> **This skill does not run on a `tier: fast` story.** That tier omits the clarification
+> pass by definition: there is no `context.md` to write, and no design and no plan for the
+> decisions to feed — the criterion closes in `spec.md` and `/sdd-build` takes it from
+> there. If you are invoked on such a story, say so and stop; the story is not missing a
+> step. The way back to this pass is `/sdd-refine` on `spec.md` to raise the tier, and a
+> fresh run here once the developer asks for the clarification.
 
 **Requires**
 
@@ -74,7 +83,7 @@ the run at the start, not after the survey has been paid for.
 | `spec.md` has acceptance criteria | the `## Acceptance Criteria` section holds at least one numbered AC | Stop: "`spec-<number>` has no acceptance criteria. There is nothing to clarify — run `/spec spec-<number>` again to write them." |
 | The item isn't already clarified | `## Ambiguity Resolution` present, **zero** `[NEEDS CLARIFICATION]` markers left, and `context.md` exists | Don't re-run: offer `/sdd-scan` (refresh the context) or `/sdd-refine` (adjust ACs) — see step 1 |
 
-**Produces** — this is what `/sdd-design` looks for
+**Produces** — this is what the stage the story hands off to looks for
 
 - `spec.md` with **zero** `[NEEDS CLARIFICATION]` markers (the count in the handoff is
   the same gate `/sdd-design` re-runs before designing anything)
@@ -91,6 +100,12 @@ the run at the start, not after the survey has been paid for.
   and nothing written in the front matter when it stays `tdd` — the default is the
   absence of the field. Either way the resolution is logged in
   `## Ambiguity Resolution`
+- the story's **`tier`** confirmed or raised (P2c): `tier: full` written explicitly when
+  a `standard` story turned out to touch a contract, a schema or a second <component>,
+  with the reason appended to `## Tier Rationale`; the tier left exactly as it stands
+  when it holds, and nothing written when the story is `full` — the default is the
+  absence of the field. Either way the resolution is logged in
+  `## Ambiguity Resolution`
 - `context.md` with the inventory `<STACK_REFS>/references/context-template.md` asks
   for, per affected <component>, and a **detected gaps** section that is always
   present even when empty
@@ -98,8 +113,9 @@ the run at the start, not after the survey has been paid for.
 **Writes** — nothing outside this list
 
 - `work/active/spec-<number>/spec.md` — the ACs, `## Ambiguity Resolution`,
-  `## Technical Context`, and the `build_mode` field + `## Build Mode Rationale`
-  when P2b resolved the story into the evidence carril
+  `## Technical Context`, the `build_mode` field + `## Build Mode Rationale` when P2b
+  resolved the story into the evidence carril, and the `tier` field + `## Tier Rationale`
+  when P2c raised the tier (both edited in place, never duplicated)
 - `work/active/spec-<number>/context.md` — regenerated whole on every run
 
 The research dossier is **not** on this list: it lives in context between R and I, and
@@ -125,12 +141,13 @@ read-only inputs here.
 the source hierarchy and recorded with its confidence. P selects the candidates and
 step 4 asks them — at most 3 per run, in a
 **single `AskUserQuestion` call** (P3/P4); above that the item's scope isn't ready and
-the wrap-up says so. Three questions sit outside that budget: the affected <component>s
+the wrap-up says so. Four questions sit outside that budget: the affected <component>s
 when the catalog can't identify them (R3 — resolved in step 2, it can't
-be deferred), R5's conditional free-text question about unwritten constraints, and the
-**build-mode question** (P2b), asked whenever the evidence carril is a candidate —
-that one is never resolved autonomously, and a full escalation budget does not
-suppress it.
+be deferred), R5's conditional free-text question about unwritten constraints, the
+**build-mode question** (P2b), asked whenever the evidence carril is a candidate, and the
+**tier-lowering question** (P2c), asked whenever the story could leave with fewer stages
+than it has. Neither of the last two is ever resolved autonomously, and a full escalation
+budget does not suppress either.
 With `--ask` there is no budget and no autonomy — every unknown is asked, one per
 turn.
 
@@ -150,7 +167,7 @@ turn.
 | What | How it comes back |
 |---|---|
 | `context.md` | **Regenerated whole on every run**, so a re-run discards the previous inventory entirely. `git checkout -- work/active/spec-<number>/context.md` restores the committed version; before the story's first commit there is none |
-| `spec.md` | Edited in place — the ACs, `## Ambiguity Resolution`, and the `build_mode` field when P2b resolved the story into the evidence carril. A re-run **appends** to the decision log rather than recreating it (step 1), so the reasoning survives even when the ACs are rewritten |
+| `spec.md` | Edited in place — the ACs, `## Ambiguity Resolution`, the `build_mode` field when P2b resolved the story into the evidence carril, and the `tier` field when P2c raised it. A re-run **appends** to the decision log rather than recreating it (step 1), so the reasoning survives even when the ACs are rewritten |
 
 The expensive half is the reasoning, which is why PHASE I writes the decision log
 **first** (I1): an interrupted run leaves behind what would cost most to reconstruct.
@@ -172,6 +189,12 @@ The expensive half is the reasoning, which is why PHASE I writes the decision lo
   `<component>/docs/`) feed R4
 - `EVIDENCE_MODE_TYPES` (items block) — which item types may opt into
   `build_mode: evidence` (P2b); default `[debt, chore, incident]`
+- `FAST_TIER_TYPES`, `STANDARD_TIER_TYPES` (items block) — which item types each reduced
+  tier is open to (P2c); defaults `[bug, debt, chore]` and
+  `[feat, bug, debt, incident, chore]`. They gate the third guardrail rather than
+  anything P2c decides: a tier written against them is refused by
+  `validate-artifacts.mjs`, and widening either list is a deliberate edit of
+  `.agents/profile.yaml`, never a decision taken inside one conversation
 - `CODE_SURVEY` (port) — the
   survey and its fallback. `VERIFY` (port) is not called here — P2b only checks
   whether it resolves to a real adapter
@@ -189,6 +212,11 @@ you execute them yourself, in this same session, with everything already in cont
 Extract `spec-<number>` from the input. If absent, ask:
 > "Which item? (e.g. spec-1933)"
 
+- Read `spec.md`'s `tier` from its front matter — absent means `full`, and a `spec.md`
+  that doesn't exist is stopped by the check further down. `fast` → **stop here**: report
+  the tier and the way in — the story runs `/sdd-build` directly, and raising the tier is
+  `/sdd-refine` on `spec.md`, after which a fresh run of this skill performs the pass the
+  developer asked for — and run nothing else, `--ask` included.
 - If the input includes `--ask` → run the legacy interactive mode (see
   `## Legacy mode` at the end) and stop.
 - Verify `spec.md` exists (a legacy `hu.md` counts — work on it in place):
@@ -220,11 +248,11 @@ Carry the resolved component list into R3.
 
 Execute the drafting phases below: R (R1 unknowns, R2 authorities, R2b assets, R4
 survey via `CODE_SURVEY`) and P (P1 classify, P2 interdependencies, P2b build mode,
-P3 select). Decide everything decidable; write nothing to disk yet.
+P2c tier, P3 select). Decide everything decidable; write nothing to disk yet.
 
 You come out of P holding the decision table, the escalations (max 3, each with its
-recommended answer), the R5 question if one is warranted, and the build-mode question
-if P2b raised one.
+recommended answer), the R5 question if one is warranted, the build-mode question if
+P2b raised one, and the tier-lowering question if P2c returned one.
 
 ### Step 4 — Ask the developer (one interaction round)
 
@@ -239,13 +267,19 @@ if P2b raised one.
   3-escalation budget, so a full budget never suppresses it, and it is never resolved
   for the user. If P2b found the type ineligible, don't ask: report it and say the way
   in is widening `EVIDENCE_MODE_TYPES` in the profile.
+- If P2c returned the **tier-lowering** question → add it to that same call too
+  (`header: "Tier"`), with the tier the story already carries first as the safe default
+  and, in each lower option, the artifacts that tier stops producing. It sits
+  **outside** the 3-escalation budget as well, and P2c never takes it on its own.
 
-No R5, no escalations and no build-mode question → skip this step entirely.
+No R5, no escalations, no build-mode question and no tier-lowering question → skip this
+step entirely.
 
 ### Step 5 — Run PHASE I
 
-With the answers in hand (or `tdd` when the build-mode question wasn't asked), execute
-PHASE I: the decision log first, then the ACs, then `context.md`.
+With the answers in hand (or `tdd` when the build-mode question wasn't asked, and the
+tier unchanged when the lowering question wasn't asked), execute PHASE I: the decision
+log first, then the ACs, then `context.md`.
 
 ### Step 6 — Handoff and review
 
@@ -254,13 +288,20 @@ PHASE I: the decision log first, then the ACs, then `context.md`.
    grep -c 'NEEDS CLARIFICATION' work/active/spec-<number>/spec.md
    ```
    - Markers remain → `<N>` markers left — re-run `/clarify spec-<number>`.
-   - Count `0` → hand off **to the stage this story's carril actually has**. P2b just
-     resolved it, and this is the only skill that knows it:
+   - Count `0` → hand off **to the stage the story's two axes actually give it**. P2c
+     and P2b just resolved them, and this is the only skill that knows them: the **tier**
+     decides which stages exist, the **`build_mode`** decides how the criterion is closed
+     among them.
 
-     | `build_mode` | Next stage | Why |
-     |---|---|---|
-     | `tdd` (the field is absent) | "Ready to design. Once you've reviewed it, `/design spec-<number>`." | The contract, the diagram and the data model come first |
-     | `evidence` | "Ready to plan. Once you've reviewed it, `/plan spec-<number>`." | That carril has no design artifacts: `/sdd-design` refuses to run on such a story and `/sdd-plan` requires none of them — the pipeline goes `/clarify → /sdd-plan` |
+     | `tier` | `build_mode` | Next stage | Why |
+     |---|---|---|---|
+     | `full` (the field absent, or present because a stage escalated into it) | `tdd` (the field is absent) | "Ready to design. Once you've reviewed it, `/design spec-<number>`." | The contract, the diagram and the data model come first |
+     | `full` | `evidence` | "Ready to plan. Once you've reviewed it, `/plan spec-<number>`." | That carril has no design artifacts: `/sdd-design` refuses to run on such a story and `/sdd-plan` requires none of them — the pipeline goes `/clarify → /sdd-plan` |
+     | `standard` | either | "Ready to plan. Once you've reviewed it, `/plan spec-<number>`." | There is no design to make: the tier omits `design.md` and everything under `docs/` whatever the carril, so `/sdd-plan` builds the atomic breakdown from `context.md` |
+     | raised to `full` in P2c | as the raise left it | `/design spec-<number>` — or `/plan spec-<number>` under `evidence` | The raise put the design stage back: a `standard` story corrected to `full` re-routes to the design, exactly as if the tier had never been reduced |
+
+     A raise is the one case where the answer differs from what `/sdd-spec` reported: say
+     it in the wrap-up, so the developer does not follow the tier the spec announced.
 2. Render the review summary from the IMPLEMENT report (the low-confidence list first,
    then the decided-with-a-source group), add the step 2 base warning and the R4 depth
    note, and — if the escalation budget cut the list — the P3 warning.
@@ -309,9 +350,10 @@ Read once, before touching the code: `docs/rules.md`, `CLAUDE.md`,
 `.agents/profile.yaml`. If any is missing, continue without it — it only lowers the
 hierarchy by one level.
 
-Consult `references/decision-authority.md` — source hierarchy, escalation test,
-confidence levels, and cases calibrated against real project items. **Read it here,
-once, not per unknown.**
+Consult `references/decision-authority.md` — source hierarchy, escalation test and
+confidence levels — and keep `references/calibrated-cases.md` at hand: it is the worked
+examples of that rubric against real items, and it is what you read when a decision sits on
+the line between autonomous and escalated. **Read both here, once, not per unknown.**
 
 ### R2b — Read the story's assets (optional)
 
@@ -450,6 +492,11 @@ Which carril `/sdd-plan` and `/sdd-build` will follow. Two values, and the defau
 `tdd` — the absence of the field in the front matter, and what every story written
 before this axis existed carries.
 
+**The tier (P2c) is the other axis and the two are independent:** the tier decides which
+stages exist, `build_mode` decides how the criterion is closed among them, and both
+questions can be live in the same run — a `fast` story can close its single criterion
+by `evidence`, a `full` one by `tdd`.
+
 | Mode | The AC is closed by | For |
 |---|---|---|
 | `tdd` | a test written red-first against the behavior | runtime behavior: features, defects, anything with a unit that can fail |
@@ -490,6 +537,41 @@ deliberate edit the developer makes. **Never write the field against the allowli
 Record the resolution — mode, why, and the check that backs it — in the decision
 table, whichever way it went.
 
+### P2c — Confirm or raise the tier
+
+Which stages this story has, where P2b decided how its criterion is closed. Read
+`spec.md`'s `tier` from the front matter — absent means `full`.
+
+| `tier` | What P2c does |
+|---|---|
+| `full` (the field absent, or present because a stage escalated into it) | Nothing to decide, nothing to write |
+| `standard` | The tier holds **unless** the survey or the decisions found a signal — below |
+| `fast` | Unreachable: step 1 stopped the run before the survey was paid for |
+
+**Raising is the only move taken here.** Read what R4 surveyed and what P1-P2 decided
+against `~/.agents/contracts/TIERS.md`'s inference table — a public contract or schema
+change, a new integration or dependency, more than one <component> affected, or a change
+to security, authentication or performance behaviour. Any one of them makes the story
+`full`: write `tier: full` (**never delete the field** — the escalation is part of the
+record, so the field stays and stops saying `standard`), append the reason to the
+existing `## Tier Rationale` — the signal that matched, never the stage that found it,
+because the rationale records the decision and not its author — and say it in the report.
+Raising is autonomous because it *adds* work: the design stage and everything under
+`docs/` come back, and nothing the story already produced is discarded.
+
+**Lowering is never taken here.** `standard` → `fast`, or `full` → anything beneath it,
+is **returned as a question** in step 4 — outside the 3-escalation budget, the same
+standing as the build-mode and R5 questions — with the current tier first as the safe
+default and the consequence stated in the options: a lower tier **stops producing
+artifacts and discards the ones that exist**. Entering `fast` means no `context.md`, no
+`design.md`, no `docs/`, no `plan.md` and no `## AC Coverage` in a plan — the close moves
+into `spec.md`; entering `standard` means `design.md` and `docs/` go. Never write a lower
+tier on your own initiative: the answer authorises it, and `/sdd-refine` is what applies
+it afterwards.
+
+Record the tier's resolution in the decision table next to the build mode's, whichever
+way it went.
+
 ### P3 — Select what to escalate
 
 Over the **complete** candidate list, pick the highest-impact ones.
@@ -512,6 +594,10 @@ never a one-per-turn loop, and never mid-phase.
 The **build-mode question** (P2b), when there is one, rides in that same call as one
 more question — it doesn't consume the 3-escalation budget. Its options are always
 `tdd` first and `evidence` second, each naming what would close the ACs.
+
+The **tier-lowering question** (P2c), when there is one, rides in that same call under
+the same rule: the current tier first, and each lower option naming the artifacts that
+tier stops producing. It spends no part of the 3-escalation budget either.
 
 ### Decision table
 
@@ -545,9 +631,10 @@ decision**, then `*Rationale:*` and `*Source:*` with its level:
   for a nonexistent resource. *Source:* HTTP convention (level 5).
 ```
 
-One entry is always present whichever way P2b went — the **build mode**. That one, plus
-a worked example of a consulted entry and of a low-confidence one with no precedent:
-`references/decision-log-format.md`.
+Two entries are always present, whichever way P2b and P2c went — the **build mode** and
+the **tier** (the tier the story runs, and, when P2c raised it, the survey signal that
+raised it). Those two, plus a worked example of a consulted entry and of a
+low-confidence one with no precedent: `references/decision-log-format.md`.
 
 Also record the searches that came back **empty** and the inconsistencies found in
 R4 — they're signals for `/sdd-design`.
@@ -613,6 +700,39 @@ written down.
 Never write the field for a type outside `EVIDENCE_MODE_TYPES`, and never write it
 when the developer wasn't asked.
 
+### I4c — Write the tier (only when it is not `full`)
+
+The field and its rationale are usually already in `spec.md` — the tier was inferred when
+the story was written. I4c is what closes the guardrail: P2c may have raised the tier,
+and a hand-written spec may carry the field with no rationale under it at all.
+
+- **`full`, and P2c raised nothing** → write **nothing** in the front matter. The absence
+  of the field *is* the default, and declaring it would suggest the axis was contested
+  when it wasn't. The decision still gets its line in `## Ambiguity Resolution`.
+- **The field is present** (`standard` held, or a raise P2c wrote as `tier: full`) → edit
+  it in place, never duplicating it: it sits in the front matter after `origin` — and
+  after `build_mode` when that one is written too. `## Tier Rationale` sits below the
+  framing block and **above `## Build Mode Rationale`**; the two are never translated,
+  and the tier keeps the wider position because it is the wider decision:
+
+```markdown
+## Tier Rationale
+
+**Why this tier:** <the signals that matched — number of criteria, what the change is
+confined to, what it does not touch>
+**What covers the omitted stages:** <the check that closes the criterion, and the fact
+that the working branch still gates the build>
+```
+
+Both labeled lines are mandatory when the field is present and neither may be empty:
+`validate-artifacts.mjs` fails the story otherwise. That is the point — the tier is only
+valid when why the full flow does not apply, and what covers the stages it omits, are
+written down.
+
+Never write the field for a type outside the tier's allowlist (`FAST_TIER_TYPES`,
+`STANDARD_TIER_TYPES`), and never write a tier lower than the story carries — P2c's
+question is the only thing that authorises that.
+
 ### I5 — Write `context.md`
 
 Pour the dossier's inventory into `<STACK_REFS>/references/context-template.md`
@@ -632,9 +752,9 @@ which is where the eye needs to land.
 ### Handoff
 
 Close with the grep (`grep -c 'NEEDS CLARIFICATION'
-work/active/spec-<number>/spec.md`) — count `0` → hand off to the stage the story's
-carril has (step 6: `/sdd-design` under `tdd`, `/sdd-plan` under `evidence`), else re-run
-`/sdd-clarify`. Run it against the file on disk; don't report the count from memory.
+work/active/spec-<number>/spec.md`) — count `0` → hand off to the stage the story's tier
+and carril give it (step 6's two-axis table), else re-run `/sdd-clarify`. Run it against
+the file on disk; don't report the count from memory.
 
 ---
 
@@ -643,8 +763,9 @@ carril has (step 6: `/sdd-design` under `tdd`, `/sdd-plan` under `evidence`), el
 With `--ask` there is no RPI separation: every unknown is asked with
 `AskUserQuestion`, one at a time, with no budget and no autonomy; EARS is offered
 rather than applied; and the technical context is surveyed by asking. The code
-inventory and `context.md` are produced all the same, and the build-mode question
-(P2b) is asked under the same rule — `evidence` is never assumed.
+inventory and `context.md` are produced all the same, the build-mode question
+(P2b) is asked under the same rule — `evidence` is never assumed — and the tier is never
+lowered without the developer asking for it (P2c).
 
 Details in `references/legacy-ask-mode.md`. Useful when the item touches terrain where
 you don't want anything decided out of your sight.
@@ -657,10 +778,10 @@ you don't want anything decided out of your sight.
 inventory prose.
 
 The **section headings** stay English regardless of that key (`## Acceptance
-Criteria`, `## Ambiguity Resolution`, `## Technical Context`, `## Build Mode
-Rationale` — other skills and the validator read them by name), and so do the
-front-matter keys and their enum values (`type`, `origin`, `build_mode: evidence`),
-which are matched verbatim.
+Criteria`, `## Ambiguity Resolution`, `## Technical Context`, `## Tier Rationale`,
+`## Build Mode Rationale` — other skills and the validator read them by name), and so do
+the front-matter keys and their enum values (`type`, `origin`, `tier: fast` /
+`tier: standard` / `tier: full`, `build_mode: evidence`), which are matched verbatim.
 
 The **identifiers** quoted from the code — paths, classes, fields, endpoints —
 follow `IDENTIFIER_LANGUAGE` (profile, language block). Quote them exactly as the
@@ -670,9 +791,10 @@ code spells them; this skill has no language of its own to convert them into.
 
 ## Common Issues
 
-The five that **stop** a run. Every other failure mode — survey depth, escalation
-budget, unreadable assets, build-mode eligibility, contradictory precedent — is in
-`references/troubleshooting.md`.
+The seven that **stop or re-route a run** — it stops, the call goes back to the user, or
+the story leaves on a different tier than it arrived. Every other failure mode — survey
+depth, escalation budget, unreadable assets, build-mode eligibility, contradictory
+precedent — is in `references/troubleshooting.md`.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
@@ -681,6 +803,8 @@ budget, unreadable assets, build-mode eligibility, contradictory precedent — i
 | Only `context.md` needs refreshing | The code changed, the ACs didn't | Use `/scan spec-<number>` — don't re-clarify |
 | You can't even build the unknowns list | Missing context, or a spec that contradicts itself | Stop before surveying: show the blocker, fix the input (`/sdd-refine`/`/sdd-spec`), then re-run |
 | The handoff grep is non-zero | PHASE I left a resolved marker in place | Stop: the run isn't complete — re-run `/clarify spec-<number>` |
+| A `standard` story turns out to touch a public contract | The inference read the input alone; the survey reads the code, and the change crosses a contract, a schema or a <component> boundary the input never named | Raise the tier in P2c: write `tier: full`, append the signal to `## Tier Rationale`, report the raise, and hand off to `/sdd-design` — raising adds work and discards none |
+| The developer asks for a lower tier | Only the developer may lower a tier: it discards artifacts the stages already produced | Ask it in step 4, with the current tier first and the artifacts that tier stops producing named in each lower option; on the answer, say `/sdd-refine` is what applies it — never write a lower tier on your own initiative |
 
 ---
 

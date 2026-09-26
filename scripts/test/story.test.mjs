@@ -9,7 +9,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  frontMatter, buildMode, BUILD_MODES, acceptanceCriteria, clarificationMarkers,
+  frontMatter, buildMode, BUILD_MODES, tier, TIERS, changeSurface,
+  acceptanceCriteria, clarificationMarkers,
   tasks, taskFiles, traceability, acCoverage, hasHeading, section,
 } from '../lib/story.mjs';
 
@@ -71,6 +72,42 @@ test('buildMode returns a typo raw instead of normalizing it', () => {
   const raw = buildMode('---\nbuild_mode: evidnce\n---\n');
   assert.equal(raw, 'evidnce');
   assert.ok(!BUILD_MODES.includes(raw));
+});
+
+test('tier defaults to full, the whole pipeline', () => {
+  // The absence of the field is the default, exactly as it is for build_mode: a story
+  // written before this axis existed keeps every stage it always had.
+  assert.equal(tier('# no front matter'), 'full');
+  assert.equal(tier('---\ntype: feat\n---\n'), 'full');
+  assert.equal(tier('---\ntier: fast\n---\n'), 'fast');
+  assert.equal(tier('---\ntier: standard\n---\n'), 'standard');
+});
+
+test('tier returns a typo raw instead of normalizing it', () => {
+  // A normalized typo would silently pick a flow; one of them skips three stages.
+  const raw = tier('---\ntier: standard-full\n---\n');
+  assert.equal(raw, 'standard-full');
+  assert.ok(!TIERS.includes(raw));
+});
+
+test('changeSurface separates paths from symbols and reads the check', () => {
+  const spec = `## Change Surface
+
+**Confined to:** \`scripts/lib/story.mjs\` (\`frontMatter\`), \`docs/rules.md\`
+
+**Check:** \`node --test scripts/test/story.test.mjs\` — proves AC-1
+`;
+  const surface = changeSurface(spec);
+  assert.deepEqual(surface.paths, ['scripts/lib/story.mjs', 'docs/rules.md']);
+  assert.deepEqual(surface.symbols, ['frontMatter']);
+  assert.equal(surface.command, 'node --test scripts/test/story.test.mjs');
+});
+
+test('changeSurface distinguishes a missing section from an empty one', () => {
+  assert.equal(changeSurface('## Acceptance Criteria\n'), null);
+  const empty = changeSurface('## Change Surface\n');
+  assert.equal(empty.command, null);
+  assert.deepEqual(empty.paths, []);
 });
 
 test('acceptanceCriteria parses numbering, body, scenarios and EARS', () => {

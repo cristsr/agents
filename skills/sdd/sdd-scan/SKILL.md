@@ -24,6 +24,13 @@ rewrites `work/active/spec-<number>/context.md` with the updated inventory.
 an item left open for several days, a base branch that moved forward, a module
 refactored in the meantime.
 
+**`context.md` is an artifact of the `full` and `standard` flows only.** A `tier: fast`
+story declares a flow with no clarification pass and no context inventory, so this skill
+refuses at the gate below instead of producing one: the artifact is not part of the flow
+the story declared, and nothing is deleted. The way to an inventory for that story is
+raising the tier with `/sdd-refine spec-<number>`: the clarification pass then
+establishes `context.md`, and this skill is what keeps it current.
+
 **It never touches `spec.md`.** It doesn't resolve ambiguities, doesn't edit ACs,
 doesn't ask about constraints. If what changed is the item and not the code, the right
 skill is `/sdd-clarify` (or `/sdd-refine` if a design already exists).
@@ -56,15 +63,24 @@ the expensive part of the run.
 | An item id was given | the input carries an id matching `STORY_ID_PATTERN` | Ask: "Which item do you want to refresh?" |
 | The item is still open | `work/active/spec-<number>/` exists | If it's under `work/done/spec-<number>/`, `/sdd-sync` already closed it: there is nothing downstream that would read a refreshed context. Report it and stop |
 | `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find the item. Run `/spec spec-<number>` first." (a legacy `hu.md` counts) |
+| The story's tier writes a `context.md` | `spec.md`'s front matter carries no `tier: fast` (absent means `full`) | Stop: "`spec-<number>` is a `tier: fast` story — that flow has no clarification pass, so it has no `context.md` and `/sdd-scan` has nothing to refresh. Nothing is deleted. If the story needs a context inventory, raise the tier with `/sdd-refine spec-<number>`." |
 | `context.md` exists | `[ -f work/active/spec-<number>/context.md ]` | Redirect: "This item hasn't been clarified yet. Run `/clarify spec-<number>` — it produces `context.md` along with the precise `spec.md`. `/sdd-scan` only refreshes one that already exists." |
 
-**Produces** — indistinguishable from what `/sdd-clarify` leaves, by design
+Read the tier row **before** the `context.md` row, and read `spec.md`'s front matter
+before either: a `fast` story has no `context.md` by construction, so the existence check
+below it would answer with a redirect to `/sdd-clarify`, a stage that tier never runs.
+The order of the two rows is the difference between a correct refusal and a wrong
+instruction.
+
+**Produces** — indistinguishable from what `/sdd-clarify` leaves, by design, in the flows
+that have a `context.md` (`full`, `standard`)
 
 - `work/active/spec-<number>/context.md` regenerated whole from
   `<STACK_REFS>/references/context-template.md`, with the same inventory per affected
   <component> and the same **detected gaps** section, always present even when empty.
   `/sdd-design` and `/sdd-plan` read `context.md` without knowing which skill wrote it, so the
-  shape has to match `/sdd-clarify`'s exactly
+  shape has to match `/sdd-clarify`'s exactly. A `tier: fast` story never reaches this
+  bullet: that flow has no `context.md` to produce (the gate in `Requires`)
 - every hand-written note from the previous `context.md` preserved (Step 4) — only what
   came from the code is replaced
 - `spec.md` byte for byte unchanged
@@ -144,8 +160,13 @@ all of them, before anything else:
 
 ```bash
 [ -f work/active/spec-<number>/spec.md ] && echo "OK" || echo "MISSING"
+grep -E '^tier:' work/active/spec-<number>/spec.md || echo "TIER ABSENT (full)"
 [ -f work/active/spec-<number>/context.md ] && echo "CTX OK" || echo "CTX MISSING"
 ```
+
+The tier line comes before the `context.md` line for the reason the `Requires` note
+gives: in a `tier: fast` story the missing file is the tier's shape, not unfinished
+clarification, and the run stops there.
 
 ## Step 2 — Determine what to survey
 
@@ -223,19 +244,21 @@ If something that changed **contradicts a decision** recorded in `spec.md`'s
 it explicitly and suggest `/sdd-clarify` or `/sdd-refine`. Don't fix it here — `/sdd-scan` doesn't
 decide.
 
-Stop — do not start the design.
+Stop — do not start the next stage: `/sdd-design` in `full` under `tdd`, and `/sdd-plan`
+in `standard` or in `full` under `evidence`.
 
 ---
 
 ## Common Issues
 
-The 3 that **interrupt a run** — it stops, or the call goes back to the user.
+The 4 that **interrupt a run** — it stops, or the call goes back to the user.
 Every other failure mode is in `references/common-issues.md`, with its cause and
 resolution.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| `context.md` doesn't exist | The item was never clarified | Redirect to `/clarify spec-<number>`, which produces it |
+| The story is `tier: fast` | That tier runs no clarification pass, so its flow never has a `context.md` | Stop. Delete nothing — the artifact is absent because the story's flow does not include it. Raising the tier with `/sdd-refine spec-<number>` is the way to an inventory; `/sdd-clarify` then establishes it |
+| `context.md` doesn't exist | The item was never clarified (and its tier runs a clarification pass) | Redirect to `/clarify spec-<number>`, which produces it |
 | `spec.md` doesn't exist | `/sdd-spec` never ran | STOP: run `/spec spec-<number>` first |
 | The item is already in `work/done/` | `/sdd-sync` closed it | Stop — nothing downstream reads a refreshed context once the story is archived |
 

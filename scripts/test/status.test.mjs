@@ -102,6 +102,77 @@ test('a gap behind finished work is flagged as a regression', () => {
   assert.equal(json.next.regression, true);
 });
 
+// ── the execution tiers, the other axis ─────────────────────────────────────
+// A tier removes stages. What matters here is that a removed stage reads as skipped
+// — never as the next step — and that the story still closes somewhere the graph can
+// see, which for `fast` is spec.md and not a plan that was never written.
+
+const FAST_SPEC = `---
+type: bug
+tier: fast
+---
+
+## Change Surface
+
+**Confined to:** \`src/foo.ts\`
+
+**Check:** \`npm test -- foo\`
+
+## Acceptance Criteria
+
+### AC-1: It works
+
+THE SYSTEM SHALL work.
+`;
+
+test('in the fast tier clarification, the design and the plan are skipped', () => {
+  const { json } = status({ 'spec.md': FAST_SPEC });
+  assert.equal(json.tier, 'fast');
+  assert.equal(stage(json, 'context').status, 'skipped');
+  assert.equal(stage(json, 'design').status, 'skipped');
+  assert.equal(stage(json, 'plan').status, 'skipped');
+  assert.equal(stage(json, 'build').status, 'ready');
+  assert.equal(json.next.artifact, 'build');
+  assert.deepEqual(stage(json, 'build').requires, ['spec']);
+});
+
+test('a fast story is closed by `## AC Coverage` in spec.md, not by tasks', () => {
+  const closed = `${FAST_SPEC}
+## AC Coverage
+
+AC-1: ✓ \`npm test -- foo\` — one field kept
+`;
+  const { json } = status({ 'spec.md': closed, '.branch': 'fix/foo' });
+  assert.equal(stage(json, 'build').status, 'done');
+  assert.equal(json.next.artifact, 'sync');
+});
+
+test('a fast story with an uncovered line is not a finished build', () => {
+  const spec = `${FAST_SPEC}
+## AC Coverage
+
+AC-1: ✗ the parser still drops it
+`;
+  const { json } = status({ 'spec.md': spec });
+  assert.equal(stage(json, 'build').status, 'ready');
+});
+
+test('in the standard tier the design is skipped and the plan hangs off context', () => {
+  const spec = SPEC.replace('type: feat', 'type: feat\ntier: standard');
+  const { json } = status({ 'spec.md': spec, 'context.md': CONTEXT });
+  assert.equal(json.tier, 'standard');
+  assert.equal(stage(json, 'design').status, 'skipped');
+  assert.equal(json.next.artifact, 'plan');
+  assert.deepEqual(stage(json, 'plan').requires, ['context']);
+});
+
+test('a story with no tier runs the whole pipeline', () => {
+  // The absence of the field is the default — every story predating the axis.
+  const { json } = status({ 'spec.md': SPEC });
+  assert.equal(json.tier, 'full');
+  assert.equal(json.next.artifact, 'context');
+});
+
 test('an unknown story cannot be reported on', () => {
   const { code } = status({ 'spec.md': SPEC }, { args: ['spec-9999', '--json'] });
   assert.equal(code, 2);

@@ -10,6 +10,21 @@ Reference for resuming an interrupted `/sdd-build` execution session.
 - Some tasks in `plan.md` are marked `[X]` and others are not
 - The user says "resume", "continue the build", "pick it back up", or "keep going from where it stopped"
 
+The steps below are the `full` and `standard` procedure. A `tier: fast` story resumes in
+one move and has no task state to audit — see the next section.
+
+---
+
+## `tier: fast` — there is nothing here to audit
+
+A `tier: fast` story has no `plan.md` and no `[X]` markers, so steps 1 to 4 below do not
+apply to it: the unit of work is the single criterion, not a task, and re-running
+`/sdd-build` re-executes that criterion rather than resuming a list. The only state the
+run carries is `## AC Coverage` in `spec.md`, and it is written once the check is green
+and not before — a `fast` story interrupted mid-flight therefore leaves no partial marker
+to read and nothing to reconcile. Re-run the check the criterion declares and let that
+answer decide: green means the story was already closed, red means it is not.
+
 ---
 
 ## Step 1: Read plan.md and audit task states
@@ -70,3 +85,4 @@ Follow the same execution rules as a fresh start:
 | Mid-group interruption (no `[X]`) | Re-execute the group's pending tasks from its red run — tests already written on disk count, re-run them rather than rewriting |
 | Branch changed since last run | Verify branch before continuing — stop if on main/master |
 | Tests were failing when interrupted | Re-run the failing test, fix if needed, then continue |
+| `tier: fast` (no plan, no markers) | Re-run the build: it re-executes the single criterion and writes `## AC Coverage` in `spec.md` only once the check is green |

@@ -33,12 +33,12 @@ paths:
 `;
 
 /** Builds a project holding one story, runs the validator, returns its result. */
-function check(files, { storyId = 'spec-0001', args = [] } = {}) {
+function check(files, { storyId = 'spec-0001', args = [], done = false, profile = PROFILE } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'sdd-artifacts-'));
   try {
     mkdirSync(join(root, '.agents'), { recursive: true });
-    writeFileSync(join(root, '.agents', 'profile.yaml'), PROFILE);
-    const dir = join(root, 'work', 'active', storyId);
+    writeFileSync(join(root, '.agents', 'profile.yaml'), profile);
+    const dir = join(root, 'work', done ? 'done' : 'active', storyId);
     mkdirSync(dir, { recursive: true });
     for (const [name, body] of Object.entries(files)) writeFileSync(join(dir, name), body);
 
@@ -182,6 +182,174 @@ test('a build_mode typo is reported, never normalized into a carril', () => {
   const { code, out } = check({ 'spec.md': spec });
   assert.equal(code, 1);
   assert.match(out, /evidnce/);
+});
+
+// ── The execution tiers' guardrails ─────────────────────────────────────────
+// The other axis: `build_mode` says how a criterion is closed, the tier says which
+// stages exist. `fast` drops the clarification pass, the design and the plan, so what
+// those stages would have established has to be IN THE SPEC before any code runs — a
+// single criterion, no open question, a declared surface and the check that closes it.
+// If these stop failing, a story skips three stages by typing one line of front matter.
+
+const FAST_SPEC = `---
+type: bug
+origin: manual
+tier: fast
+---
+
+## Defect
+
+**Symptom:** the parser drops a trailing separator.
+**Reproduction:** parse "a;b;".
+**Expected:** two fields.
+**Actual:** one field.
+**Impact:** the import silently loses a column.
+
+## Tier Rationale
+
+**Why this tier:** one criterion, one file, no contract or schema change.
+**What covers the omitted stages:** the module's own test, and the branch gate in build.
+
+## Change Surface
+
+**Confined to:** \`scripts/lib/story.mjs\` (\`frontMatter\`)
+
+**Check:** \`node --test scripts/test/story.test.mjs\`
+
+## Acceptance Criteria
+
+### AC-1: A trailing separator yields an empty field
+
+WHEN the value ends with the separator, THE SYSTEM SHALL keep the empty field.
+`;
+
+test('a fast story that holds its guardrails passes', () => {
+  const { code } = check({ 'spec.md': FAST_SPEC });
+  assert.equal(code, 0);
+});
+
+test('a fast story is refused when it carries more than one criterion', () => {
+  const spec = `${FAST_SPEC}\n### AC-2: A leading separator too\n\nTHE SYSTEM SHALL keep it as well.\n`;
+  const { code, out } = check({ 'spec.md': spec });
+  assert.equal(code, 1);
+  assert.match(out, /exactly one acceptance criterion/);
+});
+
+test('a fast story is refused while a clarification marker is open', () => {
+  // The pass that resolves it is the one the tier omits.
+  const spec = `${FAST_SPEC}\n[NEEDS CLARIFICATION: which separator?]\n`;
+  const { code, out } = check({ 'spec.md': spec });
+  assert.equal(code, 1);
+  assert.match(out, /NEEDS CLARIFICATION/);
+});
+
+test('a fast story is refused without a `## Change Surface`', () => {
+  const spec = FAST_SPEC.split('## Change Surface')[0] + FAST_SPEC.split('## Acceptance Criteria')[1];
+  const { code, out } = check({ 'spec.md': spec });
+  assert.equal(code, 1);
+  assert.match(out, /Change Surface/);
+});
+
+test('a fast story is refused when the surface names no check', () => {
+  const spec = FAST_SPEC.replace(/^\*\*Check:\*\*.*$/m, '**Check:** the reviewer looks at it');
+  const { code, out } = check({ 'spec.md': spec });
+  assert.equal(code, 1);
+  assert.match(out, /names no check/);
+});
+
+test('a fast story is refused to a type outside FAST_TIER_TYPES', () => {
+  // `feat` is deliberately absent from the default allowlist: a new capability with one
+  // criterion is still a capability, and `standard` is where it belongs.
+  const spec = FAST_SPEC.replace('type: bug', 'type: feat');
+  const { code, out } = check({ 'spec.md': spec });
+  assert.equal(code, 1);
+  assert.match(out, /FAST_TIER_TYPES/);
+});
+
+test('a reduced tier is refused without a `## Tier Rationale`', () => {
+  const spec = FAST_SPEC.split('## Tier Rationale')[0] + FAST_SPEC.split('## Change Surface')[1].replace(/^/, '## Change Surface');
+  const { code, out } = check({ 'spec.md': spec });
+  assert.equal(code, 1);
+  assert.match(out, /Tier Rationale/);
+});
+
+test('a tier typo is reported, never normalized into a flow', () => {
+  const spec = FAST_SPEC.replace('tier: fast', 'tier: fst');
+  const { code, out } = check({ 'spec.md': spec });
+  assert.equal(code, 1);
+  assert.match(out, /fst/);
+  assert.match(out, /absent means full/);
+});
+
+test('a fast story closes in spec.md, and a ✗ there is an unfinished build', () => {
+  const spec = `${FAST_SPEC}
+## AC Coverage
+
+AC-1: ✗ the check fails on a trailing separator
+`;
+  const { code, out } = check({ 'spec.md': spec });
+  assert.equal(code, 1);
+  assert.match(out, /✗/);
+});
+
+test('a fast line marked ✓ names the check that proves it', () => {
+  const spec = `${FAST_SPEC}
+## AC Coverage
+
+AC-1: ✓ \`node --test scripts/test/story.test.mjs\` — two fields parsed
+`;
+  const { code } = check({ 'spec.md': spec });
+  assert.equal(code, 0);
+});
+
+test('a plan.md is a warning in a fast story, not a silent contradiction', () => {
+  const { code, out } = check({ 'spec.md': FAST_SPEC, 'plan.md': PLAN });
+  assert.equal(code, 0, 'the tier warns instead of failing: the file may be a leftover');
+  assert.match(out, /tier: fast/);
+});
+
+test('a standard story with a design.md is warned about, not failed', () => {
+  const spec = VALID_SPEC.replace('origin: manual', 'origin: manual\ntier: standard') + `
+## Tier Rationale
+
+**Why this tier:** one component, no contract change.
+**What covers the omitted stages:** the plan and the module suite.
+`;
+  const { code, out } = check({ 'spec.md': spec, 'design.md': '# design\n\n## Global Architecture Impact\n\nNo.\n' });
+  assert.equal(code, 0);
+  assert.match(out, /omits the design stage/);
+});
+
+test('a story with no tier is validated exactly as before the axis existed', () => {
+  const { code, out } = check({ 'spec.md': VALID_SPEC });
+  assert.equal(code, 0);
+  assert.doesNotMatch(out, /tier/i);
+});
+
+test('an archived fast story is asked for its close, and accepts it in spec.md', () => {
+  // The tier writes no plan, so the archive gate reads `## AC Coverage` from spec.md —
+  // the same claim, in the artifact the flow kept.
+  const without = check({ 'spec.md': FAST_SPEC }, { done: true });
+  assert.equal(without.code, 1);
+  assert.match(without.out, /archived without a `## AC Coverage`/);
+
+  const spec = `${FAST_SPEC}
+## AC Coverage
+
+AC-1: ✓ \`node --test scripts/test/story.test.mjs\` — two fields parsed
+`;
+  const with_ = check({ 'spec.md': spec }, { done: true });
+  assert.equal(with_.code, 0);
+});
+
+test('standard eligibility comes from the documented default, not from ITEM_TYPES', () => {
+  // A fallback that followed the item types would widen a reduced tier the moment a
+  // project adds its own type. The allowlists are deliberate edits of the profile.
+  const profile = PROFILE.replace('ITEM_TYPES: [feat, bug, debt, chore]', 'ITEM_TYPES: [feat, bug, debt, chore, spike]');
+  const spec = FAST_SPEC.replace('type: bug', 'type: spike').replace('tier: fast', 'tier: standard');
+  const { code, out } = check({ 'spec.md': spec }, { profile });
+  assert.equal(code, 1);
+  assert.match(out, /STANDARD_TIER_TYPES/);
 });
 
 // ── plan.md ─────────────────────────────────────────────────────────────────

@@ -14,9 +14,12 @@ the project, or when a skill reports a value it can't act on.
 `SCHEMA_VERSION` is the profile's contract with the validator, not a changelog:
 it moves only when a profile written against the old shape would be *misread*
 under the new one. Adding a key does not move it — an unknown key is a warning,
-and a missing one falls back. Renaming a block, moving a key between blocks, or
-changing what a value means does move it, because those are the changes a
-validator cannot detect and a skill would act on wrongly.
+and a missing one falls back; the tier axis arrived exactly that way, with
+`FAST_TIER_TYPES` and `STANDARD_TIER_TYPES` added to the `items` block while this
+number stayed where it was, because a profile written before them still reads
+correctly and the skills fall back to the same defaults. Renaming a block, moving a
+key between blocks, or changing what a value means does move it, because those are
+the changes a validator cannot detect and a skill would act on wrongly.
 
 | Version | Shape | Migrating from it |
 |---|---|---|
@@ -104,6 +107,59 @@ Two coherence rules the validator enforces: every type listed must exist in
 `ITEM_TYPES`, and declaring eligible types while leaving `VERIFY` unbound raises a
 warning — the mode would be nominally available with nothing to verify anything, and
 `/sdd-plan` stops on such a story rather than running it.
+
+---
+
+## FAST_TIER_TYPES and STANDARD_TIER_TYPES — who may skip stages
+
+A story declares how much of the pipeline it runs in `spec.md`'s front matter: `tier:
+fast`, `tier: standard`, or no `tier` field at all. This axis is **not** the other half of
+`build_mode` — it decides **which stages exist**, never how a criterion is closed. Both
+fields may appear on one story, and every combination means something: a `chore` that
+regenerates a lockfile is `fast` + `evidence`; a `feat` that adds an endpoint is `full` +
+`tdd`.
+
+| Tier | The stages it omits | What it pays instead |
+|---|---|---|
+| `full` | nothing — the pipeline as documented | — |
+| `standard` | design: no `design.md`, no `docs/`, no API contract and no data model | `## Tier Rationale` in `spec.md`; `/sdd-plan` still runs and still orders the work |
+| `fast` | planning: no clarification pass, no design and no plan | `## Tier Rationale`, `## Change Surface` and exactly one acceptance criterion in `spec.md`, plus the check that proves it — `/sdd-build` appends `## AC Coverage` there |
+
+**The default is the absence of the field**: a story with no `tier` is `full`, which is
+what every story written before this axis existed is. There is deliberately no
+**DEFAULT_TIER** key, and none should be invented — a profile decides who may *enter* a
+reduced tier, never which tier a story gets by default.
+
+`FAST_TIER_TYPES` and `STANDARD_TIER_TYPES` are the first of four guardrails, and the
+only configurable one:
+
+| Layer | Where it lives | Configurable |
+|---|---|---|
+| Which item types may enter the tier | `FAST_TIER_TYPES`, `STANDARD_TIER_TYPES` (items block) | yes — these keys |
+| A non-empty `## Tier Rationale` in the artifact | the artifact contract — the decision is written where a reader can audit it | no |
+| `validate-artifacts.mjs`, re-checked at the start of the stages that run | the validator | no |
+| No silent degradation: a reduced tier whose check cannot run stops the story | the consuming skill | no |
+
+The defaults `[bug, debt, chore]` and `[feat, bug, debt, incident, chore]` fit most
+repositories, and the asymmetry between them is deliberate. `feat` is absent from
+`FAST_TIER_TYPES` because a new capability with one criterion is still a capability, and
+`standard` is the tier that keeps the clarification pass without charging for a design.
+`incident` is absent from both reduced tiers because a production remediation is rarely
+confined to one symbol. Widening either list is a deliberate, auditable edit of
+`.agents/profile.yaml` — never a decision taken inside one conversation. `[]` disables
+that tier for the project.
+
+Three coherence rules the validator enforces: a type listed in either key but absent from
+`ITEM_TYPES` is an issue, since no item could ever carry it and the list would read as
+enabled while admitting nothing; a type in `FAST_TIER_TYPES` that
+`STANDARD_TIER_TYPES` excludes is a warning, because a type may skip the design stage
+but not the clarification one; and declaring eligible fast types while neither
+`TESTS.module` nor `TESTS.full` is bound is a warning — a fast story closes its criterion
+by running its check, and with nothing bound it stops instead of degrading.
+
+These two keys only decide who may enter. The axis itself — the three tiers, how the
+tier is inferred from the input, how a story escalates, and what no tier ever relaxes —
+is `~/.agents/contracts/TIERS.md`.
 
 ---
 
@@ -273,7 +329,7 @@ templates, nothing else** — all knowledge lives in the skills:
 | In a pack | What it holds |
 |---|---|
 | `ports.yaml` | the layer's default port adapters — the first wiring layer |
-| `references/` | the artifact templates the skills fill — `context-template.md`, `api-template.md`, `data-model-template.md`, `task-structure-template.md`, `scan-guide.md`, `openapi-to-dto-mapping.md` |
+| `references/` | the artifact templates the skills fill, and the ones the packs override — `context-template.md`, `api-template.md`, `data-model-template.md`, `task-structure-template.md`, `scan-guide.md`, `openapi-to-dto-mapping.md`. A pack overrides a template an artifact contract declares as a floor; the contract's own copy is what a project with no pack resolves to |
 
 The layers in practice:
 
@@ -297,16 +353,20 @@ nothing Nest-specific is loaded as knowledge unless `stack.SKILLS` names `nestjs
 
 **Resolution** — for any resource (`ports.yaml` operation or `references/<file>`),
 search the packs from the **most specific (last) to the least (first)**; the first
-pack that provides it wins, and what no pack provides falls back to each skill's own
-local `references/`, which are stack-generic. When `STACK_REFS` is null there is no
-pack layer at all — skills use those generic templates and inherit no adapters.
+pack that provides it wins, and what no pack provides falls back to the **floor the
+artifact's contract carries** (`~/.agents/contracts/artifacts/<artifact>/`), which is
+stack-generic. When `STACK_REFS` is null there is no pack layer at all — skills use
+those floors and inherit no adapters. A template and its floor are one document in two
+places only while a pack genuinely overrides it; a copy that is byte-identical to the
+floor is a duplicate, and gets deleted.
 
 **Stack knowledge is not a profile key, and it is not a pack key either.** How this
 stack injects a dependency, shapes a DTO or lays out a module is documented in the
 framework skill's own files — the `nestjs` skill's `references/nestjs-binding.md`
 spends a section on *why* ports are abstract classes rather than interfaces;
-`<STACK_REFS>/references/openapi-to-dto-mapping.md` carries the full field-by-field
-mapping; `<STACK_REFS>/references/scan-guide.md` says what to read and what to skip
+the `api-contract` artifact contract's `openapi-to-dto-mapping.md` carries the full
+field-by-field mapping; `<STACK_REFS>/references/scan-guide.md` says what to read and
+what to skip
 per file type. A one-line key summarizing any of them adds nothing a
 skill can act on and creates a second version to keep in sync. When a skill needs that
 knowledge, it reads the document.

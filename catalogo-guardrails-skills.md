@@ -67,7 +67,7 @@ Cada entrada se describe en dos ejes además de su propósito. Sin ellos, dos gu
 
 **Diferencia con 1.1:** la validación de esquema pregunta *"¿el argumento está bien formado?"*; la precondición de estado pregunta *"¿existe ya lo que necesito para trabajar?"*. Un `spec-0042` puede ser un identificador perfectamente válido y aun así no tener `plan.md`.
 
-**Caso de uso:** `/sdd-build` exige que exista `plan.md` antes de ejecutar tarea alguna; `/sdd-sync` exige que exista `work/done/spec-<n>/`. Si falta, la skill se detiene indicando qué etapa del pipeline hay que correr antes.
+**Caso de uso:** `/sdd-build` exige que exista `plan.md` antes de ejecutar tarea alguna en `full` y `standard`, mientras que en `fast` toma `spec.md` y cierra en su `## AC Coverage`; `/sdd-sync` exige que exista `work/done/spec-<n>/`. Si falta, la skill se detiene indicando qué etapa del pipeline hay que correr antes.
 
 ### 1.5 Separación Datos / Instrucciones
 **Propósito:** Impedir que contenido leído durante la ejecución se interprete como órdenes. Todo lo que la skill lee —un archivo, una página web, el output de un subagente, el título de un recurso compartido— es dato, nunca instrucción.
@@ -210,6 +210,19 @@ Cada entrada se describe en dos ejes además de su propósito. Sin ellos, dos gu
 **Diferencia con 3.1:** confirmar no es poder deshacer. La puerta de confirmación pregunta antes; la reversibilidad protege *después*, cuando el error solo se descubre al ver el resultado. Las dos juntas cubren el caso irreversible; por separado, ninguna lo hace.
 
 **Caso de uso:** Una skill que reescribe imports en 40 archivos muestra primero el diff completo y trabaja sobre una rama aislada, de modo que un resultado indeseado se descarta sin tocar el trabajo del usuario.
+
+### 3.8 Selector de Tier de Ejecución
+**Propósito:** Decidir qué etapas del pipeline existen para una historia a partir de un único valor declarado (`tier` en el front matter de `spec.md`), en vez de negociarlas etapa por etapa. Es un `Switch/Case` sobre un valor cerrado (5.3) con una `Guard clause` al inicio de cada etapa que el tier conserva (5.4).
+**Enforcement:** `determinista` · **Respuesta:** `bloquear`
+**Estructura:**
+- Variable de control: `tier` ∈ {`fast`, `standard`, `full`}; la **ausencia** del campo es `full`, porque el caso por defecto no es un valor más que haya que escribir
+- Mapa valor → etapas: `fast` omite clarificación, diseño y plan; `standard` omite diseño; `full` no omite nada
+- Capa configurable: lista blanca de tipos de ítem admitidos por cada tier reducido (`FAST_TIER_TYPES`, `STANDARD_TIER_TYPES`); `[]` desactiva el tier en vez de dejarlo abierto
+- Capa auditable: `## Tier Rationale` no vacío en el artefacto — la razón del recorte queda escrita donde se puede revisar
+- Capa determinista: `validate-artifacts.mjs` rechaza un tipo fuera de la lista blanca y no "normaliza" el valor hacia un tier permitido; sin degradación silenciosa, un tier reducido que no puede correr su comprobación detiene la historia en vez de cerrarla a ojo
+- La lista blanca no se amplía en tiempo de ejecución por razonamiento de la skill: se edita en el perfil, donde el cambio queda en un diff revisable
+
+**Caso de uso:** Un `chore` de una línea entra como `fast` y el pipeline salta clarificación, diseño y plan; un `feat` no, aunque tenga un solo criterio de aceptación. Ilustra la regla de §6 — el nivel de enforcement más bajo que basta: lo que un script sí puede juzgar (el tipo contra la lista blanca) vive en el script, y solo lo que no puede juzgar (la justificación del recorte) se queda en prosa.
 
 ---
 
@@ -386,6 +399,7 @@ Añadir controles no es gratis, y un catálogo invita a añadirlos todos. Tres c
 | 3.5 Confinamiento de escritura | Proceso | ¿Puedo escribir en este territorio? | `duro` | bloquear |
 | 3.6 Presupuesto de recursos | Proceso | ¿Está costando más de lo previsto? | `blando` / `duro` | escalar a humano |
 | 3.7 Dry-run y reversibilidad | Proceso | ¿Puedo verlo antes y deshacerlo después? | `blando` | escalar a humano |
+| 3.8 Selector de tier de ejecución | Proceso | ¿Qué etapas existen para esta historia? | `determinista` | bloquear |
 | 4.1 Checkpoint de pipeline | Orquestación | ¿El traspaso entre skills es válido? | `determinista` | bloquear / fallback |
 | 4.2 Fallback | Orquestación | ¿Qué hacer si falla? | `blando` | degradar a fallback |
 | 4.3 Trazabilidad | Orquestación | ¿Qué pasó y por qué? | `determinista` | registrar y continuar |

@@ -1,8 +1,9 @@
 # sdd-design — worked example
 
 What a real run looks like: a design run and the artifacts it leaves.
-Read it when the shape of the output is in doubt; the rules themselves are in
-`SKILL.md`.
+Read it when the shape of the output is in doubt; the steps are in
+`SKILL.md`, and each artifact's rules are in its contract under
+`~/.agents/contracts/artifacts/`.
 
 ## Example
 
@@ -17,7 +18,7 @@ already clarified. Profile: `API_CONTRACT_MODE: delta`, `DOC_UNIT: story`.
    and whether an unknown service type is a 400 or an empty 200.
 3. **Step 3 (PHASE 3):** asks them **one at a time** — the second question changes
    depending on the first. Both answers become `## Design Decisions` bullets.
-4. **Step 4 (PHASE 3.5, 4, 4.5):** no `research.md` (both decisions were forced by
+4. **Step 4 (PHASE 4, 4.5):** no `research.md` (both decisions were forced by
    existing patterns). Writes `docs/api.delta.yaml` with the path and the two schemas,
    `docs/diagram.md`, and updates the module's existing `docs/component.md`
    surgically. No `## Data Modeling` — the story adds no table. The four gates pass.

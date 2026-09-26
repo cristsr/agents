@@ -28,7 +28,7 @@ enough to be checked, and a well-configured project can still hold a story whose
 artifacts contradict each other.
 
 `~/.agents/scripts/validate-skills.mjs` (Node) checks
-along eight axes:
+along nine axes:
 
 1. **Profile keys** — every key the skills reference exists in
    `contracts/sdd-profile.template.yaml` (the ones that don't come out as warnings, to review
@@ -41,10 +41,12 @@ along eight axes:
 4. **Local + cross-skill paths** — every `references/<file>` a skill consults exists in
    that skill, and every "the `<skill>` skill's `references/<file>`" cross-reference
    resolves in that skill's folder (`../<skill>/references/...` spellings are ignored).
-5. **Stack packs** — every `<STACK_REFS>/<file>` the skills reference is a template
-   that exists in the generic pack (the fallback floor every project shares, whatever
-   `STACK_REFS` lists); an `<STACK_REFS>/architecture/` reference is an error — packs
-   carry no guides, the framework concretion lives in the framework skill.
+5. **Stack packs and template floors** — every `<STACK_REFS>/<file>` the skills
+   reference is a template that exists in the generic pack (the fallback floor every
+   project shares, whatever `STACK_REFS` lists) **or** a path an artifact contract
+   declares as its floor, which is what a project with no pack resolves to; an
+   `<STACK_REFS>/architecture/` reference is an error — packs carry no guides, the
+   framework concretion lives in the framework skill.
 6. **Handoffs** — every `/<command>` a skill or an agent names in prose resolves to a
    skill that exists, or to a host command on the validator's allowlist. A skill
    hands off by NAME, so a rename that updates the folder and not the prose leaves
@@ -57,6 +59,12 @@ along eight axes:
    naming a skill, a PHASE or a Step inside its literal ```` ```markdown ```` block.
    A template is copied, so such a note lands in the artifact, which then records
    who wrote a line instead of what it decided.
+9. **Artifact contracts hold their shape** — every
+   `contracts/artifacts/<artifact>/CONTRACT.md` declares only floors whose files exist
+   beside it, declares only headings a script actually greps for, and carries the
+   sections a reader looks for by name. The sections say what the artifact requires, how
+   it is generated, how it is validated, what may change and what it guarantees — never
+   which skill produces or reads it, so renaming a caller never reaches into a contract.
 
 **Announce at start:** "Validating the SDD ecosystem's consistency."
 
@@ -80,6 +88,10 @@ required keys hold a value, that enums and list types are respected, that the pa
 on disk resolve (`WORKING_DIRECTORY`, `STACK_REFS`, `MODULE_ROOT`), and the cross-key
 rules — a half-configured `DOC_UNIT: use-case` set, `API_CONTRACT_MODE: delta` without
 `DOCS_MODULE`, a `STORY_ID_PATTERN` that contradicts its prefix.
+It also checks the tier allowlists' coherence — `FAST_TIER_TYPES` and
+`STANDARD_TIER_TYPES` against `ITEM_TYPES` and against each other, and the fast tier
+against an unbound `TESTS` port — because a type no item can carry is a permission that
+never applies, and a criterion with nothing bound to run it closes nothing.
 
 ## Step 3: Validate this project's constitution
 
@@ -112,6 +124,13 @@ against `ITEM_TYPES`, the headings `/sdd-sync` and `/sdd-build` navigate by
 (`## Ambiguity Resolution`, `## Global Architecture Impact`, `## AC Coverage`), the
 `### AC → Task traceability` table against `spec.md`'s ACs, every task's
 `**Files:**` path against the `### File Tree`, and the task numbering.
+It gates `spec.md`'s front matter on **both axes** — `build_mode` (how a criterion is
+closed) and `tier` (which stages exist) — and a broken tier guardrail is an issue, not
+a warning: a `tier` outside the three values, a reduced tier with no rationale, a
+`type` its allowlist excludes, a `fast` story without `## Change Surface`, or a close
+whose line names no check. That axis warns only where a higher tier already left
+something behind — a stray `design.md` or `plan.md` — or where a declared path is not
+yet on disk.
 It also warns when an artifact names the pipeline that produced it — a leaked
 template comment, a "(via `/sdd-sync`)", a "see PHASE 3.5" — which is a story to clean
 up, not a broken contract.

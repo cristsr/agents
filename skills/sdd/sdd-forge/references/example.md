@@ -44,3 +44,30 @@ Actions:
 2. Step 2: `/sdd-build` fails on task 6 (a test that won't pass, unrecoverably).
    forge **aborts before `/sdd-sync`**: it reports the failing task; it doesn't reconcile
    docs or archive the story. The user fixes it (or `/sdd-hotfix`) and retries.
+
+### Example 4: a `fast` story — the chain is two stages, not three
+
+User says: "/sdd-forge spec-0011"
+
+Actions:
+1. Preflight: `spec.md` carries `tier: fast` (absent would mean `full`), so the rows for
+   `context.md`, `design.md` and the API contract are skipped, and `plan.md` must be
+   **absent** rather than merely unexecuted. No `[NEEDS CLARIFICATION]` markers — a fast
+   story cannot carry one. `## Change Surface` is present with its `Confined to:` paths
+   and its `Check:` command. `.branch` exists → on the working branch. OK.
+2. Step 1 is **skipped entirely**: `/sdd-plan` is not invoked, so there is no plan to
+   verify and no `Task 0` to look for. The scope contract it would have carried is the
+   `## Change Surface` the spec already holds.
+3. Step 2: invokes the `build` skill, which reads the single criterion, keeps the change
+   inside the declared surface, runs the check named in `**Check:**`, runs the pre-close
+   suite, and appends `## AC Coverage` to `spec.md` — the tier's close.
+4. Step 3: invokes the `sync` skill. The gates it reads are the same two claims, from
+   `spec.md` instead of a plan; there is no design delta to reconcile, so Steps 3 and 4
+   there are skipped silently and the story is archived whole.
+5. Step 4: reports the criterion closed with the command that closed it, and suggests
+   `/commit spec-0011`.
+
+> A `plan.md` in this story would have stopped the run at preflight: no stage of the
+> `fast` tier reads one, so the file is either a leftover or the tier is wrong — and
+> forge never corrects the tier, because the flow it is running is the developer's
+> decision, not the orchestrator's.

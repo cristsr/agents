@@ -85,6 +85,55 @@ export function buildMode(specText) {
 }
 
 /**
+ * The three execution tiers, from most to least ceremony. Order is not significant.
+ *
+ * A tier decides which STAGES a story runs; `build_mode` decides how its acceptance
+ * criteria are closed. They are orthogonal axes, and both live in spec.md's front
+ * matter.
+ */
+export const TIERS = ['fast', 'standard', 'full'];
+
+/**
+ * The story's `tier`, from spec.md's front matter.
+ *
+ * Absent (or no front matter at all) means `full`: every story written before this
+ * axis existed runs the whole pipeline, and that is the safe default — a reduced tier
+ * is the one that has to be inferred, justified and validated. Returns the raw value
+ * when it is not a known tier, so the caller can report it instead of silently
+ * normalizing a typo into a flow that skips stages.
+ */
+export function tier(specText) {
+  const value = frontMatter(specText)?.tier;
+  return value ? value.trim() : 'full';
+}
+
+/**
+ * The `## Change Surface` block a `tier: fast` spec carries — the scope contract that
+ * replaces the design and the plan the tier omits.
+ *
+ * `**Confined to:**` lists the files and symbols the change is allowed to touch, in
+ * backticks; the caller distinguishes a path from a symbol by shape, because only a
+ * path can be checked against the filesystem. `**Check:**` names the command that
+ * closes the criterion. Returns null when the section is absent.
+ */
+export function changeSurface(text) {
+  const body = section(text, 'Change Surface');
+  if (body === null) return null;
+  const confined = body.match(/^\s*\*\*Confined to:\*\*\s*(.*)$/im)?.[1] ?? '';
+  const check = body.match(/^\s*\*\*Check:\*\*\s*(.*)$/im)?.[1] ?? '';
+  const tokens = [...confined.matchAll(/`([^`]+)`/g)].map((m) => m[1].trim()).filter(Boolean);
+  const isPath = (t) => /[\\/]/.test(t) || /\.[A-Za-z0-9]+$/.test(t);
+  return {
+    body,
+    confined: confined.trim(),
+    check: check.trim(),
+    paths: tokens.filter(isPath),
+    symbols: tokens.filter((t) => !isPath(t)),
+    command: check.match(/`([^`]+)`/)?.[1]?.trim() ?? null,
+  };
+}
+
+/**
  * Every `### AC-N: <title>` under `## Acceptance Criteria`, in order of
  * appearance, with the body text and the scenarios that hang off it.
  */

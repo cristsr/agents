@@ -56,6 +56,29 @@ test('no skill front matter carries an angle-bracket placeholder', () => {
   assert.deepEqual(offenders, [], `angle brackets in front matter:\n  ${offenders.join('\n  ')}`);
 });
 
+test('no skill ships a reference its own body never names', () => {
+  // Check 13, pinned here so a failure names the skill and the file instead of arriving
+  // as a generic non-zero exit. A reference nothing points at is loaded by nobody, and
+  // the mistake is invisible: the skill still reads as if the knowledge were there.
+  const offenders = [];
+  for (const f of skillFiles()) {
+    const refs = join(dirname(f), 'references');
+    let entries;
+    try {
+      entries = readdirSync(refs);
+    } catch {
+      continue;
+    }
+    const body = readFileSync(f, 'utf8');
+    for (const entry of entries) {
+      if (entry.endsWith('.md') && !body.includes(entry)) {
+        offenders.push(`${f.replace(REPO, '')} -> references/${entry}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], `unreferenced reference files:\n  ${offenders.join('\n  ')}`);
+});
+
 function skillFiles() {
   const out = [];
   const walk = (dir) => {

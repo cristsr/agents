@@ -57,6 +57,11 @@ what closes an AC:
 Everything else is identical in both — Task 0, the AC → Task traceability table, the
 `[P]` groups, and the refusal to save a plan with an uncovered AC.
 
+**The tier sits above both carriles.** `spec.md` also declares the story's `tier` (absent
+means `full`), and that field decides whether this stage exists at all: `fast` never
+reaches it, `standard` plans without design artifacts and without `[P]` groups (step 0).
+The axes are orthogonal — either carril above can run at `full` or at `standard`.
+
 ---
 
 ## Project profile (read first, always)
@@ -86,9 +91,12 @@ document:
 
 **Requires**
 
-The four rows marked **(tdd only)** are skipped when the story runs in
-`build_mode: evidence` — that carril has no design artifacts to require. Everything
-else is checked in both.
+The four rows marked **(full only)** require the design stage, so they are skipped
+whenever it does not run: in `build_mode: evidence` (that carril produces no design
+artifacts) and at `tier: standard` (that tier omits the stage itself). Everything else is
+checked in both carriles — and at `standard`, `context.md` is what the plan reads instead
+of the design artifacts, which is why the tier keeps it. `tier: fast` never reaches this
+skill (step 0).
 
 | Condition | Check | If it fails |
 |---|---|---|
@@ -96,10 +104,11 @@ else is checked in both.
 | `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find `work/active/spec-<number>/spec.md`. Run `/spec spec-<number>` first." |
 | `context.md` exists | `[ -f work/active/spec-<number>/context.md ]` | Stop: "I couldn't find `work/active/spec-<number>/context.md`. Run `/clarify spec-<number>` first." |
 | The build mode is valid and eligible | step 0 | Stop — see `Escalates` |
-| `design.md` exists **(tdd only)** | `[ -f work/active/spec-<number>/design.md ]` | Stop: "I couldn't find the complete design artifacts for spec-<number>. Run `/design spec-<number>` first." |
-| The sequence diagram exists **(tdd only)** | `<flow-artifact>` is present under `work/active/spec-<number>/` | Same stop as `design.md` — the implementation order comes from it (drafting PHASE 2) |
-| The API contract exists **(tdd only)** | `[ -f work/active/spec-<number>/docs/<api-artifact> ]` | Same stop as `design.md` — it is the source of truth for every DTO task |
-| A declared data model has its file **(tdd only)** | `design.md` has a `## Data Modeling` section ⇒ `docs/data-model.md` exists | Stop: "`design.md` states there's a new data model but I couldn't find `docs/data-model.md`. Run `/design spec-<number>` again." |
+| The tier is `full` or `standard` | step 0 | Stop: "`spec-<number>` runs at `tier: fast`: the story builds from `spec.md` and a plan is an artifact its flow never reads. At `standard` this skill runs, requiring `context.md` and nothing from the design." |
+| `design.md` exists **(full only)** | `[ -f work/active/spec-<number>/design.md ]` | Stop: "I couldn't find the complete design artifacts for spec-<number>. Run `/design spec-<number>` first." |
+| The sequence diagram exists **(full only)** | `<flow-artifact>` is present under `work/active/spec-<number>/` | Same stop as `design.md` — the implementation order comes from it (drafting PHASE 2) |
+| The API contract exists **(full only)** | `[ -f work/active/spec-<number>/docs/<api-artifact> ]` | Same stop as `design.md` — it is the source of truth for every DTO task |
+| A declared data model has its file **(full only)** | `design.md` has a `## Data Modeling` section ⇒ `docs/data-model.md` exists | Stop: "`design.md` states there's a new data model but I couldn't find `docs/data-model.md`. Run `/design spec-<number>` again." |
 | `VERIFY` resolves to a usable adapter **(evidence only)** | the `VERIFY` port, resolved across packs + profile | Stop: "This story runs in `build_mode: evidence` but the `VERIFY` port is unbound — there is nothing to close its ACs with. Bind it in `.agents/profile.yaml`, or move the story back to `tdd`." |
 | The working branch exists (prepare ran) | `[ -f work/active/spec-<number>/.branch ]` | Stop: "I couldn't find `work/active/spec-<number>/.branch`. Run `/prepare spec-<number>` first — it creates and checks out the working branch that Task 0 verifies." |
 | No plan is already under execution | `plan.md` is absent, or present with **no** task marked `[X]` | Ask before overwriting — see `Escalates` |
@@ -107,7 +116,9 @@ else is checked in both.
 **Produces** — this is what `/sdd-build` looks for
 
 - `work/active/spec-<number>/plan.md`, with the header of
-  `references/plan-header-template.md`
+  `references/plan-header-template.md` — written at `tier: full` and at `tier: standard`,
+  where it holds the atomic, flat breakdown of drafting PHASE 3. `tier: fast` produces no
+  plan at all: its close is `## AC Coverage` in `spec.md`
 - an `### AC → Task traceability` table in that header mapping **every** AC in
   `spec.md` to at least one task — `/sdd-build` stops at its own Step 1.3 if one is missing
 - a `### File Tree` in that header, one fenced block per `<component>`, consolidating
@@ -127,20 +138,23 @@ else is checked in both.
   evidence, per the carril), exact file paths
   and the expected output of every command; tasks belonging to independent groups
   carry a trailing `[P]` and the groups are named in the header's
-  "Implementation groups" line
+  "Implementation groups" line — `full` only: the `standard` breakdown is one sequence,
+  so no task there carries `[P]`
 - no final "run the suite" task — `/sdd-build` closes with `TESTS.full` (Step 3.1)
 - no task marked `[X]` — those markers belong to `/sdd-build`
 
-**Writes** — exactly two files:
+**Writes** — two files, plus the one edit the tier escalation owns:
 
 - `work/active/spec-<number>/plan.md`
 - `work/active/spec-<number>/docs/file-tree.md`
+- **only when raising a `standard` story to `full`** (`Escalates`): `tier: full` in
+  `spec.md`'s front matter and the reason appended to its `## Tier Rationale` — the two
+  writes that escalation consists of, and nothing else in `spec.md`
 
-Not `spec.md`, `context.md`, `design.md` or anything else under the story's `docs/`
-(that's `/sdd-design` or `/sdd-refine` — `docs/file-tree.md` is the one exception, since
-it is a rendering of the plan's own File Tree, not a design artifact), not the
-project's source and test files (that's `/sdd-build`), and not the unit's living docs
-(that's `/sdd-sync`).
+Everything else is off limits: `context.md` and `design.md` are `/sdd-design`'s or
+`/sdd-refine`'s (`docs/file-tree.md` is the one exception under `docs/`, since it is a
+rendering of the plan's own File Tree, not a design artifact), the project's source and
+test files are `/sdd-build`'s, and the unit's living docs are `/sdd-sync`'s.
 
 **Never** — regardless of what the plan appears to need
 
@@ -171,6 +185,14 @@ project's source and test files (that's `/sdd-build`), and not the unit's living
   guardrail's last mechanical line, and it is not negotiable at plan time. The fix is
   `/sdd-refine` on `spec.md`, or widening `EVIDENCE_MODE_TYPES` in the profile if the
   project's deliverables genuinely warrant it.
+- A `standard` story whose analysis turns up a contract, a schema or a second component:
+  **raise the tier here.** Write `tier: full` into `spec.md`'s front matter — never delete
+  the field, since the escalation is part of the record — append the reason to
+  `## Tier Rationale`, and hand back to `/sdd-design`: the plan now depends on design
+  artifacts that do not exist yet, and planning them inline would be writing the stage the
+  tier omitted. Raising is autonomous because it *adds* work; lowering is never this
+  skill's decision, because a plan regenerated for a lower tier discards artifacts a stage
+  already produced.
 
 **Degrades**
 
@@ -188,7 +210,8 @@ project's source and test files (that's `/sdd-build`), and not the unit's living
 - `stack.SKILLS` unset/empty → load only what the project's
   `conventions.md`/`CLAUDE.md` require.
 - `DOC_UNIT = use-case` → there is no `docs/diagram.md`; take the order
-  from the `sequenceDiagram` inside each `docs/flows/*.md`.
+  from the `sequenceDiagram` inside each `docs/flows/*.md` (at `tier: standard` there is no
+  `<flow-artifact>` at all — the order comes from the dependency edges, drafting PHASE 2).
 
 **Reverting** — both files are restorable only once the story workspace is tracked by
 git: `git checkout -- work/active/spec-<number>/plan.md work/active/spec-<number>/docs/file-tree.md`
@@ -211,6 +234,11 @@ restore, which is exactly why regenerating over a plan with `[X]` tasks asks fir
   (`tdd` carril only)
 - `ITEM_TYPES`, `EVIDENCE_MODE_TYPES` (items block) — the eligibility check in
   step 0
+- `FAST_TIER_TYPES`, `STANDARD_TIER_TYPES` (items block) — which item types may enter a
+  reduced tier, re-checked at step 0: `fast` (default `[bug, debt, chore]`) and `standard`
+  (default `[feat, bug, debt, incident, chore]`). A `type` outside the list is refused by
+  the artifact check; widening either list is a deliberate edit of `.agents/profile.yaml`,
+  never a decision taken inside one conversation
 - `STACK_REFS` and the stack block (`COMPONENT_TERM`, `LANGUAGE`, `FRAMEWORK`, `ORM`,
   `MIGRATIONS`, `MODULE_ROOT`) — the task templates (resolved across the listed packs,
   most specific first, generic fallback) and the header's `Stack` line
@@ -225,9 +253,25 @@ restore, which is exactly why regenerating over a plan with `[X]` tasks asks fir
 Run these seven steps. Step 4 is the drafting PHASEs documented below (PHASE 1-3.5);
 you execute them yourself, in this same session.
 
-### Step 0 — Read the build mode, and re-check its guardrail
+### Step 0 — Read the tier first, then the build mode, and re-check both guardrails
 
-Read `spec.md`'s front matter. No `build_mode` field → `tdd`; run everything below
+Read `spec.md`'s front matter. The **tier** is read first, because it decides which of the
+rows and PHASEs below apply at all — the other axis says how an AC is closed, this one says
+whether this stage runs:
+
+- **No `tier` field, or `tier: full`** → plan as the rest of this document describes.
+- **`tier: standard`** → the design stage never ran: there is no `design.md`, no
+  `<api-artifact>`, no `<flow-artifact>` and no `docs/data-model.md` to require
+  (`Requires`, the four rows marked **full only**) or to read (drafting PHASE 1, steps 3-6
+  and 11), and the breakdown is the atomic, flat one of drafting PHASE 3. The carril
+  re-check below still applies — a `standard` story runs `tdd` or `evidence` like any other.
+- **`tier: fast`** → **stop, do not plan.** A `fast` story goes `spec → build`: it builds
+  from `spec.md` and closes with `## AC Coverage` there, so `plan.md` is an artifact its
+  flow never reads. Stop with: "`spec-<number>` runs at `tier: fast`, which writes no plan
+  — the story builds from `spec.md` and closes with `## AC Coverage` there. Planning it
+  would add the stage its tier omitted."
+
+Then read the `build_mode`. No `build_mode` field → `tdd`; run everything below
 unchanged. `build_mode: evidence` → verify the three conditions **before** any other
 precondition, because they decide which of the others apply:
 
@@ -237,24 +281,30 @@ precondition, because they decide which of the others apply:
    `[debt, chore, incident]`).
 3. `spec.md` carries a non-empty `## Build Mode Rationale`.
 
-The mechanical form of all three, plus the rest of the artifact contract:
+The mechanical form of all three, plus the rest of the artifact contract — it reports the
+tier's issues too (an ineligible `type`, a missing or empty `## Tier Rationale`, a `fast`
+spec that carries an artifact its tier omits):
 
 ```bash
 node ~/.agents/scripts/validate-artifacts.mjs spec-<number>
 ```
 
-Exit `1` on a `build_mode` issue → stop and quote it verbatim (`Escalates`). Exit `2`
-(no `node`) → check the three by eye and say the gate ran manually.
+Exit `1` on a `build_mode` or `tier` issue → stop and quote it verbatim (`Escalates`). Exit
+`2` (no `node`) → check the three conditions and the tier by eye and say the gate ran
+manually.
 
 **Why /sdd-plan re-checks what /sdd-clarify already decided:** `/sdd-clarify` may not have run
 (the field can be hand-written), and this is the last gate before an entire plan gets
-written against the wrong carril. It costs one command.
+written against the wrong carril. The tier widens that same gap one axis up: a `standard`
+story planned as `full` writes tasks against artifacts the design stage never produced, and a
+`fast` story planned at all gets the plan its tier deliberately omits. It costs one command.
 
 ### Step 1 — Preconditions (Requires)
 
-Check every `Requires` row above, skipping the four marked **(tdd only)** when step 0
-resolved the mode to `evidence`, and adding the `VERIFY` row in that case. Any failure
-→ stop with the listed message.
+Check every `Requires` row above, skipping the four marked **(full only)** whenever the
+design stage does not run — `build_mode: evidence`, `tier: standard`, or both — and adding
+the `VERIFY` row when step 0 resolved the mode to `evidence`. Any failure → stop with the
+listed message.
 
 ### Step 2 — Overwrite gate
 
@@ -281,6 +331,8 @@ Run `/prepare spec-<number>` first."
 Run the drafting PHASEs below, carrying in what the earlier steps resolved:
 
 - the working branch name from step 3, written **literally** into Task 0
+- **the tier from step 0** (`full` or `standard`) — it fixes whether the design artifacts
+  are read at all and whether the `[P]` scan runs
 - **the build mode from step 0** (`tdd` or `evidence`) and, when it is `evidence`,
   the `VERIFY.run` / `VERIFY.full` adapters resolved once there and written into the
   tasks — don't re-resolve the port per task
@@ -330,6 +382,11 @@ Show the summary (PHASE 4 below) and stop. Do not start executing.
 > (9), and take the task shape from
 > `<STACK_REFS>/references/task-structure-evidence-template.md` instead of step 10;
 > skip step 11 (there are no DTOs to map). Steps 6b and 11b apply in both carriles.
+>
+> **At `tier: standard`, steps 3-6 and step 11 do not apply either** — that tier omits the
+> design stage itself, so there is no `design.md`, no `<api-artifact>`, no `<flow-artifact>`
+> and no `docs/data-model.md` to read. Steps 1-2, 6b, 7-9 and 11b are read as always, and
+> the task shape is the one the carril dictates (step 10, or the evidence template).
 
 1. Read `work/active/spec-<number>/spec.md` — extract:
 
@@ -376,7 +433,8 @@ Show the summary (PHASE 4 below) and stop. Do not start executing.
 
 6c. Read the project constitution if it exists — its Articles are non-negotiable
     and the generated tasks MUST respect them; `/sdd-design` already validated the
-    Quality Gates, so here just avoid producing tasks that violate an Article:
+    Quality Gates where the design stage ran, so here just avoid producing tasks that
+    violate an Article:
 
     ```bash
     [ -s docs/rules.md ] && echo "FOUND" || echo "NONE"
@@ -392,9 +450,10 @@ Show the summary (PHASE 4 below) and stop. Do not start executing.
 10. Consult `<STACK_REFS>/references/task-structure-template.md` (if no pack in
     `STACK_REFS` provides it: the local `references/task-structure-template.md` —
     generic) — required task format.
-11. Consult `<STACK_REFS>/references/openapi-to-dto-mapping.md` (if no pack in
-    `STACK_REFS` provides it: the local `references/openapi-to-dto-mapping.md` —
-    generic) — exact mapping from the API contract schema fields for the DTO task(s).
+11. Consult the `api-contract` artifact contract's `openapi-to-dto-mapping.md`
+    (`~/.agents/contracts/artifacts/api-contract/openapi-to-dto-mapping.md`, or
+    `<STACK_REFS>/references/openapi-to-dto-mapping.md` when a stack pack overrides it) —
+    exact mapping from the API contract schema fields for the DTO task(s).
 11b. Load each skill in the profile's `stack.SKILLS`
      with the Skill tool before writing code blocks, and apply its rules to the
      task text. Load by name; a name that doesn't exist is reported under
@@ -406,6 +465,17 @@ Show the summary (PHASE 4 below) and stop. Do not start executing.
 ## Drafting PHASE 2: Determine implementation order
 
 *Run inline, in the main agent.*
+
+### At `tier: standard` — order by the dependency edges
+
+There is no sequence diagram. The order comes from the edges between the tasks themselves:
+a task that produces what another consumes goes first, and the plan is the topological
+order of those edges. Write each edge down when you fix the order — "B reads what A
+writes" — because that edge is the only reason a `standard` task exists at all (drafting
+PHASE 3). Getting this backwards produces a plan whose second task cannot run yet, for a
+reason that has nothing to do with its content.
+
+Then skip the rest of this phase.
 
 ### In `build_mode: evidence` — order by what validates what
 
@@ -492,6 +562,29 @@ running it when the working branch is already checked out passes without changes
 Note: refreshing the base branch is `/sdd-prepare`'s job and must have run before this
 plan. Task 0 does not pull, rebase or create branches — it only verifies.
 
+### Tasks at `tier: standard` — atomic and flat
+
+The breakdown is **atomic and flat**: one task per dependency edge, in the order those
+edges impose (drafting PHASE 2), never one task per layer and never a task that exists only
+to hold a file. Each task carries the three things every task carries — its **Files**, its
+**contract** and its **verification** with the expected output.
+
+**This replaces the slicing of the two sections below; it keeps their task shape.** There is
+no sequence diagram to derive per-<component> behavior slices from, so a `standard` task is
+whatever the dependency edge needs, written in the format the carril dictates: signatures
+and invariants with a `TEST_FRAMEWORK` cycle of failing cases in `tdd`, the deliverable's
+shape with a `VERIFY.run` command and its verbatim expected output in `evidence`.
+
+**No `[P]` groups.** A `standard` change is circumscribed to one component, so its tasks are
+a sequence: two tasks that share nothing are still ordered by the dependency edge that put
+them in the plan, and a `[P]` marker would claim a parallelism the tier's own scope does not
+have. The independence scan is skipped (drafting PHASE 2), and `/sdd-build` runs the tasks
+in the order written.
+
+Task 0, the `### AC → Task traceability` table, the `### File Tree`, `docs/file-tree.md` and
+the refusal to save a plan with an uncovered AC are unchanged: the tier moves the plan's
+granularity, never its contract.
+
 ### Tasks in `build_mode: evidence`
 
 One task per **run of the check**, in the order fixed in PHASE 2, following
@@ -549,7 +642,9 @@ Consult `references/task-structure-template.md` for the exact format.
 Each task MUST have:
 - Exact file paths (absolute from the repo root)
 - The contract: signatures, injected ports, error classes, and every field name and
-  type taken verbatim from `<api-artifact>` or `docs/data-model.md`
+  type taken verbatim from `<api-artifact>` or `docs/data-model.md` — at `tier: standard`
+  there is no `<api-artifact>` and no `docs/data-model.md`, so the contract is signatures
+  and invariants only: inventing a field name here is writing the design the tier omitted
 - The cases its tests must cover, one line each
 - The TDD cycle in `TEST_FRAMEWORK` (cases as failing tests → implement → green) and
   **one** verification run, with its expected output
@@ -603,15 +698,17 @@ buys no coverage and costs a full run — the one thing this plan is optimizing 
 
 *Run inline, in the main agent, before writing plan.md.*
 
-Before saving, run this consistency check across the three artifacts —
+Before saving, run this consistency check across the artifacts step 0 resolved —
 do NOT skip it even if the plan "looks complete".
 
-> **Check 1 runs in both carriles — it is the contract itself.** Checks 2-4 read the
-> API contract and the data model, so they apply only in `build_mode: tdd`. In
-> `evidence`, replace them with a single equivalent: **every task names a `VERIFY`
-> command and a verbatim expected output**, and every AC in the table is closed by at
-> least one of those commands. An AC whose only "verification" is a human reading the
-> result is not covered — report `BLOCKED`.
+> **Check 1 runs in every tier and carril — it is the contract itself.** Checks 2-4 read the
+> API contract and the data model, so they apply only at `tier: full` in `build_mode: tdd`,
+> where those artifacts exist. In `evidence`, whatever the tier, replace them with a single
+> equivalent: **every task names a `VERIFY` command and a verbatim expected output**, and
+> every AC in the table is closed by at least one of those commands. An AC whose only
+> "verification" is a human reading the result is not covered — report `BLOCKED`. At
+> `tier: standard` in `tdd` there is nothing to replace them with: check 1 and check 5 carry
+> the whole run.
 
 1. **AC → Task coverage:** for every AC in `spec.md`, list which Task(s)
    exercise it (via the test written in that task). Build the table:
@@ -627,7 +724,8 @@ do NOT skip it even if the plan "looks complete".
    when an AC is missing from it.
 
 2. **DTO field consistency:** every field name a task's contract declares
-   must match exactly (name and type, per `references/openapi-to-dto-mapping.md`)
+   must match exactly (name and type, per the `api-contract` artifact contract's
+   `openapi-to-dto-mapping.md`)
    the field defined in `<api-artifact>`'s `components.schemas`. If a
    mismatch is found, fix the task — the API contract is the source of truth,
    never invent a different name in the plan.
@@ -666,6 +764,8 @@ After step 5's verification passes:
    - Total tasks generated
    - The build mode the plan was written for, and the check backing it when it is
      `evidence` (the resolved `VERIFY` adapter)
+   - The tier the plan was written for (`full`, or `standard` with its atomic, flat
+     breakdown)
    - Affected <component>s in implementation order
    - Whether it includes an entity + migration
    - Scope, from the `### File Tree`: files to create, modify, delete and test
@@ -683,7 +783,7 @@ After step 5's verification passes:
 
 ## Common Issues
 
-The 6 that **interrupt a run** — it stops, or the call goes back to the user.
+The 8 that **interrupt a run** — it stops, or the call goes back to the user.
 Every other failure mode is in `references/common-issues.md`, with its cause and
 resolution.
 
@@ -692,9 +792,11 @@ resolution.
 | `plan.md` already has `[X]` tasks | `/sdd-build` already ran on this story | Ask before regenerating — a targeted fix is `/hotfix spec-<number>` |
 | `build_mode: evidence` with an ineligible `type` | The allowlist was never widened, or the field was hand-written | Stop at step 0 and quote the validator. Widening `EVIDENCE_MODE_TYPES` is the developer's call — never write the plan against the guardrail |
 | `build_mode: evidence` with `VERIFY` unbound | The project declared the mode but bound no check | Stop: bind the port, or move the story back to `tdd`. Never plan tasks whose verification is a human reading them |
-| No `design.md` and the mode is `tdd` | `/sdd-design` never ran | Stop as always — in `tdd` the design is the input, and `evidence` is not the way around that |
+| No `design.md`, the mode is `tdd` and the tier is `full` | `/sdd-design` never ran | Stop as always — at `full` in `tdd` the design is the input, and `evidence` is not the way around that. At `standard` the missing design is the tier, not a skipped stage |
 | `.branch` missing at Requires | `/sdd-prepare` never ran | Stop and ask the user to run `/prepare spec-<number>` first — Task 0 verifies the branch, it doesn't create it |
 | An AC cannot be mapped with the artifacts at hand | The design leaves it uncovered | Show the escalation to the user and ask; `/sdd-refine` the design or instruct the mapping — never save a plan with an uncovered AC |
+| `tier: standard` and the analysis turns up a contract or a schema change | The design stage never ran at that tier, and the change now needs an API contract or a data model | Raise the tier in `spec.md` — write `tier: full`, append the reason to `## Tier Rationale` — and hand back to `/sdd-design`. Never plan the contract inline against a design that does not exist |
+| A plan regenerated after a tier change | The old `plan.md` was written for the other flow — a `full` granularity against a `standard` story, or a flat sequence against a `full` one | Regenerate it whole under the new tier; never reconcile the two plans by choosing one. Overwriting a plan with `[X]` tasks still asks first (step 2) |
 
 ---
 

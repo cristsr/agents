@@ -9,9 +9,10 @@ Artifact names follow the profile, same as the skill: `<api-artifact>` =
 (default), otherwise the flow's own `docs/flows/<use-case>.md` with its inline
 `sequenceDiagram`.
 
-Section names below are the ones the templates actually write — `spec-template.md`,
-`context-template.md` and `design-template.md`. If a section isn't in this guide, it
-isn't refinable: regenerate with the skill that owns it.
+Section names below are the ones the artifacts actually carry. Each artifact's own contract
+— under `~/.agents/contracts/artifacts/` — is the authority on what may change inside it;
+what follows is the routing and the coherence checks that no single artifact owns. If a
+section isn't in this guide, it isn't refinable: regenerate with the skill that owns it.
 
 ---
 
@@ -22,6 +23,9 @@ isn't refinable: regenerate with the skill that owns it.
 | Section | What can change | Examples |
 |---------|----------------|---------|
 | The framing block (As / I want / So that, or the block for the item's type) | Correcting wording or role name | "operator" → "administrator" |
+| `tier` (front-matter field) | Raising the tier, applied on request, or lowering it — which requires deleting the artifacts the lower tier does not produce | `standard` → `full` adds the design stage; `full` → `fast` deletes `plan.md`, `context.md` and `docs/` |
+| `## Tier Rationale` | The reason recorded beside the field — the decision, never the stage that made it | Add the survey signal that raised a `standard` story to `full` |
+| `## Change Surface` | In `fast`, the scope contract `/sdd-build` enforces: the `**Confined to:**` paths and symbols, and the `**Check:**` command | Add the second symbol the change is confined to |
 | AC body text | Correcting or clarifying the criterion | Fix ambiguous wording, add missing detail |
 | AC title (heading) | Renaming the short label | "AC-1: Filter" → "AC-1: Filter by service type" |
 | AC added | New criterion added | Add AC-3 for a missing edge case |
@@ -82,94 +86,56 @@ isn't refinable: regenerate with the skill that owns it.
 
 ## design.md — Mutability Rules
 
-`design.md` only holds the narrative summary — DTOs, endpoint paths/methods, the full
-diagram and the full data model live in `<api-artifact>`, `<flow-artifact>` and
-`docs/data-model.md` (see their own mutability rules below).
+The rules live with the artifact, in `~/.agents/contracts/artifacts/design-md/CONTRACT.md`
+under `## Mutability`: what may change in the narrative summary — the decisions, the flow
+prose, a component's role, the architecture verdict, a business description, a table
+name — and what is read-only because another artifact owns it. The endpoint table's method
+and path belong to the API contract, the entity and SQL to `data-model.md`, and the
+quality-gate table is re-evaluated by a design run rather than edited into passing.
 
-### Mutable sections
-
-| Section | What can change | Examples |
-|---------|----------------|---------|
-| Design Decisions | Correcting or adding a recorded decision | Fix the reasoning text |
-| Cross-Service Flow (prose) | Clarifying the summary | Wording only |
-| Module Components | Correcting a component's role in the module | Wording only |
-| Global Architecture Impact | Correcting the yes/no answer and the node/edge it names | Flipping it to "Yes" when the refinement added an integration |
-| Contracts per Service — business description | Clarifying the description column | Minor edits — NOT the method/path, those live in the contract |
-| Data Modeling — table name | Correcting the table name reference | Wording only — NOT the entity/SQL, those live in `data-model.md` |
-
-**`## Global Architecture Impact` is a contract with `/sdd-sync`**, which reads it to decide
-whether to invoke `/sdd-docs`. If a refinement adds or removes a module, an app, an
-integration or an actor, this section has to change with it — otherwise the system-level
-C4 model silently stops matching the code.
-
-### Read-only sections (do NOT modify)
-
-| Section | Why |
-|---------|-----|
-| `# design: spec-<number>` header | Identifies the artifact |
-| Component section headers (`### <component>`) | Structural — run `/sdd-design` if the set of components changes |
-| Endpoints — method/path | Use `/refine api` — the contract is the source of truth for these |
-| Data Modeling — entity/SQL | Use `/refine data-model` — `data-model.md` is the source of truth |
-| Quality Gates Validation · Constitution Exceptions | Produced by `/sdd-design` against `docs/rules.md`; a gate that now passes is re-evaluated by `/sdd-design`, not edited |
+Read it there rather than here. A second copy of that list is a second answer to the same
+question, and the copy is the one that goes stale.
 
 ---
 
 ## API contract (`docs/<api-artifact>`) — Mutability Rules
 
-### Mutable sections
+The rules live with the artifact, in
+`~/.agents/contracts/artifacts/api-contract/CONTRACT.md` under `## Mutability`. It states
+what `/sdd-refine` may change — `info.description`, a path or method, a path's
+`responses`, a schema's `properties` and their `type`/`format`/`enum`, the `required`
+array — and what is read-only because something downstream keys on it: the version line,
+`tags`, and the `operationId` of an existing operation, which is the identity the sync
+stage reconciles by.
 
-| Section | What can change | Examples |
-|---------|----------------|---------|
-| `info.description` | Clarifying the contract description | Wording only |
-| `paths.<path>.<method>` | Correcting the route or HTTP method | `/zones/type` → `/zones/filter` |
-| `responses` (per path) | Adding missing codes, correcting descriptions | Add `404: Zone not found` |
-| `components.schemas.<Schema>.properties` | Renaming/adding/removing fields | `type` → `serviceTypeId` |
-| `components.schemas.<Schema>.properties.<field>.type/format/enum` | Correcting the field's type | `string` → `string[]` |
-| `required` array | Adding/removing a field from required | Mark `serviceTypeId` as required |
-
-### Read-only sections (do NOT modify)
-
-| Section | Why |
-|---------|-----|
-| The contract's version line (`openapi:` or the `API_CONTRACT` equivalent) | Structural — never change without an explicit user request |
-| `tags` list | Must match the components in `context.md` — run `/sdd-design` if they change |
-| `operationId` of an existing operation | It is the identity key `/sdd-sync` reconciles by: changing it turns a modification into a duplicate |
+Read it there rather than here. A second copy of that list is a second answer to the same
+question, and the copy is the one that goes stale.
 
 ---
 
 ## Flow artifact (`docs/<flow-artifact>`) — Mutability Rules
 
-### Mutable sections
+With `DOC_UNIT = use-case`, the rules live with the artifact, in
+`~/.agents/contracts/artifacts/flow-md/CONTRACT.md` under `## Mutability`: the sequence
+diagram and the surrounding prose may change, and the front matter's `use_case` is
+**read-only** — it is the identity the sync stage reconciles by, exactly like
+`operationId`.
 
-| Section | What can change | Examples |
-|---------|----------------|---------|
-| The sequence diagram | Adjusting the flow if it was simplified or changed | Add a step, rename a participant, add a new hop |
-| Surrounding prose (`use-case` only) | Clarifying the flow's description | Wording only |
-
-With `DOC_UNIT = story`, the whole file is one diagram — there's nothing else
-to subdivide. With `use-case`, the frontmatter's `use_case` is **read-only**: it is the
-identity key `/sdd-sync` reconciles by, exactly like `operationId`.
+With `DOC_UNIT = story` the artifact is `docs/diagram.md`: the whole file is one diagram,
+there is nothing to subdivide, and the same identity rule applies to every participant it
+names.
 
 ---
 
 ## docs/data-model.md — Mutability Rules
 
-### Mutable sections
+The rules live with the artifact, in
+`~/.agents/contracts/artifacts/data-model-md/CONTRACT.md` under `## Mutability`: the
+entity's fields and the migration's columns move together, and the `## EntityName` headers
+are structural — a change in the set of tables is a design run.
 
-| Section | What can change | Examples |
-|---------|----------------|---------|
-| Entity (per the profile's `ORM`) — fields | Adding/removing/renaming entity fields | Add a `serviceTypeId` column mapping |
-| Migration (per `MIGRATIONS`) — columns | Keeping in sync with entity changes | Add a column to the table creation |
-
-### Read-only sections (do NOT modify)
-
-| Section | Why |
-|---------|-----|
-| `# Data model: spec-<number>` header | Identifies the artifact |
-| Entity/table headers (`## EntityName`) | Structural — run `/sdd-design` if the set of tables changes |
-
-This file only exists if the item has a new or changed table — if it doesn't exist,
-there is nothing to refine here; redirect to `/sdd-design`.
+This file only exists if the story has a new or changed table. If it doesn't exist, there
+is nothing to refine here; redirect to `/sdd-design`.
 
 ---
 
@@ -255,7 +221,10 @@ If the change adds or removes a module, an app, an integration or an actor:
 
 ## Change classification: minor vs structural
 
-Use this classification to determine the handoff message.
+Use this classification to determine the handoff message. Each artifact's own contract is
+authoritative about what may change *inside* it and what that costs; this section is the
+cross-artifact view the message is built from — it answers "which stages to re-run", not
+"what is writable".
 
 ### spec.md — Minor change (no downstream action)
 - Wording correction in the framing block

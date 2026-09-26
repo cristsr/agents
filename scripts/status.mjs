@@ -15,7 +15,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadProfile, listStories, storyIdMatcher, workdirBase } from './lib/profile.mjs';
 import { rel as toRel } from './lib/paths.mjs';
-import { readStory, acceptanceCriteria, clarificationMarkers, tasks, acCoverage, traceability, buildMode } from './lib/story.mjs';
+import { readStory, acceptanceCriteria, clarificationMarkers, tasks, acCoverage, traceability, buildMode, tier, hasHeading } from './lib/story.mjs';
 
 // ── The pipeline graph ──────────────────────────────────────────────────────
 // Order here is dependency order; ties break by declaration order, so the first
@@ -30,18 +30,39 @@ const PIPELINE = [
 ];
 
 /**
- * The graph as the story's carril draws it. In `build_mode: evidence` there is no
- * API contract and no sequence diagram for /sdd-design to produce, so the stage is
- * skipped rather than pending — otherwise the next step would read "/sdd-design" in a
- * carril where /sdd-design never runs — and /sdd-plan hangs off context.md instead.
+ * The graph as the story's two axes draw it. A stage that never runs is marked
+ * `skipped` rather than `pending` — otherwise the next step would read "/sdd-design"
+ * in a flow where /sdd-design has nothing to produce.
+ *
+ * `build_mode: evidence` removes the design stage whatever the tier: that carril has
+ * no API contract and no sequence diagram to make. The tier removes more — `standard`
+ * also drops the design, and `fast` drops clarification and the plan as well, which is
+ * why its build hangs off spec.md and not off a plan.
  */
-function pipelineFor(mode) {
-  if (mode !== 'evidence') return PIPELINE;
-  return PIPELINE.map((node) => {
-    if (node.id === 'design') return { ...node, skipped: true };
-    if (node.id === 'plan') return { ...node, requires: ['context'] };
-    return node;
-  });
+function pipelineFor(mode, storyTier) {
+  const nodes = PIPELINE.map((node) => ({ ...node }));
+  const set = (id, patch) => Object.assign(nodes.find((n) => n.id === id), patch);
+
+  if (storyTier === 'fast') {
+    set('context', { skipped: true });
+    set('design', { skipped: true });
+    set('plan', { skipped: true, requires: [] });
+    set('build', { requires: ['spec'] });
+    return nodes;
+  }
+  if (storyTier === 'standard') {
+    set('design', { skipped: true });
+    set('plan', { requires: ['context'] });
+    return nodes;
+  }
+  // `full` runs everything but the evidence carril's design, which has no API contract
+  // and no sequence diagram to produce; the plan then hangs off context.md instead.
+  if (mode === 'evidence') {
+    set('design', { skipped: true });
+    set('plan', { requires: ['context'] });
+  }
+
+  return nodes;
 }
 
 const argv = process.argv.slice(2);
@@ -77,7 +98,8 @@ function reportAll() {
   console.log(`${reports.length} active ${reports.length === 1 ? 'story' : 'stories'}\n`);
   for (const r of reports) {
     const stage = r.artifacts.filter((a) => a.status === 'done').map((a) => a.id).pop() ?? 'inbox';
-    console.log(`  ${r.storyId.padEnd(16)} ${stage.padEnd(9)} → ${r.next?.command ?? '/sdd-commit'} ${r.detail ?? ''}`.trimEnd());
+    const tag = r.tier === 'full' ? '' : ` (${r.tier})`;
+    console.log(`  ${(r.storyId + tag).padEnd(16)} ${stage.padEnd(9)} → ${r.next?.command ?? '/sdd-commit'} ${r.detail ?? ''}`.trimEnd());
   }
   process.exit(0);
 }
@@ -90,20 +112,27 @@ function buildReport(storyId) {
   const acs = acceptanceCriteria(story.text.spec);
   const taskList = tasks(story.text.plan);
   const doneTasks = taskList.filter((t) => t.done);
-  const coverage = acCoverage(story.text.plan);
   const closed = story.location === 'done';
   const mode = buildMode(story.text.spec);
-  const pipeline = pipelineFor(mode);
+  const storyTier = tier(story.text.spec);
+  const fastTier = storyTier === 'fast';
+  // The tier decides where the story closes: a plan's `## AC Coverage` for full and
+  // standard, spec.md's own for fast — which writes no plan at all.
+  const coverage = acCoverage(fastTier ? story.text.spec : story.text.plan);
+  const pipeline = pipelineFor(mode, storyTier);
 
   // Satisfaction per artifact. `context` is not done while unresolved markers
   // remain: /sdd-clarify's own contract is to leave zero, so a spec still carrying
-  // them means clarification is unfinished, not that design may start.
+  // them means clarification is unfinished, not that design may start. `build` is
+  // closed by the artifact the tier closes in.
   const satisfied = {
     spec: Boolean(story.files.spec),
     context: Boolean(story.files.context) && markers.length === 0,
     design: Boolean(story.files.design),
     plan: Boolean(story.files.plan),
-    build: taskList.length > 0 && doneTasks.length === taskList.length,
+    build: fastTier
+      ? Boolean(coverage?.length) && !coverage.some((r) => r.uncovered)
+      : taskList.length > 0 && doneTasks.length === taskList.length,
     sync: closed,
   };
 
@@ -134,14 +163,31 @@ function buildReport(storyId) {
   const warnings = [];
   if (markers.length) warnings.push(`${markers.length} unresolved [NEEDS CLARIFICATION] marker(s) in spec.md`);
   if (acs.length === 0 && story.files.spec) warnings.push('spec.md has no `### AC-N:` acceptance criteria');
-  if (story.files.plan && !story.files.branch && !closed) warnings.push('no `.branch` marker — /sdd-prepare never ran');
+  if ((story.files.plan || fastTier) && !story.files.branch && !closed) {
+    warnings.push('no `.branch` marker — /sdd-prepare never ran');
+  }
   if (story.files.plan && traceability(story.text.plan) === null) {
     warnings.push('plan.md has no `### AC → Task traceability` table');
+  }
+  if (fastTier) {
+    // The tier writes no plan and no design, so the scope contract and the close both
+    // live in spec.md. What is missing is named here; validate-artifacts.mjs rejects it.
+    if (story.files.spec && !hasHeading(story.text.spec, 'Change Surface')) {
+      warnings.push('tier: fast without a `## Change Surface` section — the build has no declared scope');
+    }
+    if (story.files.plan) warnings.push('plan.md is present in a `tier: fast` story — the close belongs to `## AC Coverage` in spec.md');
+    if (story.files.context) warnings.push('context.md is present in a `tier: fast` story — that tier runs no clarification pass');
+  } else if (storyTier === 'standard' && story.files.design) {
+    warnings.push('design.md is present in a `tier: standard` story — raise the tier, or drop the artifact');
   }
   if (coverage?.some((r) => r.uncovered)) {
     warnings.push(`AC Coverage has ${coverage.filter((r) => r.uncovered).length} AC(s) marked ✗`);
   }
-  if (satisfied.build && !coverage) warnings.push('every task is [X] but plan.md has no `## AC Coverage` section');
+  if (satisfied.build && !coverage) {
+    warnings.push(fastTier
+      ? 'the criterion reads as closed but spec.md has no `## AC Coverage` section'
+      : 'every task is [X] but plan.md has no `## AC Coverage` section');
+  }
   if (regression) {
     warnings.push(`${next.id} is unfinished but later stages are done — re-running that stage would discard built work`);
   }
@@ -151,6 +197,7 @@ function buildReport(storyId) {
     root: profile.root,
     location: story.location,
     buildMode: mode,
+    tier: storyTier,
     dir: rel(story.dir),
     artifacts,
     next: nextNode && !closed
@@ -186,17 +233,25 @@ function output(report) {
     context: '',
     design: report.docs.length ? `+ docs/ (${report.docs.join(', ')})` : '',
     plan: report.counts.tasks.total ? `${report.counts.tasks.total} tasks` : '',
-    build: report.counts.tasks.total ? `${report.counts.tasks.done}/${report.counts.tasks.total} tasks` : '',
+    build: report.tier === 'fast'
+      ? (report.counts.acceptanceCriteria ? `${report.counts.acceptanceCriteria} AC(s) closed` : '')
+      : (report.counts.tasks.total ? `${report.counts.tasks.done}/${report.counts.tasks.total} tasks` : ''),
     sync: report.location === 'done' ? 'archived' : '',
   };
 
   const modeLabel = report.buildMode === 'tdd' ? '' : ` · ${report.buildMode} mode`;
-  console.log(`${report.storyId} · ${report.location}${modeLabel}${report.branch ? ` · ${report.branch}` : ''}\n`);
+  const tierLabel = report.tier === 'full' ? '' : ` · ${report.tier} tier`;
+  console.log(`${report.storyId} · ${report.location}${tierLabel}${modeLabel}${report.branch ? ` · ${report.branch}` : ''}\n`);
+  // A skipped stage is skipped by one of two axes, and naming the wrong one sends the
+  // developer to the profile instead of to spec.md's front matter.
+  const skipNote = (id) => (id === 'design' && report.buildMode === 'evidence'
+    ? 'not required in evidence mode'
+    : `not required in the ${report.tier} tier`);
   for (const a of report.artifacts) {
     const name = a.outputPath ? a.id.padEnd(9) : a.id.padEnd(9);
     const suffix = a.status === 'blocked'
       ? `blocked: needs ${a.missingDeps.join(', ')}`
-      : a.status === 'skipped' ? 'not required in evidence mode' : detail[a.id] ?? '';
+      : a.status === 'skipped' ? skipNote(a.id) : detail[a.id] ?? '';
     console.log(`  ${glyph[a.status]} ${name} ${suffix}`.trimEnd());
   }
   if (report.warnings.length) {

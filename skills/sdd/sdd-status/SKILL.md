@@ -89,20 +89,36 @@ The payload:
 
 | Field | What it holds |
 |---|---|
-| `artifacts[]` | one entry per pipeline stage, **in dependency order**, each with `status` (`done` \| `ready` \| `blocked` \| `skipped`), `requires` and `missingDeps` |
+| `artifacts[]` | one entry per pipeline stage, **in dependency order**, each with `status` (`done` \| `ready` \| `blocked` \| `skipped`), `requires` and `missingDeps`. `skipped` is a stage an axis *removed* — never one still to write (Step 2) |
 | `buildMode` | the story's carril (`tdd` \| `evidence`), from `spec.md`'s front matter |
+| `tier` | the story's tier (`fast` \| `standard` \| `full`), from the same front matter. `full` whenever the field is absent, because the default is the absence of the field |
 | `next` | the first artifact that is neither `done` nor `skipped`, and the exact command for it |
 | `next.regression` | `true` when that pending stage sits *behind* finished ones |
-| `counts` | ACs, `tasks: {done, total}`, pending `[NEEDS CLARIFICATION]` markers |
+| `counts` | ACs, `tasks: {done, total}`, pending `[NEEDS CLARIFICATION]` markers. `tasks` stays `0/0` in `fast`, which writes no plan — that is the tier, not a missing artifact |
 | `docs`, `branch` | the contents of `docs/` and the `.branch` marker |
 | `warnings[]` | already-worded findings — render them, don't re-derive them |
+
+The two axes are reported side by side and answer different questions: `buildMode` says
+how an AC is closed, `tier` says which stages exist at all. The header carries
+`· <tier> tier` only when the tier is not `full` — absent means `full`, so the default
+story gets no label — and `--all` tags each row with `(standard)` or `(fast)` for the
+same reason. Relay that label when it is there: it explains every stage the report is
+missing before the user counts them as gaps.
 
 **The first `ready` entry is the artifact to write next.** Don't recompute the order,
 don't second-guess `next.command`: this skill renders the answer, it doesn't derive it.
 
-A `skipped` stage is not a gap. In `build_mode: evidence` the `design` stage is
-skipped by construction — that carril has no contract or diagram to produce — so
-report it as "not required in this carril" and never suggest `/sdd-design` for it.
+**A `skipped` stage is not a gap, and it is never the next step.** One of the two axes
+removed it: the tier (`design` in `standard`; `context`, `design` and `plan` in `fast`)
+or the `build_mode` (`design` in the `evidence` carril, which has no contract or diagram
+to produce). Render the removal in the script's own words — *"not required in the
+standard tier"*, *"not required in the fast tier"*, *"not required in evidence mode"* —
+and never suggest that stage's command. The script picks the wording itself: the
+`evidence` carril is named wherever it removes `design`, the tier otherwise.
+
+Because `next` is the first artifact that is neither `done` nor `skipped`, a `fast`
+story never reads as a broken `full` one: with `spec.md` finished the report points at
+`/sdd-build`, not at the clarification pass or the plan that tier never runs.
 
 > **Legacy items.** Those closed before the rename use `hu.md` and an old ID prefix
 > (`STORY_ID_LEGACY_PREFIXES` in the profile). The script accepts both — they're read
@@ -111,21 +127,35 @@ report it as "not required in this carril" and never suggest `/sdd-design` for i
 **Degrades** — exit code `2` means the script couldn't run (unknown id, no workspace):
 report its message. If node is unavailable, fall back to checking the files by hand
 (`[ -f work/active/<id>/spec.md ]`, … , `rg -c '\[X\]' plan.md`) and say the report is
-the manual fallback.
+the manual fallback. Read the front matter first: a `fast` story has no `plan.md` to
+count, so its close is `## AC Coverage` in `spec.md` — never report that story as
+incomplete for the plan it does not have.
 
 ## Step 2: Read the answer
 
-The stages the script reports, and what each one means:
+The stages the script reports, and what each one means. The third column names the
+command *and the tiers where that stage exists at all* — a stage outside the story's
+tier is never `ready`, so it never carries a command in the report:
 
 | Stage `ready` | Meaning | Command |
 |---|---|---|
-| `spec` | nothing written yet | `/spec <id>` |
-| `context` | spec.md exists (or still carries markers) | `/sdd-clarify` |
-| `design` | context.md is clean | `/sdd-design` |
-| `plan` | design.md (+ docs/) approved | `/sdd-plan` |
-| `build` | plan.md written, tasks pending | `/sdd-build` (resumes at the first unchecked task) |
-| `sync` | every task `[X]` | `/sdd-sync` |
-| — (all done) | folder under `WORKDIR_DONE` | `/sdd-commit` |
+| `spec` | nothing written yet | `/sdd-spec <id>` (every tier) |
+| `context` | spec.md exists (or still carries markers) | `/sdd-clarify` (`full`, `standard` — `fast` runs no clarification pass) |
+| `design` | context.md is clean | `/sdd-design` (`full` only, and not in the `evidence` carril) |
+| `plan` | the stage before it is approved — design.md (+ docs/), or context.md wherever there is no design | `/sdd-plan` (`full`, `standard`; it reads `context.md` whenever it has no design to read) |
+| `build` | work is left to execute (tasks pending; in `fast`, `spec.md` finished with its criterion not yet closed) | `/sdd-build` (resumes at the first unchecked task; in `fast` it reads `spec.md` instead and writes the close) |
+| `sync` | the build is closed (every task `[X]`; in `fast`, `## AC Coverage` in `spec.md` with no `✗`) | `/sdd-sync` (every tier) |
+| — (all done) | folder under `WORKDIR_DONE` | `/sdd-commit` (every tier) |
+
+The sequence each tier actually runs, so the report is read against the right one:
+
+- `full` — `/sdd-spec` → `/sdd-prepare` → `/sdd-clarify` → `/sdd-design` → `/sdd-plan`
+  → `/sdd-build` → `/sdd-sync` → `/sdd-commit`; the `evidence` carril drops
+  `/sdd-design` and hangs the plan off `context.md` instead.
+- `standard` — `/sdd-spec` → `/sdd-prepare` → `/sdd-clarify` → `/sdd-plan` →
+  `/sdd-build` → `/sdd-sync` → `/sdd-commit`: there is no `/sdd-design` in it.
+- `fast` — `/sdd-spec` → `/sdd-prepare` → `/sdd-build` → `/sdd-sync` → `/sdd-commit`:
+  no `/sdd-clarify`, no `/sdd-design` and no `/sdd-plan`.
 
 **`/sdd-prepare` is missing from that table on purpose — it is orthogonal to the stages,
 and the report has to say so anyway.** It doesn't produce an artifact the script reads
@@ -140,10 +170,18 @@ Relaying only the stage command sends the user to a stop that `/sdd-status` coul
 coming: the script already reports `branch`, and warns explicitly once `plan.md`
 exists without it.
 
-Two cases deserve a sentence of their own in the report rather than a bare command:
+In `fast` there is no `/sdd-plan` for the marker to gate, so name `/sdd-prepare`
+alongside the build instead: that skill is the only stage between the specification and
+the build, and what reads `.branch` there is the branch gate of `/sdd-build`.
+
+Three cases deserve a sentence of their own in the report rather than a bare command:
 
 - **Pending markers.** `counts.clarificationMarkers > 0` holds `context` open even
-  when later artifacts exist — `/sdd-design` won't proceed until they're resolved.
+  when later artifacts exist — `/sdd-design` won't proceed until they're resolved, and
+  in a `standard` story (which has no design) the stage it holds back is `/sdd-plan`.
+- **A reduced tier.** A `tier` other than `full` is why stages are missing: `standard`
+  has no design, `fast` has no context, no design and no plan. State the tier before
+  listing what the story lacks, so its shape is not read as unfinished work.
 - **Regression.** `next.regression` means a finished stage sits on top of an
   unfinished one. Re-running that stage would discard built work, so the script
   points at `/sdd-hotfix` instead. Say why, don't just relay the command.
@@ -171,7 +209,7 @@ resolution.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| `node` is not on PATH | The script can't run | Check the artifacts by hand (`[ -f ... ]`, `rg -c '\[X\]' plan.md`) and say the report was manual — see `Degrades` |
+| `node` is not on PATH | The script can't run | Check the artifacts by hand (`[ -f ... ]`, `rg -c '\[X\]' plan.md` — or `## AC Coverage` in `spec.md` when the story is `fast` and has no plan) and say the report was manual — see `Degrades` |
 | No story carries that id | Typo, or the id uses a legacy prefix | The script reads `STORY_ID_LEGACY_PREFIXES` too. List the active stories and ask which one — never create the folder |
 
 ---

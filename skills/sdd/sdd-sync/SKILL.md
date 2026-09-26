@@ -9,7 +9,7 @@ description: >
   touch git — that's /sdd-commit's job.
   Use when the user says "/sdd-sync spec-XXXX", "sync the documentation", "close
   the story", "finalize the story", "cierra la historia", or after /sdd-build
-  completes every plan task and the user approves the changes.
+  closes the story and the user approves the changes.
   Do NOT use to execute plan tasks (use /sdd-build), to fix post-build defects
   (use /sdd-hotfix), to commit or draft the PR (use /sdd-commit, right after /sdd-sync),
   or to bootstrap the architecture docs from scratch (use /sdd-docs directly).
@@ -29,11 +29,17 @@ anymore — `/sdd-design` already determined and documented it; sync only promot
 That's the whole scope — the git side (grouping and executing commits,
 drafting the PR) is `/sdd-commit`'s job, meant to run right after this one.
 
+The story's **tier** (spec.md front matter, absent → `full`) decides how much of that
+there is to do. `full` hands sync documentation to promote; `standard` and `fast` omit
+the design stage, so there is no delta, no decisions block and no architecture verdict —
+the close-out is the `## AC Coverage` gate and the archive, and it runs in every tier.
+Whatever the tier, sync closes the story and nothing else.
+
 **Announce at start:** "Syncing documentation for spec-<number>."
 
 **Output:**
 
-- The design delta reconciled into the unit's living docs (`DOC_UNIT = use-case`): canonical OpenAPI merged (classified by `CONTRACT_DIFF`) and `flows/*.md` replaced under `<unit>/flows/`, with their inline Mermaid diagrams validated by `DIAGRAM_CHECK`. (Under `DOC_UNIT = story`: artifacts copied as is.)
+- The design delta reconciled into the unit's living docs (`DOC_UNIT = use-case`): canonical OpenAPI merged (classified by `CONTRACT_DIFF`) and `flows/*.md` replaced under `<unit>/flows/`, with their inline Mermaid diagrams validated by `DIAGRAM_CHECK`. (Under `DOC_UNIT = story`: artifacts copied as is.) **Nothing to reconcile in `standard` or `fast`.**
 - `docs/decisions.md` (repo root) with a new entry if `design.md` had a "Design Decisions" section (or unchanged, if it didn't apply).
 - `docs/architecture/` updated by `/sdd-docs` if the story touched global architecture (or unchanged, if it didn't apply).
 - The `work/active/spec-<number>/` folder moved to `work/done/spec-<number>/`.
@@ -61,35 +67,47 @@ What this skill needs, what it guarantees, and what it may not do. **Check every
 `Requires` row before any other work**, in this order — a failed precondition
 stops the close-out at the start.
 
+Two of the rows below are **tier-conditional**, because a `tier: fast` story has no
+`plan.md` (spec.md front matter; absent → `full`). Where a plan exists — `full` and
+`standard` alike — the two claims split cleanly: the `[X]` markers vouch for the tasks and
+`plan.md`'s `## AC Coverage` for the criteria. Where it doesn't, `fast`, there are no tasks
+to vouch for anything and only the second claim survives: `spec.md`'s `## AC Coverage` — one
+line per AC, no `✗`, the check named in backticks — and that is the gate.
+
 **Requires**
 
 | Condition | If it fails |
 |---|---|
 | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
 | `work/active/spec-<number>/` exists | Check `work/done/spec-<number>/` — if it's already there the story was already synced: report it and stop |
-| `node ~/.agents/scripts/validate-artifacts.mjs spec-<number>` exits `0` | Stop and report the issues it lists, verbatim — each one names the artifact and the broken contract. This is the mechanical form of the two rows below; don't re-derive by eye what it already checked. If `node` is unavailable (exit `2`), check both rows by hand and say the gate ran manually |
-| `plan.md` exists and **all** its tasks are marked `[X]` | Stop: "The plan still has incomplete tasks. Run `/build spec-<number>` first." |
-| `plan.md` has an `## AC Coverage` section with **zero** lines marked `✗` | Stop: "AC-<N> is not covered (`<reason from the line>`). The story isn't ready to close." (in `build_mode: evidence` the line points at the command that proves the AC rather than at a test — the gate is the same) If the section is missing entirely, the plan predates this convention — ask the user to confirm AC coverage; don't infer it from the `[X]` markers |
-| `design.md` exists | In `build_mode: evidence` (spec.md front matter) there is no design to promote: skip Steps 3 and 4 silently and go on to the archive — that carril never produced a contract, a flow or a `## Design Decisions` section. In `tdd`, ask the user whether to skip doc promotion; do not invent module docs |
+| `node ~/.agents/scripts/validate-artifacts.mjs spec-<number>` exits `0` | Stop and report the issues it lists, verbatim — each one names the artifact and the broken contract. This is the mechanical form of the two rows below — the build's own gate and the AC Coverage one; don't re-derive by eye what it already checked. If `node` is unavailable (exit `2`), check both rows by hand and say the gate ran manually |
+| The build is finished | `plan.md` exists and **all** its tasks are marked `[X]` — in `full` and `standard`, the tiers that write a plan. In `fast` there is no plan, so there are no tasks to check: the claim moves to that tier's `## AC Coverage` in `spec.md`, and no `[X]` marker vouches for it | Stop: "The plan still has incomplete tasks. Run `/build spec-<number>` first." |
+| Every acceptance criterion was met | `## AC Coverage` exists with **zero** lines marked `✗` — in `plan.md` for `full` and `standard`, in `spec.md` for `fast`, where each line also names the check that proves the criterion, in backticks. If the section is missing entirely: in `full` and `standard` the plan predates this convention — ask the user to confirm AC coverage; in `fast` the close never happened, so the build is unfinished | Stop: "AC-<N> is not covered (`<reason from the line>`). The story isn't ready to close." (in `build_mode: evidence` the line points at the command that proves the AC rather than at a test — the gate is the same). Never infer coverage from the `[X]` markers, and in `fast` never infer it from a green suite: with no plan there is no task to vouch for the criterion |
+| `design.md` exists | Two cases have no design to promote, and in both Steps 3 and 4 are **skipped silently**, going on to the archive: `build_mode: evidence` (spec.md front matter), whose carril never produced a contract, a flow or a `## Design Decisions` section, and the `standard` and `fast` tiers, which omit the design stage whatever the carril. Only in `full` + `tdd` is there one to promote: ask the user whether to skip doc promotion; do not invent module docs |
 | `git branch --show-current` ≠ `BASE_BRANCH` | Stop and ask the user to switch to the working branch |
 
 The `[X]` markers say the *tasks* were executed; `## AC Coverage` says the
 *acceptance criteria* were met. Those are different claims, and a story can satisfy
-the first without the second — which is exactly what this gate catches.
+the first without the second — which is exactly what this gate catches. Which artifact
+carries each claim depends on the tier: both live in the workspace, `plan.md` and
+`spec.md` respectively, and `fast` keeps only `spec.md` — where the section has to name
+the check, precisely because there is no task whose verification could vouch for it.
 
 **Produces**
 
-- the design delta reconciled into the unit's living docs (Step 3)
-- a new entry at the top of `docs/decisions.md`, if `design.md` had one (Step 4)
+- the design delta reconciled into the unit's living docs (Step 3) — in `full` only, the
+  one tier that produces a design; `standard` and `fast` have no delta to promote
+- a new entry at the top of `docs/decisions.md`, if `design.md` had one (Step 4) — no
+  design, no decisions block to stack
 - `work/done/spec-<number>/` (Step 5) — the whole workspace folder moved intact, so
-  `spec.md` and the `plan.md` that closed with `## AC Coverage` travel with it.
-  `/sdd-commit` reads both from there
+  `spec.md` travels with it, and with it the `plan.md` that closed in `## AC Coverage`
+  when the tier wrote one. `/sdd-commit` reads both from there
 - `docs/architecture/` refreshed **through `/sdd-docs`**, never written here (Step 6)
 
 **Writes** — nothing outside this list
 
 - `<unit>/docs/` — the living docs of the units named in `design.md`: canonical
-  `api.yaml`, `flows/*.md`, unit README
+  `api.yaml`, `flows/*.md`, unit README (no `design.md`, no destinations)
 - `docs/decisions.md` at the repo root
 - `work/active/spec-<number>/` → `work/done/spec-<number>/` (filesystem move)
 
@@ -133,6 +151,12 @@ duplicate-flow clash (Step 3), or a failed CI gate (Step 2). Ask; never guess.
 
 ## Step 1: Read the story artifacts
 
+**Skip the two artifact reads below when the tier produced neither** — a `standard` or
+`fast` story has no `design.md` and no `docs/`. Their absence is the tier working as
+declared, not a missing file, and nothing downstream is owed: Steps 3, 4 and 6 already
+skip for those tiers. Everything else in the workspace (`spec.md`, and the `plan.md` when
+one exists) is read as usual.
+
 Read from `work/active/spec-<number>/`:
 
 - `design.md` — affected apps and modules → defines each artifact's destination.
@@ -159,6 +183,11 @@ Read from `work/active/spec-<number>/`:
    a spec gap.
 
 ## Step 3: Reconcile the design delta into the living module docs
+
+**Whole step applies to `full` only.** A `standard` or `fast` story produced no
+`design.md` and no `docs/`, so it has no delta, no destination and nothing to reconcile —
+skip Steps 3, 4 and 6 and go on to the archive. (The `Requires` row above already covers
+the `evidence` carril, which has no design artifacts either.)
 
 Two profile keys decide this step, one per artifact class. **They are resolved
 independently** — read both rows of the table below and execute what each one says.
@@ -203,15 +232,14 @@ of the `command`'s class.
 For each affected unit (identified in `design.md`; if ambiguous → ask, don't guess):
 
 1. **Canonical OpenAPI** (convention under `DOCS_MODULE` — `<DOCS_MODULE>/<module>/api.yaml`):
-   - Keep a copy of the previous canonical file (for the diff).
-   - Merge `docs/api.delta.yaml`: add/replace each `path` and each `components.schemas`
-     from the delta; keep everything the delta doesn't touch. Don't change the module's
-     canonical `info.title`.
-   - Call the `CONTRACT_DIFF.run` port with the previous canonical file as `<old>` and
-     the new one as `<new>`. If the port is unbound → manual diff comparison.
-     Record the verdict in the PR body: **non-breaking** (in-place evolution) or
-     **breaking** (→ flag that it warrants a `/vN` path version; don't version
-     automatically).
+   the merge is this artifact's promotion rule, stated in
+   `~/.agents/contracts/artifacts/api-contract/CONTRACT.md` under `## Guarantees`. Follow
+   it: keep a copy of the previous canonical file, merge the delta into the canonical one
+   without touching what the delta doesn't carry and without changing its `info.title`,
+   then classify the change through `CONTRACT_DIFF.run` (`<old>` = previous canonical,
+   `<new>` = new canonical). Record the verdict in the PR body: **non-breaking** (in-place
+   evolution) or **breaking** (→ flag that it warrants a `/vN` path version; don't version
+   automatically). If the port is unbound → compare manually.
 
 2. **Flows** (`DOCS_UNIT_FLOWS` = `<unit>/flows/<slug>.md`), for each
    `docs/flows/<slug>.md` in the delta:
@@ -220,9 +248,10 @@ For each affected unit (identified in `design.md`; if ambiguous → ask, don't g
      setting `last_modified_by` = this item. Git keeps the previous version; never
      create `<slug>-v2.md`.
    - `status: deprecated`/`removed` → mark it in the frontmatter, don't delete the file.
-   - The frontmatter's keys are whatever `<STACK_REFS>/references/flow-template.md`
-     declares — this skill promotes the document, it does not police its shape. A key
-     the template doesn't define is the template's problem, or the diagram gate's.
+   - The frontmatter's keys are whatever the `flow-md` contract's floor declares —
+     `<STACK_REFS>/references/flow-template.md` when a stack pack overrides it. This skill
+     promotes the document, it does not police its shape. A key the floor doesn't define
+     is the floor's problem, or the diagram gate's.
 
 3. **Unit README** (`DOCS_UNIT_README`): update the use case table (add the new flow's
    row) and, **if the story added or removed components**, the ` ```mermaid ` block of
@@ -282,7 +311,8 @@ If `design.md` has a `## Design Decisions` section:
    entry that references the old one.
 
 If `design.md` has no such section, skip silently — not every story has a
-significant decision to record.
+significant decision to record. A tier that produced no `design.md` at all has nothing to
+read here: it already skipped under the `Requires` gate.
 
 ## Step 5: Archive the story workspace
 
@@ -296,12 +326,16 @@ mv work/active/spec-<number> work/done/spec-<number>
 `WORKDIR_ACTIVE`'s parent is tracked by git, so the move shows up in `git status` — `/sdd-commit`
 picks it up from there as part of its own commit grouping.
 
+Nothing is left behind to compensate for a reduced tier: a `fast` story's close travels
+inside `spec.md`, which moves with the folder like every other artifact, so the archived
+workspace is self-contained whatever the tier wrote.
+
 ## Step 6: Promote global architecture changes (if design.md already flagged one)
 
 `/sdd-design` already determined, at design time, whether the story touches
 global architecture — it's documented explicitly in `design.md`'s
 **`## Global Architecture Impact`** section (always present, never
-conditional — see PHASE 4/`../sdd-design/references/design-template.md` of `/sdd-design`).
+conditional — the `design-md` contract states why).
 Sync does **not** re-derive this from a git diff — it just reads the
 answer and promotes it.
 
@@ -323,7 +357,9 @@ the user first.
 If `design.md` predates this section (an older story, written before this
 convention existed) and doesn't have it, fall back to asking the user
 directly whether the story touched global architecture — do not guess from
-the diff.
+the diff. A tier that produced no `design.md` at all is not that case: there is no verdict
+to read and nothing to promote, so skip the step and report "no global architecture
+changes" — asking would be inventing a question the tier already answered.
 
 ## Step 7: Suggest /sdd-commit and close out
 
@@ -334,7 +370,7 @@ Report, in this order:
    to record".
 3. Folder archived under `work/done/spec-<number>/`.
 4. `docs/architecture/` updated (what changed) — or "no global architecture
-   changes".
+   changes", including the tiers that produced no design to read.
 5. Explicitly suggest: "Run `/commit spec-<number>` to group and execute the commits
    and leave the PR drafted."
 
@@ -395,8 +431,8 @@ resolution.
 
 | Issue | Cause | Resolution |
 |---|---|---|
-| `plan.md` has tasks without `[X]` | `/sdd-build` didn't finish | Stop — suggest `/build spec-<number>` |
-| `plan.md` has an AC marked `✗` in `## AC Coverage` | Tasks executed, but an acceptance criterion has no test behind it | Stop — the story isn't ready to close; fix the gap, or `/hotfix spec-<number>` if it traces back to an ambiguous AC |
+| Incomplete build | `/sdd-build` didn't finish: `plan.md` has tasks without `[X]` in `full` and `standard`, or — in `fast`, which has no tasks to read — `spec.md`'s `## AC Coverage` is missing | Stop — suggest `/build spec-<number>` |
+| An AC marked `✗` in `## AC Coverage` | Tasks executed, but an acceptance criterion has no test behind it (in `fast`: the build ran, and the criterion is written down as unmet) | Stop — the story isn't ready to close; fix the gap, or `/hotfix spec-<number>` if it traces back to an ambiguous AC |
 | Folder is already in `work/done/` | sync already ran for this story | Report it and stop |
 | Current branch is the base branch | The user forgot to switch branches | Stop immediately, ask them to switch to the working branch |
 | lint/test/build fails in Step 2 | Regression at close time | Stop — fix directly, or `/sdd-hotfix` if it traces back to a spec gap |

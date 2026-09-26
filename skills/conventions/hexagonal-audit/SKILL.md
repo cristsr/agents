@@ -5,7 +5,8 @@ description: >
   layer topology, ports & bindings, error handling) and produces a ranked
   findings report — then bridges into the SDD pipeline by generating draft
   spec.md stories (work/active/{story-id}/spec.md) whose ACs derive from the HIGH
-  and MEDIUM findings, ready for /sdd-clarify → /sdd-design → /sdd-plan → /sdd-build. Read-only:
+  and MEDIUM findings. Because these drafts carry no execution tier, they run the
+  full flow from /sdd-clarify onward. Read-only:
   never edits code unless the user asks for the fixes to be applied. Use when
   the user says "audit the project", "review the architecture", "audit it",
   "find architecture improvements", "does this respect hexagonal", or wants to

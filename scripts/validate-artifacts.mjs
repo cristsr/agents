@@ -18,10 +18,12 @@
 
 import { loadProfile, listStories, storyIdMatcher, key } from './lib/profile.mjs';
 import { rel as toRel, machinePaths } from './lib/paths.mjs';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   readStory, frontMatter, acceptanceCriteria, clarificationMarkers,
   tasks, taskFiles, traceability, acCoverage, hasHeading, section,
-  buildMode, BUILD_MODES, pipelineFootprint,
+  buildMode, BUILD_MODES, tier, TIERS, changeSurface, pipelineFootprint,
 } from './lib/story.mjs';
 
 const argv = process.argv.slice(2);
@@ -74,6 +76,12 @@ function validate(storyId) {
   const mode = buildMode(story.text.spec);
   const evidence = mode === 'evidence';
   if (evidence) notes.push('evidence mode');
+  // The tier is the other axis: `build_mode` says how a criterion is closed, the tier
+  // says which stages exist at all. Absent means `full`, exactly as absent means `tdd`.
+  const storyTier = tier(story.text.spec);
+  const fastTier = storyTier === 'fast';
+  const reducedTier = storyTier !== 'full';
+  if (reducedTier) notes.push(`${storyTier} tier`);
 
   // ── spec.md ───────────────────────────────────────────────────────────────
   const acs = acceptanceCriteria(story.text.spec);
@@ -106,6 +114,35 @@ function validate(storyId) {
           issue('spec.md', 'build_mode "evidence" without a `## Build Mode Rationale` section — the mode is only valid when why-not-TDD and what-verifies-it are written down');
         } else if (!rationale) {
           issue('spec.md', '`## Build Mode Rationale` is empty — state why TDD does not apply and which check closes the ACs instead');
+        }
+      }
+
+      // ── tier: the axis that decides which stages exist ─────────────────────
+      // A story with no `tier` field is `full`, which is why only a story that
+      // declares one has anything to prove here — the same shape as the build_mode
+      // guardrails above, one level up. A `tier: full` written explicitly is an
+      // escalation recorded in place, so it keeps the rationale and nothing else.
+      if (fm.tier && !TIERS.includes(storyTier)) {
+        issue('spec.md', `front-matter tier "${fm.tier}" is not one of: ${TIERS.join(', ')} (absent means full)`);
+      } else if (fm.tier) {
+        const tierRationale = section(story.text.spec, 'Tier Rationale');
+        if (!hasHeading(story.text.spec, 'Tier Rationale')) {
+          issue('spec.md', `tier "${storyTier}" without a \`## Tier Rationale\` section — the tier is only valid when why the full flow does not apply, and what covers the stages it omits, are written down`);
+        } else if (!tierRationale) {
+          issue('spec.md', '`## Tier Rationale` is empty — state the signals that matched and what closes the criterion instead');
+        }
+        if (reducedTier) {
+          const tierKey = fastTier ? 'FAST_TIER_TYPES' : 'STANDARD_TIER_TYPES';
+          // The documented defaults, spelled out rather than derived from ITEM_TYPES:
+          // a fallback that followed the item types would widen the tier's allowlist
+          // the moment a project adds a type, and widening it is meant to be a
+          // deliberate edit of the profile.
+          const eligible = key(profile, tierKey, fastTier
+            ? ['bug', 'debt', 'chore']
+            : ['feat', 'bug', 'debt', 'incident', 'chore']);
+          if (Array.isArray(eligible) && fm.type && !eligible.includes(fm.type)) {
+            issue('spec.md', `tier "${storyTier}" is not open to type "${fm.type}" — eligible types are (${eligible.join(', ')}). Widen ${tierKey} in .agents/profile.yaml if this project's items warrant it; never force the field`);
+          }
         }
       }
     }
@@ -148,10 +185,47 @@ function validate(storyId) {
     if (clarified && !hasHeading(story.text.spec, 'Ambiguity Resolution')) {
       issue('spec.md', 'context.md exists but spec.md has no `## Ambiguity Resolution` — /sdd-clarify writes the decision log before the ACs');
     }
+    if (fastTier && story.files.context) {
+      warn('context.md', 'present in a `tier: fast` story — that tier runs no clarification pass');
+    }
+
+    // ── tier: fast, the guardrails a script can enforce ──────────────────────
+    // The tier omits the clarification pass, the design and the plan, so what those
+    // stages would have established has to be in the spec before any code exists: one
+    // criterion, no open question, a declared surface, and the check that closes it.
+    if (fastTier) {
+      if (acs.length !== 1) {
+        issue('spec.md', `tier "fast" requires exactly one acceptance criterion — this spec carries ${acs.length}. The tier omits the clarification pass, the design and the plan; run the story at "standard" when it has more than one criterion`);
+      }
+      if (markers.length) {
+        issue('spec.md', `tier "fast" with ${markers.length} unresolved [NEEDS CLARIFICATION] marker(s) — the pass that resolves them is the one this tier omits, so an item whose input is silent about something that changes the implementation cannot run fast`);
+      }
+      const surface = changeSurface(story.text.spec);
+      if (surface === null) {
+        issue('spec.md', 'tier "fast" without a `## Change Surface` section — the tier writes no plan and no design, so the files the change is confined to and the check that closes it are the only scope contract the build has');
+      } else {
+        if (!surface.paths.length && !surface.symbols.length) {
+          issue('spec.md', '`## Change Surface` names no file or symbol — `**Confined to:**` takes at least one backtick-quoted path or symbol');
+        }
+        for (const p of surface.paths) {
+          if (!existsSync(join(profile.root, p))) {
+            warn('spec.md', `\`## Change Surface\` declares "${p}", which does not exist under the project root — a fast-tier change modifies what is already there`);
+          }
+        }
+        if (!surface.command) {
+          issue('spec.md', '`## Change Surface` names no check — `**Check:**` takes the command that closes the criterion, in backticks');
+        }
+      }
+    }
   }
 
   // ── design.md ─────────────────────────────────────────────────────────────
   if (story.files.design) {
+    if (reducedTier) {
+      // Only `full` has a design stage: `standard` and `fast` omit it, and the way
+      // back is `full`, not the tier above the one the story is in.
+      warn('design.md', `present in a \`tier: ${storyTier}\` story — that tier omits the design stage. Raise the story to \`full\`, or drop the artifact`);
+    }
     if (!hasHeading(story.text.design, 'Global Architecture Impact')) {
       issue('design.md', 'missing `## Global Architecture Impact` — always present, never inferred; /sdd-sync reads it to decide whether to invoke /sdd-docs');
     } else {
@@ -161,13 +235,16 @@ function validate(storyId) {
       }
     }
     for (const heading of ['Module Components', 'Quality Gates Validation']) {
-      if (!hasHeading(story.text.design, heading)) warn('design.md', `missing \`## ${heading}\` (design-template.md)`);
+      if (!hasHeading(story.text.design, heading)) warn('design.md', `missing \`## ${heading}\` (the design-md contract)`);
     }
   }
 
   // ── plan.md ───────────────────────────────────────────────────────────────
   const taskList = tasks(story.text.plan);
   const doneTasks = taskList.filter((t) => t.done);
+  if (story.files.plan && fastTier) {
+    warn('plan.md', 'present in a `tier: fast` story — the tier writes no plan, and the close belongs to `## AC Coverage` in spec.md. Raise the tier, or delete the file');
+  }
   if (story.files.plan) {
     const trace = traceability(story.text.plan);
     if (trace === null) {
@@ -245,6 +322,31 @@ function validate(storyId) {
           else warn('plan.md', `${r.id} is marked ✓ with no concrete test reference`);
         }
       }
+    }
+  }
+
+  // ── `## AC Coverage` in spec.md: how a `tier: fast` story closes ───────────
+  // The tier writes no plan, so the section that proves every criterion moves to the
+  // artifact the tier kept. The gate is the same one the plan carries — one line per
+  // AC, no ✗ — and stricter about the reference: with no plan there is no task whose
+  // verification could vouch for the check, so the line has to name it.
+  if (fastTier && story.files.spec) {
+    const specCoverage = acCoverage(story.text.spec);
+    if (specCoverage) {
+      for (const r of specCoverage) {
+        if (r.uncovered) {
+          issue('spec.md', `${r.id} is marked ✗ in \`## AC Coverage\` — a ✗ is an unfinished build, not a footnote`);
+        } else if (!/`[^`]+`/.test(r.text)) {
+          issue('spec.md', `${r.id} is marked ✓ with no check — a fast-tier line names the command that proves it, in backticks`);
+        }
+      }
+      for (const ac of acs) {
+        if (!specCoverage.some((r) => r.id === ac.id.toUpperCase())) {
+          issue('spec.md', `${ac.id} has no line in "## AC Coverage" — one line per AC in spec.md, no more and no fewer`);
+        }
+      }
+    } else if (closed) {
+      issue('spec.md', 'archived without a `## AC Coverage` section — a fast-tier story closes there, and the archive step reads it before moving the workspace');
     }
   }
 

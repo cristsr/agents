@@ -78,6 +78,6 @@ components:
 - **Every new field must come from a decision recorded in `## Design Decisions`** or from a field that already exists in `context.md` — never invent a field not backed by one of the two.
 - **HTTP response descriptions must be specific to the business case**, not generic ("Success", "Error"). Correct example: `"Zone with no active time slots for the requested service type"`.
 - **`required` defines mandatoriness** — any field not listed in `required` is interpreted as optional (`@IsOptional()` on the NestJS DTO `/sdd-plan` will generate).
-- **Use `format` whenever it applies:** `uuid`, `date-time`, `email` — these map directly to NestJS validators (see `plan/references/openapi-to-dto-mapping.md`).
+- **Use `format` whenever it applies:** `uuid`, `date-time`, `email` — these map directly to NestJS validators (see the OpenAPI → DTO mapping of the `api-contract` artifact contract, which this pack overrides).
 - **Use `enum` for closed value sets** instead of `type: string` with a description that enumerates options in free text.
 - **Write every `description` and `summary` in `ARTIFACT_LANGUAGE`** (profile, language block — falls back to `OUTPUT_LANGUAGE`); the contract's prose is part of the artifact. Paths, schema names and `operationId` stay in `IDENTIFIER_LANGUAGE`.

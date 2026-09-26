@@ -21,11 +21,52 @@ origin: <tracker:<key> | audit:<reference> | manual>
      means `tdd`, which is the default for every item. Same rule as the
      `#### Scenario:` blocks: /sdd-spec transcribes what arrived, /sdd-clarify decides. -->
 
+<!-- A fourth field, `tier`, is the other axis and the OPPOSITE rule: /sdd-spec DOES
+     write it, inferred in Step 2b from what arrived, and only ever when the reading is
+     not `full` — the absence of the field is `full`, the whole pipeline, which is what
+     every story predating the axis carries. A reduced tier adds two sections, shown
+     below: `## Tier Rationale` always, and `## Change Surface` for `fast` only, which
+     is also the tier where /sdd-build later appends `## AC Coverage` to this file
+     instead of to a plan. See `tier-inference.md`. -->
+
 
 # <story-id>: <title>
 
 <!-- Framing block — pick the one matching the type. See the section
      "Framing blocks per type" below. Exactly ONE, never two. -->
+
+## Tier Rationale
+
+<!-- ONLY when the front matter carries `tier:`. Required for `fast` and `standard`;
+     two labeled lines, neither may be empty. Drop the section entirely when the tier
+     is `full`. An explicit `tier: full` — written when a story is raised out of a
+     reduced tier — keeps it, because the escalation is part of the record. -->
+
+**Why this tier:** <the signals that matched: how many criteria, what the change is
+confined to, what it does not touch>
+
+**What covers the omitted stages:** <the check that closes the criterion, and the fact
+that the working branch still gates the build>
+
+## Build Mode Rationale
+
+<!-- ONLY in the `evidence` carril, written by /sdd-clarify. See that skill. It sits
+     below `## Tier Rationale` and above `## Change Surface`: the tier decides which
+     stages exist, the carril only how a criterion is closed, and each rationale goes
+     above the section it justifies. -->
+
+## Change Surface
+
+<!-- ONLY for `tier: fast`, and after both rationales. This is what the tier pays
+     instead of a design and a plan:
+     the scope contract /sdd-build enforces, and the check that will close the story.
+     Both lines are mandatory, and validate-artifacts.mjs fails the story without them.
+     `**Confined to:**` takes at least one backtick-quoted path or symbol, and a change
+     that reaches outside it stops the build rather than widening it. -->
+
+**Confined to:** `<path/to/file>` (`<symbol>`)
+
+**Check:** `<the command that proves the criterion>`
 
 ## Acceptance Criteria
 
@@ -44,6 +85,10 @@ origin: <tracker:<key> | audit:<reference> | manual>
      code, behavior on invalid/empty input, undefined business term, implied
      edge case, contradiction). The markers are resolved and removed during
      clarification. No markers if the item is fully specified.
+
+     A marker and `tier: fast` cannot coexist, and neither can more than one AC: the
+     tier omits the pass that resolves the first and the stage that breaks the second
+     down. That pair is `standard`, and the validator refuses it.
 
      /sdd-spec does NOT write scenarios: it transcribes what arrived. The concrete
      cases are added by /sdd-clarify, once the ambiguities are resolved. -->
@@ -171,6 +216,16 @@ intent without forcing an alien mold.
 **`type`:** mandatory. If the input doesn't state it, infer it from the content and
 **confirm it** with the user before writing — the type determines the framing and
 getting it wrong produces an artifact that contradicts itself.
+
+**`tier`:** the one front-matter field this skill *does* write, and the only one it
+writes without asking. Inferred from the input alone (never from the code) and rendered
+by the reading in `tier-inference.md`; written **only when it is not `full`**, because
+the absence of the field *is* `full`. A reduced tier forces two sections — see their
+notes above — and `fast` forces exactly one acceptance criterion. When the reading is
+`full`, leave the field out: declaring the default suggests the axis was contested.
+
+**`## AC Coverage`:** never written here. It is the section that closes a `fast` story
+and the build appends it, in this file, once the criterion's check is green.
 
 **`origin`:** where the item came from. `tracker:<key>` if it came from an export or a
 tracker key, `audit:<reference>` if an audit generated it (e.g. `/hexagonal-audit`),

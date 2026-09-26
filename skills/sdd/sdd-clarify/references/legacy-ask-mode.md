@@ -17,6 +17,10 @@ constraints, integrations, technical debt), one per turn. The code inventory and
 The build-mode question (P2b) is asked here too, under the same rule: `evidence` is
 never assumed, and the eligibility conditions are identical.
 
+The tier (P2c) keeps its own rules in this mode as well, because they are about what
+exists rather than about how much is asked: a `fast` story never reaches this skill at
+all, and a lower tier is only ever written after the developer asks for it.
+
 Useful when the item touches terrain where you don't want anything decided out of your
 sight — typically a new domain or strong contractual implications.
 

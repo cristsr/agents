@@ -4,6 +4,10 @@ What a real run looks like: a run executing a group and closing out.
 Read it when the shape of the output is in doubt; the rules themselves are in
 `SKILL.md`.
 
+**The run below is `full`** — it starts at `[Task 0]` and executes a `[P]` group. A
+`standard` story has no groups, and a `fast` story has neither: it writes no
+`plan.md`, so its close lives in `spec.md`.
+
 ## Example
 
 **Input:** `/build spec-1933`
