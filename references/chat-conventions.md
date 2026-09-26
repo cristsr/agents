@@ -2,7 +2,7 @@
 
 The conversational SDD skills present their work to the user in the **same six
 blocks**. "Conversational" means skills that drive a run and hand off to the next
-one: `sdd-spec`, `sdd-route`, `sdd-prepare`, `sdd-scan`, `sdd-clarify`, `sdd-design`, `sdd-plan`, `sdd-build`, `sdd-sync`,
+one: `sdd-spec`, `sdd-ready`, `sdd-route`, `sdd-prepare`, `sdd-scan`, `sdd-clarify`, `sdd-design`, `sdd-plan`, `sdd-build`, `sdd-sync`,
 `sdd-commit`, `sdd-hotfix`, `sdd-refine`, `sdd-forge`, `sdd-status`, `healthcheck`, `sdd-docs`, `sdd-rules`,
 `sdd-bootstrap`, `profile`, `hexagonal-audit`. Convention skills (`typescript`,
 `error-handling`, `hexagonal-architecture`, `design-principles`) are exempt — they
@@ -58,7 +58,8 @@ Message samples in the skills are written in English as the default — render t
    (`AskUserQuestion` / `question`); free-text asks are quoted:
    > "<question>"
 
-   One question call at a time, except `/sdd-clarify`'s single batch of max 3 and
+   One question call at a time, except `/sdd-clarify`'s single batch of max 3,
+   `/sdd-ready`'s relayed stage questions, and
    `/sdd-forge`'s relayed `/sdd-plan`/`/sdd-build` gates. Recommended options come first,
    labelled " (Recommended)".
 
@@ -119,6 +120,7 @@ fixed, and the tier is a value in an existing line, not a seventh block.
 | sdd-commit | ✓ | ✓ | — | ✓ | ✓ | ✓ → PR (gh pr create) |
 | sdd-hotfix | ✓ | ✓ | — | ✓ | ✓ | ✓ → sdd-build |
 | sdd-refine | ✓ | — | ✓ | ✓ | ✓ | ✓ → next artifact |
+| sdd-ready | ✓ | ✓ (per stage) | ✓ (relayed from the stages) | ✓ | ✓ | ✓ → sdd-design (full+tdd) / sdd-forge |
 | sdd-forge | ✓ | — | — | ✓ | ✓ | ✓ → sdd-commit |
 | sdd-status | ✓ | — | — | ✓ | — | ✓ (suggests next step) |
 | healthcheck | ✓ | — | — | ✓ | — | ✓ (remedy per finding) |

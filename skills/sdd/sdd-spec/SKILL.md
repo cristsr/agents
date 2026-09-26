@@ -354,7 +354,8 @@ After saving `work/active/{story-id}/spec.md`:
    state them even when a count is zero — and if the AC count is zero, the item isn't
    finished: go back to Step 4 rather than handing it off.
 2. Say: "Saved to `work/active/{story-id}/spec.md`. Review it and when you're ready run
-   `/sdd-route {story-id}` — it decides how much of the pipeline the story runs." If the
+   `/sdd-ready {story-id}` — it takes the story up to the design in one command (or
+   `/sdd-route {story-id}` to go stage by stage)." If the
    developer stated a tier or a build mode, repeat it here so `/sdd-route` takes it.
    Markers, if any, are resolved by `/sdd-clarify` later in the flow.
 

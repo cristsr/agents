@@ -70,11 +70,24 @@ ambiguities, `/sdd-route` decides the tier and the build mode. `/sdd-route` runs
 right after the specification, from the input alone, and after clarification, with the
 survey and the decisions in view.
 
+Two orchestrators chain the stages so nobody types them one by one — they implement
+nothing and every stage keeps its own gates:
+
+```
+/sdd-spec  →  /sdd-ready  →  [/sdd-design]  →  /sdd-forge  →  /sdd-commit
+ (review)     route · prepare ·   full+tdd      plan · build ·   (review)
+              scan · clarify ·    only          sync
+              route review
+```
+
+`/sdd-ready` is interactive — it relays the stages' questions. `/sdd-forge` is not.
+
 **How much of that chain a story runs is its execution tier** (see "Execution tiers").
 `full` — the default, and the absence of the field — is the line above. `standard` drops
 `/sdd-design`. `fast` goes `/sdd-spec → /sdd-route → /sdd-prepare → /sdd-build → /sdd-sync`.
 
-**Support skills:** `/sdd-forge` (runs the chain the tier declares, unattended) · `/sdd-hotfix`
+**Support skills:** `/sdd-ready` (spec → ready for design, relaying the stages' questions) ·
+`/sdd-forge` (plan → build → sync, unattended) · `/sdd-hotfix`
 (post-build defect traced to an ambiguous AC) · `/sdd-refine` (targeted artifact
 corrections) · `/sdd-status` (where a story sits) ·
 `/healthcheck` (validate the ecosystem) · `/sdd-rules` (the project's non-negotiables) ·

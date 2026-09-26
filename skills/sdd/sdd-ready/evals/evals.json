@@ -1,0 +1,60 @@
+{
+  "skill": "sdd-ready",
+  "models": ["haiku", "sonnet", "opus"],
+  "baseline": [],
+  "triggers": {
+    "should": [
+      "/sdd-ready spec-0040",
+      "get spec-0040 ready",
+      "run everything before the design for spec-0040",
+      "déjala lista para diseñar",
+      "take spec-0040 up to the design"
+    ],
+    "should_not": [
+      { "query": "new story: list zones by service type", "owner": "sdd-spec" },
+      { "query": "plan, build and sync spec-0040", "owner": "sdd-forge" },
+      { "query": "prepare the branches for spec-0040", "owner": "sdd-prepare" },
+      { "query": "clarify story spec-0040", "owner": "sdd-clarify" },
+      { "query": "what stage is spec-0040 in?", "owner": "sdd-status" }
+    ]
+  },
+  "evals": [
+    {
+      "id": 1,
+      "query": "/sdd-ready spec-0040 on a freshly reviewed standard spec",
+      "files": [],
+      "expected_behavior": [
+        "Runs route, prepare, scan, clarify and the route review in that order",
+        "Relays each stage's questions unchanged and answers none of them",
+        "Ends with one next command: /sdd-design or /sdd-forge by tier and mode"
+      ]
+    },
+    {
+      "id": 2,
+      "query": "/sdd-ready spec-0031 on a fast story",
+      "files": [],
+      "expected_behavior": [
+        "Stops the chain after /sdd-prepare",
+        "Never runs /sdd-scan or /sdd-clarify"
+      ]
+    },
+    {
+      "id": 3,
+      "query": "/sdd-ready spec-0052 where .branch exists and context.md is missing",
+      "files": [],
+      "expected_behavior": [
+        "Resumes at /sdd-scan without re-running route or prepare"
+      ]
+    },
+    {
+      "id": 4,
+      "query": "/sdd-ready spec-0053 where /sdd-clarify stops because spec.md contradicts itself",
+      "files": [],
+      "expected_behavior": [
+        "Stops the chain, reports the stage's message verbatim",
+        "Does not edit spec.md and does not run the route review"
+      ]
+    }
+  ],
+  "runs": []
+}
