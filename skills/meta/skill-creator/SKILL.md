@@ -1,20 +1,19 @@
 ---
 name: skill-creator
 description: >
-  Interactive guide for creating a new skill from scratch, following Anthropic's
-  official guidance for building skills. Interviews the user to define 2–3
-  concrete use cases, picks the right category and workflow pattern, drafts the
-  YAML frontmatter with explicit triggers, lays out the folder structure
-  (SKILL.md + scripts/ + references/ + assets/), writes actionable instructions
-  with error handling, adds a Contract block when the skill hands artifacts to
-  another one, and proposes the trigger test battery before closing.
+  Guides the creation of a new single-responsibility skill following Anthropic's
+  skill authoring best practices. Interviews for 2–3 use cases, checks the
+  boundary so sibling descriptions stay mutually exclusive, writes the evals and
+  a no-skill baseline before any instructions, drafts a third-person frontmatter
+  with explicit triggers, keeps SKILL.md under 500 lines, and adds a Contract
+  block when the skill hands artifacts to another one.
   Use when the user says "/skill-creator", "create a skill", "new skill",
-  "generate a SKILL.md", "I want to automate this flow with a skill", "turn this
-  process into a skill", "build a skill for X", or describes a repeatable
-  workflow they want Claude to follow consistently.
-  Do NOT use to review or score an existing skill (use /skill-evaluator), to
-  edit project artifacts of a user story (use /sdd-refine), or to define
-  project-wide governing principles (use /sdd-rules).
+  "generate a SKILL.md", "turn this process into a skill", "build a skill for X",
+  "build the pieces of this split", or describes a repeatable workflow they want
+  Claude to follow consistently.
+  Do NOT use to review an existing skill or decide whether to split it (use
+  /skill-evaluator), to edit a user story's artifacts (use /sdd-refine), or to
+  define project-wide principles (use /sdd-rules).
 ---
 
 # skill-creator
@@ -22,28 +21,52 @@ description: >
 ## Overview
 
 A **skill** is a folder of instructions that teaches Claude to handle a repeatable
-task or workflow. This skill guides the creation of a new skill following
-Anthropic's official guidance.
+task or workflow. This skill guides the creation of a new one following Anthropic's
+skill authoring best practices.
 
 This skill is **agnostic** — it works for creating skills for any project or
 domain. It assumes nothing about this workspace's structure.
 
 **Announce at start:** "Let's create a new skill. Starting with the use cases."
 
-**Output:** a `<skill-name>/` folder with a `SKILL.md` and, where applicable,
-`references/`, `scripts/` and `assets/`.
+**Output:** a `<skill-name>/` folder with a `SKILL.md`, an `evals/evals.json` and,
+where applicable, `references/`, `scripts/` and `assets/`.
 
-**Core principle:** the **frontmatter matters most**. It's the only thing Claude
-always has loaded, and it's what decides whether the skill activates. A skill with
-brilliant instructions and a vague `description` never triggers.
+**Core principles:**
+
+1. **The context window is shared.** The skill lives next to the system prompt, the
+   conversation, every other skill's metadata and the user's request. It adds only
+   what Claude doesn't already know — conventions, domain rules, team decisions.
+2. **One skill, one responsibility.** If it can't be described in one or two
+   sentences without "and also…", it's two skills.
+3. **Evals before instructions.** Observe where Claude fails without the skill, then
+   write only what fixes those failures.
+4. **The frontmatter matters most.** It's the only thing always loaded, and it's
+   what decides whether the skill activates. Brilliant instructions behind a vague
+   `description` never run.
+
+### Progress checklist
+
+Copy it into the conversation and tick it as you go:
+
+```
+- [ ] PHASE 1 — use cases, single-responsibility test, collision check
+- [ ] PHASE 2 — evals/evals.json + no-skill baseline
+- [ ] PHASE 3 — category, pattern, pipeline or standalone
+- [ ] PHASE 4 — frontmatter
+- [ ] PHASE 5 — folder structure
+- [ ] PHASE 6 — instructions (only what the baseline showed missing)
+- [ ] PHASE 7 — evals re-run on every target model, checklist, handoff
+```
 
 ---
 
-## PHASE 1: Use cases (don't skip)
+## PHASE 1: Use cases and boundary (don't skip)
 
-**Write nothing of the skill until you have 2–3 concrete use cases.** This is this
-skill's gate: without use cases, the `description` comes out vague and the skill
-doesn't trigger.
+**Write nothing of the skill until you have 2–3 concrete use cases.** Without them
+the `description` comes out vague and the skill doesn't trigger.
+
+### Step 1 — Interview
 
 Ask one at a time:
 
@@ -51,9 +74,10 @@ Ask one at a time:
 2. "What exact phrase would they say to ask for it?" (this feeds the triggers)
 3. "What multi-stage steps does it require?"
 4. "Which tools does it need? (built-in, MCP, scripts)"
-5. "What domain knowledge or best practices need to be embedded?"
+5. "What does Claude get wrong today when you ask for this without a skill?"
+   (this seeds the baseline — PHASE 2)
 6. "Which files does it read, which does it write, and does another skill run
-   right before or right after it?" (this feeds the `Contract` — PHASE 2 Step 4)
+   right before or right after it?" (this feeds the `Contract` — PHASE 3 Step 4)
 
 Record each use case in this format:
 
@@ -68,14 +92,74 @@ Steps:
 Result: sprint planned with the tasks created
 ```
 
-> **Pro tip from the guide:** the most effective creators iterate on **one hard
-> task** until Claude solves it well, and only then extract the winning approach
-> into a skill. If the user hasn't managed the task by hand even once, suggest
-> doing that first — it gives much faster signal than designing in the abstract.
+> **Pro tip from the guide:** iterate on **one hard task** until Claude solves it
+> well, and only then extract the winning approach into a skill. If the user hasn't
+> done the task by hand even once, suggest doing that first.
+
+### Step 2 — Single-responsibility test
+
+Write the skill's purpose in **one or two sentences**. It passes if:
+
+- the sentences need no "and also…", "plus…", "it can also…";
+- every use case from Step 1 ends in the same kind of result for the same consumer;
+- there is one reason the skill would change (a convention, a tool, a workflow —
+  not two unrelated ones).
+
+If it fails, stop and propose the split to the user: one skill per responsibility,
+each with its own use cases. Then create them one at a time.
+
+### Step 3 — Collision check against existing skills
+
+Sibling descriptions must be **mutually exclusive**: if two skills could activate for
+the same request, the boundary is drawn wrong. Collect every installed description:
+
+```bash
+for f in $(find -L ~/.claude/skills ~/.agents/skills .claude/skills -maxdepth 2 -name SKILL.md 2>/dev/null); do
+  echo "== $f"; awk '/^---$/{n++; next} n==1' "$f" | sed -n '/^description:/,/^[a-z-]*:/p'
+done
+```
+
+For each trigger phrase from Step 1, ask: "would another skill's description also
+claim this?" If yes, decide with the user who owns it — then the loser gets a
+negative trigger, and so does this one.
+
+**Granularity vs discovery.** Every skill adds a description to the permanent
+context, and every extra skill raises the collision risk. A piece earns its own skill
+only if the user would ask for it on its own — with a trigger no other skill claims.
+A piece with no trigger of its own belongs **inside** an existing skill, as a
+reference or a script.
 
 ---
 
-## PHASE 2: Category and pattern
+## PHASE 2: Evals before instructions
+
+Consult `references/evals-format.md` for the file format and a full example.
+
+### Step 1 — Write `evals/evals.json`
+
+From the use cases, before writing a single instruction:
+
+- **Behavior evals** — at least 3, one per use case plus one edge case. Each has a
+  `query`, the `files` it needs, and the `expected_behavior` in verifiable terms.
+- **Trigger battery** — `should` (literal phrases + paraphrases) and `should_not`,
+  with at least one query owned by each neighboring skill found in PHASE 1 Step 3,
+  naming that skill as `owner`.
+- **Target models** — the models the skill will run on. Haiku may need more detail
+  than Opus; a skill tuned only on the strongest model breaks on the weakest.
+
+### Step 2 — Baseline without the skill
+
+Run the behavior evals **without the skill loaded** — the user in a clean session,
+or a subagent that doesn't have the skill — on at least one target model. Record
+each concrete failure in `baseline`.
+
+The baseline is the scope: **PHASE 6 writes only what fixes those failures.** If the
+baseline shows no failures, Claude already handles the task — say so and stop; the
+skill would only spend tokens.
+
+---
+
+## PHASE 3: Category, pattern and kind
 
 ### Step 1 — Pick the category
 
@@ -83,17 +167,16 @@ Use `AskUserQuestion` (`header: "Category"`) if it isn't obvious:
 
 | Category | What it's for | Key techniques |
 |---|---|---|
-| **1. Document and asset creation** | Consistent, high-quality output: documents, presentations, apps, designs, code | Embedded style guides, templates, quality checklists, no external tools |
+| **1. Document and asset creation** | Consistent, high-quality output: documents, presentations, apps, designs, code | Embedded style guides, templates, quality checklists |
 | **2. Workflow automation** | Multi-step processes that benefit from a consistent methodology | Steps with validation gates, templates, refinement loops |
-| **3. MCP enhancement** | Workflow guidance layered over the access an MCP server provides | Coordinates several MCP calls in sequence, embeds expertise, handles MCP errors |
+| **3. MCP enhancement** | Workflow guidance layered over the access an MCP server provides | Coordinates MCP calls in sequence, embeds expertise, handles MCP errors |
 
 ### Step 2 — Pick the framing
 
 - **Problem-first:** "I need to set up a project workspace" → the skill orchestrates
-  the right calls in the right order. The user describes the outcome; the skill
-  handles the tools.
+  the right calls in the right order.
 - **Tool-first:** "I have the Notion MCP connected" → the skill teaches Claude the
-  optimal workflows. The user already has access; the skill brings the expertise.
+  optimal workflows for access the user already has.
 
 ### Step 3 — Pick the pattern
 
@@ -107,39 +190,26 @@ Consult `references/patterns.md` for each pattern's full structure:
 | **4. Contextual tool selection** | Same outcome, different tool depending on the context |
 | **5. Domain intelligence** | The skill brings specialized knowledge beyond tool access |
 
-A skill may combine patterns, but if it fits none of them, check whether it's
-actually two skills.
+If it needs two patterns that share no steps, re-run PHASE 1 Step 2 — it's
+probably two skills.
 
 ### Step 4 — Pipeline or standalone (decides the `Contract`)
 
-This is the gate for PHASE 5. Answer it now, from use-case question 6.
-
 A skill is **pipeline** if any of these holds:
 
-- a **named** skill produces its input, or a **named** skill consumes its output —
-  a chain with a fixed position, not "anyone could hand it a file";
+- a **named** skill produces its input, or a **named** skill consumes its output;
 - it writes files into a workspace shared with other skills;
 - it reads a project profile or config file for paths, branches or commands.
 
-Otherwise it's **standalone**: it answers, advises or transforms within a single
-invocation and owes nothing to a fixed neighbor. Convention and rule-exposing
-skills are the usual case, and so is any skill that operates on whatever input the
-user points it at — a tool applied to arbitrary files has no handoff to protect,
-however often it's run after some other skill.
+Otherwise it's **standalone** — including a skill that operates on whatever file the
+user points it at: arbitrary input is not a handoff.
 
-| Kind | Gets a `## Contract` | Why |
-|---|---|---|
-| **Pipeline** | Yes — PHASE 5 | The handoff is where contract defects hide. They're invisible reading either side alone |
-| **Standalone** | No | There's no handoff and no territory to bound |
-
-**Don't force a `Contract` where there is no contract.** A standalone skill with
-`Requires`/`Produces` rows invented to fill the template is noise, and it trains the
-next reader to skim the block — which is exactly what breaks it for the skills that
-do need it.
+Pipeline skills get a `## Contract` (PHASE 6). Standalone skills don't — rows
+invented to fill the template are noise that trains the reader to skim the block.
 
 ---
 
-## PHASE 3: Frontmatter (the most important part)
+## PHASE 4: Frontmatter (the most important part)
 
 Consult `references/frontmatter-reference.md` for every field and rule.
 
@@ -147,79 +217,122 @@ Consult `references/frontmatter-reference.md` for every field and rule.
 
 | Rule | Detail |
 |---|---|
-| Folder name | kebab-case. No spaces, no underscores, no uppercase |
-| File | Exactly `SKILL.md` (case-sensitive). Not `SKILL.MD`, not `skill.md` |
+| Folder name | kebab-case: lowercase letters, numbers and hyphens |
+| File | Exactly `SKILL.md` (case-sensitive) |
 | `name` | kebab-case, must match the folder name |
-| `description` | Mandatory. Must include **WHAT it does** and **WHEN to use it**. Max 1024 characters |
-| Forbidden | XML angle brackets in the frontmatter. Names containing "claude" or "anthropic" (reserved) |
-| Forbidden | A `README.md` inside the skill's folder — docs go in `SKILL.md` or `references/` |
+| `description` | Mandatory. **WHAT it does** and **WHEN to use it**. Max 1024 characters |
+| Forbidden | XML angle brackets in the frontmatter. Names containing "claude" or "anthropic" |
+| Forbidden | A `README.md` inside the skill's folder |
 
 > **Why the XML restriction:** the frontmatter enters Claude's system prompt.
 > Malicious content there could inject instructions.
+
+### Choosing the `name`
+
+- **Specific.** Never `helper`, `utils`, `tools`, `assistant` — a generic name gives
+  the reader nothing and invites collisions.
+- **Prefer the gerund form** (`processing-pdfs`, `reviewing-migrations`). Exception:
+  a skill joining an established family keeps the family's convention
+  (`sdd-plan` next to `sdd-build`) — consistency within the family wins.
 
 ### Writing the `description`
 
 Formula: **[what it does] + [when to use it] + [key capabilities]**
 
-Take the literal phrases the user gave in PHASE 1 (question 2) and put them in as
-triggers. If the skill competes with a similar one, add **negative triggers**
-(`Do NOT use to…`) to avoid over-triggering.
+- **Third person.** "Analyzes Figma files…", never "I analyze…" or "You can use this
+  to…". The description is injected into the system prompt; a shifting point of
+  view hurts discovery.
+- The literal phrases from PHASE 1 as triggers.
+- Negative triggers (`Do NOT use to… (use /x)`) for every collision PHASE 1 Step 3
+  resolved.
 
 ```yaml
-# Good — specific, actionable, with triggers
+# Good — third person, specific, with triggers
 description: Analyzes Figma design files and generates handoff documentation for
   development. Use when the user uploads .fig files, asks for "design specs",
   "component documentation", or "design-to-code handoff".
 
-# Bad — too vague, will never trigger reliably
+# Bad — vague
 description: Helps with projects.
 
-# Bad — no triggers, Claude doesn't know when to load it
-description: Creates sophisticated multi-page documentation systems.
-
-# Bad — technical, no user language
-description: Implements the Project entity model with hierarchical relationships.
+# Bad — first person, no triggers
+description: I create sophisticated multi-page documentation systems.
 ```
 
 `description` checklist before moving on:
-- [ ] Says what the skill does
-- [ ] Says when to use it, with phrases the user would actually say
-- [ ] Mentions file types if they're relevant (`.fig`, `.csv`, `.pdf`)
-- [ ] Has negative triggers if there are neighboring skills
-- [ ] Under 1024 characters, with no XML tags (`description: >` is fine — it's YAML)
+- [ ] Third person; says what the skill does and when to use it
+- [ ] Phrases the user would actually say; file types if relevant
+- [ ] Passes the single-responsibility test — no "and also…"
+- [ ] A negative trigger for every neighbor it could collide with
+- [ ] Under 1024 characters, no XML tags (`description: >` is fine — it's YAML)
 
 ---
 
-## PHASE 4: Folder structure
+## PHASE 5: Folder structure
 
 ```
 <skill-name>/
 ├── SKILL.md          # Required — main instructions
-├── scripts/          # Optional — executable code (Python, Bash)
+├── evals/            # Required — evals.json (never linked from SKILL.md)
+├── scripts/          # Optional — executable code
 ├── references/       # Optional — documentation loaded on demand
 └── assets/           # Optional — templates, fonts, icons used in the output
 ```
 
-Decide with the user which folders are needed. Rule: **start with just `SKILL.md`**
-and add folders when there's real content justifying each one. A skill with an empty
-`references/` is noise.
+**Start with `SKILL.md` and `evals/`**; add other folders only when real content
+justifies them. An empty `references/` is noise.
 
-### The three levels of progressive disclosure
+### Progressive disclosure
 
 | Level | What it is | When it loads |
 |---|---|---|
 | 1 | YAML frontmatter | Always, in the system prompt |
-| 2 | `SKILL.md`'s body | When Claude believes the skill is relevant |
-| 3 | Linked files (`references/`) | Only when Claude decides to navigate them |
+| 2 | `SKILL.md`'s body | When the skill activates |
+| 3 | Linked files (`references/`, `scripts/`) | Only on demand — a script's code never enters the context, only its output |
 
-Exploit it: keep `SKILL.md` to the core instructions (**under 5,000 words**) and move
-the detail into `references/` with explicit links.
+Rules:
+
+- **`SKILL.md` body under ~500 lines.** Split into `references/` as it approaches
+  the limit.
+- **References one level deep.** Every reference is linked from `SKILL.md`; a
+  reference that sends the reader to another reference gets read partially.
+- **A table of contents** at the top of any reference longer than ~100 lines.
+- **Forward slashes** in every path (`references/guide.md`), never Windows style.
 
 ---
 
-## PHASE 5: Write the instructions
+## PHASE 6: Write the instructions
 
-Consult `references/skill-template.md` for the full template.
+Consult `references/skill-template.md` for the full template, and — for pipeline
+skills — `references/contract-guide.md` for the `## Contract` block, its rows and
+how profile keys are written inline.
+
+### Only what the baseline showed missing
+
+Assume Claude is intelligent. Don't explain what a PDF, an endpoint or a git branch
+is. Explain the conventions, domain rules and team decisions it failed on in the
+baseline. Every section should trace back to a baseline failure or to a rule Claude
+couldn't know.
+
+### Match the degree of freedom to the task's fragility
+
+| Freedom | When | Form |
+|---|---|---|
+| **High** | Many valid solutions (reviewing code, writing prose) | General criteria and heuristics |
+| **Medium** | A preferred pattern with acceptable variations | Template or parameterized pseudocode |
+| **Low** | Fragile operation where consistency is critical (a DB migration) | Exact steps or a script, "run exactly this" |
+
+Loose prose on a fragile operation causes errors; rigid steps on a judgment task
+cause bad output.
+
+### Workflows and feedback loops
+
+- **Multi-step task → a copyable checklist** Claude pastes and ticks as it goes.
+- **Quality-critical output → a loop:** run → validate → fix → repeat until the
+  validator passes. It's the pattern that improves results most.
+- **Scripts:** handle their own errors (don't punt them to Claude), justify every
+  configurable value (no magic constants), and `SKILL.md` says whether each script is
+  to be **run** or **read as reference**.
 
 ### Recommended structure
 
@@ -229,196 +342,105 @@ Consult `references/skill-template.md` for the full template.
 ## Overview
 [what it solves, announce-at-start, output, core principle]
 
-## Contract            # pipeline skills only — see below
+## Contract            # pipeline skills only
 [Requires / Produces / Writes / Never / Escalates / Degrades / Profile keys]
 
 ## Instructions
 ### Step 1: [First major step]
-Clear explanation of what happens.
 
 ## Example
-
-A full worked run — an interview turned into a finished skill — is in
-`references/example.md`. Read it when the shape of the output is in doubt.
-
----
+[link to references/example.md]
 
 ## Troubleshooting
-Error: [common message]
-Cause: [why it happens]
-Solution: [how it's fixed]
+[issue / cause / resolution]
 ```
-
-### The `## Contract` block (pipeline skills only)
-
-Skip this section entirely if PHASE 2 Step 4 said **standalone**.
-
-It goes **immediately after the Overview** (or after the profile block, if the skill
-reads one), **before the first step**. It's an index, not a copy: when the detail
-already lives in a step, reference the step instead of repeating it — duplicating it
-reintroduces the saturation the block exists to prevent.
-
-```markdown
-## Contract
-
-**Requires** — table of preconditions, each with its action on failure.
-             ALL are verified before any work.
-**Produces** — what the next skill will find, in verifiable terms.
-**Writes**   — closed list of writable paths, and what is explicitly out.
-**Never**    — forbidden verbs, no matter what.
-**Escalates**— when it stops and asks.
-**Degrades** — what it does when a tool it depends on is unavailable.
-**Profile keys** — the config keys this skill reads, grouped by what for.
-```
-
-Write only the rows that apply. One optional row: **Reverting**, when the skill
-overwrites live artifacts — name the real way back (`git restore`, a backup copy),
-never promise one that doesn't exist.
-
-Two rules that decide whether the block works:
-
-- **`Produces` is written for whoever comes next, in countable terms.** "Documents
-  the module" isn't a contract; "one line per AC, zero lines marked `✗`" is. A gate
-  the model grades itself on is not a gate.
-- **`Requires` is checked before any work**, not when each step happens to need it.
-  A precondition that fails halfway leaves the workspace half-written.
-
-### Profile keys inline, never a lookup table
-
-If the skill reads a profile or config file, **do not add a
-`| In this document | Key in profile.yaml |` translation table.** Two better pieces
-replace it: the `Profile keys` row of the `Contract` (what the skill reads) and the
-key written inline in the body, with the example in parentheses.
-
-```diff
-- 1. Run the full test suite: cd <microservice> && npx jest --no-coverage
-+ 1. Check out `BASE_BRANCH` for each affected <component> (e.g. `develop`)
-```
-
-The concrete example survives where it aids understanding, but it stops being the
-subject of the sentence.
-
-**Why not a table.** It's a map someone has to remember to consult, and that isn't a
-guardrail. Real evidence: a skill carried `| develop | BASE_BRANCH |` in its table
-and, three hundred lines below, still checked `branch ∉ {main, master}` — letting
-through exactly the project whose base branch is `develop`. The one skill that got it
-right wrote `` `BASE_BRANCH` (`develop`) `` inline and depended on no table at all.
-
-When rewriting a literal, classify it: **normative** (the action depends on the value
-→ replace it with the key) or **illustrative** (it clarifies a sentence → keep it, in
-parentheses or in `## Example`). This is sentence-by-sentence reading; there's no
-mechanical pass.
 
 ### Writing rules
 
 | Rule | Good | Bad |
 |---|---|---|
 | **Specific and actionable** | ``Run `python scripts/validate.py --input {filename}` to check the format`` | "Validate the data before continuing" |
-| **Unambiguous** | "CRITICAL: before calling `create_project`, verify: name not empty, at least one member assigned, start date not in the past" | "Make sure to validate things properly" |
-| **Concise** | Bullets and numbered lists; the detail goes to `references/` | Long paragraphs Claude won't follow |
-| **Critical instructions up top** | The rule that governs the run stated near the start — in the `Contract` if there is one | The key rule buried in the middle |
-| **`CRITICAL` reserved** | One heading, for something irreversible the `Contract` doesn't already cover | A `## CRITICAL` per section. When everything is critical, nothing is |
+| **Unambiguous** | "Before calling `create_project`, verify: name not empty, one member assigned, start date not past" | "Make sure to validate things properly" |
+| **Concise** | Bullets and numbered lists; detail in `references/` | Long paragraphs Claude won't follow |
+| **Consistent terminology** | One term per concept across the whole skill | "field", "box", "element" for the same thing |
+| **Timeless** | Current behavior only; legacy isolated in a `## Legacy` section | "As of 2025, use the new API" |
+| **Critical up top** | The governing rule near the start — in the `Contract` if there is one | The key rule buried in the middle |
+| **`CRITICAL` reserved** | One heading, for something irreversible the `Contract` doesn't cover | A `## CRITICAL` per section |
 
 ### Always include
 
-1. **Error handling** — a common-issues section with cause and solution.
-2. **Examples** — at least one end-to-end scenario with what the user says, the
-   actions and the result.
-3. **Explicit links to the references** — the file existing isn't enough:
+1. **Error handling** — a common-issues section with cause and resolution.
+2. **An example** — one end-to-end scenario: what the user says, the actions, the
+   result.
+3. **Explicit links to every reference** — the file existing isn't enough; say what
+   to consult it for.
+4. **Structural headings in English, if the skill is pipeline** — a heading another
+   skill reads to find its input (`## AC Coverage`, `Task N`) is part of the
+   contract. Translating one breaks the reader silently.
 
-```markdown
-Before writing queries, consult `references/api-patterns.md` for:
-- Rate limiting guidance
-- Pagination patterns
-- Error codes and handling
-```
-
-4. **Structural headings, if the skill is pipeline** — a heading another skill reads
-   to find its input (`## AC Coverage`, `## Design Decisions`, `Task N`) is part of
-   the contract. Keep them in English whatever language the chat runs in, and
-   register them in the project's pipeline catalog. Translating one breaks the
-   reader silently: the section is there, and the next skill reports it missing.
-
-> **Advanced technique:** for critical validations, it's better to ship a script
-> that does them programmatically than to rely on natural-language instructions.
-> Code is deterministic; language interpretation isn't.
+> **Critical validations belong in a script.** Code is deterministic; language
+> interpretation isn't.
 
 ---
 
-## PHASE 6: Success criteria and tests
+## PHASE 7: Verify against the evals and close
 
-Define with the user how they'll know the skill works. These are aspirational
-targets, not exact thresholds.
+### Step 1 — Re-run the evals with the skill
 
-| Type | Metric | How it's measured |
-|---|---|---|
-| Quantitative | Triggers on 90% of relevant queries | Run 10–20 test queries; count how often it loads on its own vs. needs explicit invocation |
-| Quantitative | Completes the workflow in X tool calls | Compare the same task with and without the skill; count calls and tokens |
-| Quantitative | 0 failed calls per workflow | Monitor the MCP logs during the runs |
-| Qualitative | The user doesn't need to prompt the next steps | Note how often you have to redirect or clarify |
-| Qualitative | The workflow finishes without user correction | Run the same request 3–5 times and compare consistency |
+On **every target model** in `evals/evals.json`:
 
-Generate the trigger battery (the user runs it afterwards):
+1. Run the behavior evals. Each baseline failure must be gone; record the run in
+   `runs`.
+2. Run the trigger battery. Target: loads on ~90% of `should`, on none of
+   `should_not`.
+3. **Observe navigation:** which files Claude reads, which it ignores, in what
+   order. A reference never opened is dead weight or badly linked; one read on every
+   run belongs in `SKILL.md`.
 
-```
-Should trigger:
-- "<literal phrase from use case 1>"
-- "<paraphrase of use case 1>"
-- "<literal phrase from use case 2>"
+A failure → fix the instruction that should have prevented it → re-run. Iterate on
+observed behavior, not on assumptions.
 
-Should NOT trigger:
-- "<query from a neighboring domain>"
-- "<generic unrelated query>"
-```
+### Step 2 — Checklist
 
----
-
-## PHASE 7: Validation and close
-
-Run the checklist before delivering:
-
-- [ ] Folder in kebab-case
-- [ ] `SKILL.md` exists with that exact name (case-sensitive)
-- [ ] Frontmatter with `---` delimiters
-- [ ] `name` in kebab-case, matches the folder, without "claude"/"anthropic"
-- [ ] `description` with WHAT and WHEN, under 1024 characters
-- [ ] No XML tags in the frontmatter (the YAML `>` block scalar doesn't count)
+- [ ] Folder and `name` in kebab-case, matching, without "claude"/"anthropic"
+- [ ] `name` specific (no `helper`/`utils`/`tools`); gerund unless a family
+      convention applies
+- [ ] `description` in third person, WHAT and WHEN, under 1024 characters, no XML
+- [ ] Describable in one or two sentences without "and also…"
+- [ ] No trigger collides with an existing skill
 - [ ] No `README.md` inside the folder
-- [ ] Clear, actionable instructions
-- [ ] Error handling included
-- [ ] Examples included
-- [ ] References linked explicitly from `SKILL.md`
-- [ ] `SKILL.md` under 5,000 words
+- [ ] `SKILL.md` body under 500 lines
+- [ ] References one level deep, all linked; TOC on those over ~100 lines
+- [ ] Nothing Claude already knows is explained
+- [ ] Degree of freedom matches the task's fragility
+- [ ] Multi-step workflows carry a checklist; quality-critical ones a validation loop
+- [ ] Error handling and an example included
+- [ ] `evals/evals.json` with a baseline, created before the instructions
+- [ ] Evals re-run on every target model
 
-If PHASE 2 Step 4 said **pipeline**, seven more. They map one-to-one onto
-`/skill-evaluator`'s group C, so a skill that passes here passes its review:
+If PHASE 3 Step 4 said **pipeline**, seven more — they map one-to-one onto
+`/skill-evaluator`'s group C and are detailed in `references/contract-guide.md`:
 
 - [ ] **C1** — `## Contract` after the Overview, with the rows that apply
-      (+ `Reverting` if it overwrites live artifacts)
-- [ ] **C2** — every key in `Profile keys` exists in the project's profile
-      template, and every key the skill reads is declared
+- [ ] **C2** — every key in `Profile keys` exists in the profile template, and every
+      key read is declared
 - [ ] **C3** — no `| In this document | Key in profile.yaml |` table; keys inline
-- [ ] **C4** — no path, branch or command the project configures left hardcoded
-      in a step
+- [ ] **C4** — no configured path, branch or command hardcoded in a step
 - [ ] **C5** — no `## CRITICAL` heading the `Contract` already covers
-- [ ] **C6** — handoff verified in both directions: the previous skill's
-      `Produces` covers this one's `Requires`, and this one's `Produces` covers
-      the next one's `Requires`, stated in countable terms
+- [ ] **C6** — handoff verified in both directions, in countable terms
 - [ ] **C7** — the project's validation script passes, if it has one
 
-### Handoff
+### Step 3 — Handoff
 
-Show a summary:
-- Folder path and files created.
-- The 2–3 use cases it covers.
-- The trigger test battery for the user to run.
+Show a summary: folder path and files created, the 2–3 use cases covered, the
+baseline failures and whether each is fixed, and the models tested.
 
 Say:
-> "Skill created at `<path>`. Run the trigger queries to verify it loads when it
-> should. For a full review with a score and over/under-triggering risks, use
-> `/skill-evaluator <path>`."
+> "Skill created at `<path>`. Its evals live in `evals/evals.json` — re-run them
+> whenever the skill changes. For a full review with a score and over/under-triggering
+> risks, use `/skill-evaluator <path>`."
 
-Stop — don't run the new skill or start using it.
+Stop — don't start using the new skill.
 
 ---
 
@@ -427,10 +449,9 @@ Stop — don't run the new skill or start using it.
 **The `SKILL.md` is written in English** — body, headings, tables and examples.
 Technical identifiers, frontmatter field names, paths and code are English too.
 
-**The `description`'s triggers go in the language the user actually speaks.** If the
-user asks for things in English, the triggers are English; if they mix languages,
-include both variants — a trigger that never matches what the user types is dead
-weight.
+**The `description`'s triggers go in the language the user actually speaks.** If they
+mix languages, include both variants — a trigger that never matches what the user
+types is dead weight. The same holds for the trigger battery in `evals/evals.json`.
 
 **Chat interaction (the interview) follows the user's language.**
 
@@ -445,7 +466,12 @@ resolution.
 | Issue | Cause | Resolution |
 |---|---|---|
 | The user doesn't know which use cases to give | The idea is still fuzzy | Don't move on: ask them to describe the last time they did the task by hand, step by step |
-| The skill wants to do too much | Several unrelated workflows mixed together | Split into two skills; each with its own `description` and cross negative triggers |
-| Generic `description` ("helps with X") | PHASE 1 was skipped | Go back to the use cases and extract the user's literal phrases |
+| The skill fails the single-responsibility test | Several responsibilities mixed together | Stop and propose the split; create each skill separately, with cross negative triggers |
+| The baseline shows no failures | Claude already handles the task | Say so and stop — the skill would only spend tokens |
 
 ---
+
+## Example
+
+A full worked run — an interview turned into a finished skill — is in
+`references/example.md`. Read it when the shape of the output is in doubt.

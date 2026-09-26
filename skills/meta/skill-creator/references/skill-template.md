@@ -1,5 +1,14 @@
 # SKILL.md Template
 
+## Contents
+
+- Base template
+- `## Contract` — pipeline skills only
+- High-value optional sections
+- Error handling — template
+- Writing rules
+- Limits
+
 Adapt this template to the concrete skill. Replace the bracketed sections with the
 specific content. Optional sections are marked.
 
@@ -81,8 +90,8 @@ Solution: [how it's fixed]
 
 ## `## Contract` — pipeline skills only
 
-Goes right after the Overview, before the first step. Write only the rows that
-apply; delete the rest. `Reverting` is optional — include it when the skill
+Goes right after the Overview, before the first step. The rules behind each row
+are in `contract-guide.md`. Write only the rows that apply; delete the rest. `Reverting` is optional — include it when the skill
 overwrites live artifacts.
 
 ```markdown
@@ -218,13 +227,21 @@ If you see "Connection refused":
 | Unambiguous | "CRITICAL: verify the name isn't empty" | "Make sure to validate things properly" |
 | Concise | Bullets and numbered lists | Long paragraphs |
 | Progressive disclosure | Core in `SKILL.md`, detail in `references/` | Everything inline |
+| Only what Claude doesn't know | Team conventions, domain rules | Explaining what a PDF or an endpoint is |
+| Consistent terminology | One term per concept | Synonyms for the same thing across sections |
+| Timeless | Current behavior; legacy in a `## Legacy` section | "As of 2025…" in the main flow |
 | Config keys inline | ``Check out `BASE_BRANCH` (e.g. `develop`)`` in the sentence itself | A `\| In this document \| Key in profile.yaml \|` table the reader must remember to consult |
 
 ---
 
 ## Limits
 
-- `SKILL.md` under **5,000 words**. If it goes over, move content to `references/`.
+- `SKILL.md` body under **~500 lines**. As it approaches the limit, move content to
+  `references/`.
+- `references/` **one level deep** — every file linked from `SKILL.md`, none sending
+  the reader on to another reference.
+- A **table of contents** at the top of any reference over ~100 lines.
 - `description` under **1024 characters**.
+- Paths with **forward slashes** only.
 - No `README.md` inside the skill's folder. (A repo-level README for humans is fine
   if it's distributed via GitHub — but outside the skill's folder.)
