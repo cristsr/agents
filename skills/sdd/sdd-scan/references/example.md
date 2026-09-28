@@ -6,7 +6,7 @@ Read it when the shape of the output is in doubt; the rules themselves are in
 
 ## Example
 
-**Input:** `/scan spec-0042` — the item was clarified three weeks ago and the module
+**Input:** `/sdd-scan spec-0042` — the item was clarified three weeks ago and the module
 has moved since.
 
 **Flow:**

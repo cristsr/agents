@@ -109,7 +109,7 @@ missing before the user counts them as gaps.
 don't second-guess `next.command`: this skill renders the answer, it doesn't derive it.
 
 **A `skipped` stage is not a gap, and it is never the next step.** One of the two axes
-removed it: the tier (`design` in `standard`; `context`, `design` and `plan` in `fast`)
+removed it: the tier (`design` in `standard`; `context`, `clarify`, `route`, `design` and `plan` in `fast`)
 or the `build_mode` (`design` in the `evidence` carril, which has no contract or diagram
 to produce). Render the removal in the script's own words — *"not required in the
 standard tier"*, *"not required in the fast tier"*, *"not required in evidence mode"* —
@@ -140,22 +140,26 @@ tier is never `ready`, so it never carries a command in the report:
 | Stage `ready` | Meaning | Command |
 |---|---|---|
 | `spec` | nothing written yet | `/sdd-spec <id>` (every tier) |
-| `context` | spec.md exists (or still carries markers) | `/sdd-clarify` (`full`, `standard` — `fast` runs no clarification pass) |
-| `design` | context.md is clean | `/sdd-design` (`full` only, and not in the `evidence` carril) |
-| `plan` | the stage before it is approved — design.md (+ docs/), or context.md wherever there is no design | `/sdd-plan` (`full`, `standard`; it reads `context.md` whenever it has no design to read) |
+| `context` | spec.md exists, no `context.md` yet | `/sdd-scan` (`full`, `standard` — `fast` runs no survey) |
+| `clarify` | `context.md` exists; `## Ambiguity Resolution` missing or markers left | `/sdd-clarify` (`full`, `standard`) |
+| `route` | clarified; the decision log has no `**Tier ·` / `**Build mode ·` entries | `/sdd-route` — its review run (`full`, `standard`) |
+| `design` | the story is routed | `/sdd-design` (`full` only, and not in the `evidence` carril) |
+| `plan` | the stage before it is approved — design.md (+ docs/), or the routed story wherever there is no design | `/sdd-plan` (`full`, `standard`; it reads `context.md` whenever it has no design to read) |
 | `build` | work is left to execute (tasks pending; in `fast`, `spec.md` finished with its criterion not yet closed) | `/sdd-build` (resumes at the first unchecked task; in `fast` it reads `spec.md` instead and writes the close) |
 | `sync` | the build is closed (every task `[X]`; in `fast`, `## AC Coverage` in `spec.md` with no `✗`) | `/sdd-sync` (every tier) |
 | — (all done) | folder under `WORKDIR_DONE` | `/sdd-commit` (every tier) |
 
 The sequence each tier actually runs, so the report is read against the right one:
 
-- `full` — `/sdd-spec` → `/sdd-prepare` → `/sdd-clarify` → `/sdd-design` → `/sdd-plan`
-  → `/sdd-build` → `/sdd-sync` → `/sdd-commit`; the `evidence` carril drops
-  `/sdd-design` and hangs the plan off `context.md` instead.
-- `standard` — `/sdd-spec` → `/sdd-prepare` → `/sdd-clarify` → `/sdd-plan` →
-  `/sdd-build` → `/sdd-sync` → `/sdd-commit`: there is no `/sdd-design` in it.
-- `fast` — `/sdd-spec` → `/sdd-prepare` → `/sdd-build` → `/sdd-sync` → `/sdd-commit`:
-  no `/sdd-clarify`, no `/sdd-design` and no `/sdd-plan`.
+- `full` — `/sdd-spec` → `/sdd-route` → `/sdd-prepare` → `/sdd-scan` → `/sdd-clarify`
+  → `/sdd-route` → `/sdd-design` → `/sdd-plan` → `/sdd-build` → `/sdd-sync` →
+  `/sdd-commit`; the `evidence` carril drops `/sdd-design`.
+- `standard` — the same without `/sdd-design`.
+- `fast` — `/sdd-spec` → `/sdd-route` → `/sdd-prepare` → `/sdd-build` → `/sdd-sync` →
+  `/sdd-commit`: no `/sdd-scan`, no `/sdd-clarify`, no `/sdd-design` and no `/sdd-plan`.
+
+The first `/sdd-route` (the initial run, right after `/sdd-spec`) is not a stage the
+script reports: when both axes keep their defaults it leaves nothing on disk to read.
 
 **`/sdd-prepare` is missing from that table on purpose — it is orthogonal to the stages,
 and the report has to say so anyway.** It doesn't produce an artifact the script reads
@@ -163,7 +167,7 @@ as a stage; it leaves `.branch`, which `/sdd-plan` requires and `/sdd-build` re-
 whenever `branch` is `null` and the story has a `spec.md`, name it alongside whatever
 stage command applies:
 
-> "Next: `/clarify <id>` — and `/prepare <id>` at some point before `/sdd-plan`, which
+> "Next: `/sdd-scan <id>` — and `/sdd-prepare <id>` at some point before `/sdd-plan`, which
 > stops without the `.branch` marker."
 
 Relaying only the stage command sends the user to a stop that `/sdd-status` could see
@@ -176,7 +180,7 @@ the build, and what reads `.branch` there is the branch gate of `/sdd-build`.
 
 Three cases deserve a sentence of their own in the report rather than a bare command:
 
-- **Pending markers.** `counts.clarificationMarkers > 0` holds `context` open even
+- **Pending markers.** `counts.clarificationMarkers > 0` holds `clarify` open even
   when later artifacts exist — `/sdd-design` won't proceed until they're resolved, and
   in a `standard` story (which has no design) the stage it holds back is `/sdd-plan`.
 - **A reduced tier.** A `tier` other than `full` is why stages are missing: `standard`

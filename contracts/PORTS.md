@@ -185,8 +185,9 @@ without it diagrams drift into fiction, which is why the profile validator warns
 |---|---|---|
 | `run` | `<input>`, `<output>` | Writes the collection to `<output>`. |
 
-Consumed by `/sdd-build`. Never blocking: a missing collection costs a manual import, not
-a broken story.
+Consumed by `/sdd-design`, right after the contract passes its validation — the collection
+is a rendering of the contract, so the skill that owns the contract owns it. Never
+blocking: a missing collection costs a manual import, not a broken story.
 
 ### `PROJECT_GRAPH` — the repo's app/lib dependency graph
 

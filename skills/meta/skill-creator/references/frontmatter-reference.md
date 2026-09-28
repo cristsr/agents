@@ -1,5 +1,15 @@
 # YAML frontmatter reference
 
+## Contents
+
+- Minimum required format
+- Fields (`name`, `description`, optional ones)
+- Example with every optional field
+- Security notes
+- Frequent YAML errors
+- Description examples
+- Negative triggers and sibling exclusivity
+
 The frontmatter is **progressive disclosure level 1**: it's always loaded in Claude's
 system prompt. It's what decides whether the skill activates.
 
@@ -22,10 +32,13 @@ That's enough to get started.
 
 ### `name` (required)
 
-- kebab-case only.
-- No spaces, no uppercase.
+- kebab-case only: lowercase letters, numbers and hyphens.
 - Must match the folder name.
 - **Must not contain "claude" or "anthropic"** (reserved).
+- **Specific** — never `helper`, `utils`, `tools`: name the job, not the mechanism.
+- **Prefer the gerund form** (`processing-pdfs`, `reviewing-migrations`). A skill
+  joining an established family keeps the family's convention (`sdd-plan` next to
+  `sdd-build`).
 
 ```yaml
 # Bad
@@ -34,12 +47,18 @@ name: my_cool_skill
 name: MyCoolSkill
 name: claude-helper
 
+name: helper
+
 # Good
-name: my-cool-skill
+name: processing-invoices
 ```
 
 ### `description` (required)
 
+- **Third person.** "Processes invoices…", never "I process…" or "You can use this
+  to…". It's injected into the system prompt; a shifting point of view hurts
+  discovery.
+- **One responsibility.** If it takes "and also…" to describe, it's two skills.
 - **MUST include both things:**
   - What the skill does.
   - When to use it (trigger conditions).
@@ -177,11 +196,22 @@ description: Creates sophisticated multi-page documentation systems.
 
 # Too technical, no user language
 description: Implements the Project entity model with hierarchical relationships.
+
+# First/second person — the point of view shifts inside the system prompt
+description: I can help you process Excel files.
+description: You can use this to process Excel files.
+
+# Two responsibilities — "and also" is the tell
+description: Processes invoices and also reviews supplier contracts.
 ```
 
 ---
 
-## Negative triggers
+## Negative triggers and sibling exclusivity
+
+Sibling descriptions must be **mutually exclusive**: if two skills could activate for
+the same request, the boundary between them is drawn wrong. Negative triggers mark
+the boundary once it's decided — if both sides need many of them, redraw it instead.
 
 When a skill over-triggers, add explicit exclusions:
 

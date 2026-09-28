@@ -1,8 +1,8 @@
 # Inferring the execution tier
 
 A story declares how much of the pipeline it runs, in `spec.md`'s front matter. The
-field is inferred **once, here, from the input** — this skill never surveys the
-codebase — and it is written down, never asked.
+initial run infers the field **from the input alone** — nothing has surveyed the
+codebase yet — and writes it down, never asks it.
 
 The normative contract is `~/.agents/contracts/TIERS.md`: what each tier runs, what it
 omits, and the four guardrails around it. This file is only the reading that decides
@@ -12,9 +12,9 @@ between the three values.
 
 | `tier` | The flow | Written |
 |---|---|---|
-| `full` | spec → prepare → clarify → design → plan → build → sync | **never** — the absence of the field *is* `full` |
-| `standard` | spec → prepare → clarify → plan → build → sync (no design) | yes, with `## Tier Rationale` |
-| `fast` | spec → prepare → build → sync (no clarification, no design, no plan) | yes, with `## Tier Rationale` and `## Change Surface` |
+| `full` | spec → route → prepare → scan → clarify → route → design → plan → build → sync | **never** — the absence of the field *is* `full` |
+| `standard` | spec → route → prepare → scan → clarify → route → plan → build → sync (no design) | yes, with `## Tier Rationale` |
+| `fast` | spec → route → prepare → build → sync (no survey, no clarification, no design, no plan) | yes, with `## Tier Rationale` and `## Change Surface` |
 
 **The default is the absence of the field**, exactly as `tdd` is the default of
 `build_mode`: a story written before this axis existed keeps every stage it always had,
@@ -26,9 +26,9 @@ Only the input: its `type`, how many acceptance criteria it carries, whether a
 criterion is unclear enough to need a marker, and what the input *says* about the
 change — the file or symbol it names, and the systems it does not mention.
 
-Nothing else is available. Reading the repository to measure the real blast radius is
-`/sdd-clarify`'s job (the `CODE_SURVEY` port), and it is why the inference here is
-provisional: `/sdd-clarify` and `/sdd-plan` may raise it when the code disagrees.
+Nothing else is available. Measuring the real blast radius is `/sdd-scan`'s job (the
+`CODE_SURVEY` port), and it is why the inference is provisional: this skill's review run
+raises it once `context.md` shows the code disagrees.
 
 ## The reading
 
@@ -88,8 +88,8 @@ not.
 
 ## Overriding the reading
 
-The developer may disagree — before the file is written, or afterwards through
-`/sdd-refine`. Take their tier, write the field (even for `full`, where an explicit
+The developer may disagree — during the initial run, or afterwards through this
+skill's change run (`tier-changes.md`). Take their tier, write the field (even for `full`, where an explicit
 `tier: full` records the decision), and make `## Tier Rationale` say what the reading
 missed. What may never happen is a tier written *against* `FAST_TIER_TYPES` or
 `STANDARD_TIER_TYPES`: `validate-artifacts.mjs` fails the story, and widening the

@@ -1,0 +1,62 @@
+{
+  "skill": "skill-creator",
+  "models": ["haiku", "sonnet", "opus"],
+  "baseline": [],
+  "triggers": {
+    "should": [
+      "create a skill that builds my weekly incident report",
+      "I want to turn our release checklist into a skill",
+      "generate a SKILL.md for reviewing database migrations",
+      "crea una skill para procesar facturas",
+      "build the two skills we agreed to split sdd-clarify into"
+    ],
+    "should_not": [
+      { "query": "review this skill and tell me why it doesn't trigger", "owner": "skill-evaluator" },
+      { "query": "should sdd-plan be split into smaller skills?", "owner": "skill-evaluator" },
+      { "query": "update the acceptance criteria in the story's spec", "owner": "sdd-refine" },
+      { "query": "define the project's governing principles", "owner": "sdd-rules" },
+      { "query": "write a unit test for this function", "owner": null }
+    ]
+  },
+  "evals": [
+    {
+      "id": 1,
+      "query": "Create a skill that processes supplier invoices and also reviews supplier contracts",
+      "files": [],
+      "expected_behavior": [
+        "Fails the single-responsibility test before writing anything",
+        "Proposes two skills, each with its own one-sentence purpose and triggers"
+      ]
+    },
+    {
+      "id": 2,
+      "query": "Create a skill for our team's commit message convention",
+      "files": [],
+      "expected_behavior": [
+        "Asks for 2-3 use cases before drafting the frontmatter",
+        "Writes evals/evals.json and asks for a no-skill baseline before writing instructions",
+        "Runs the collision check against installed skills and reports any shared trigger"
+      ]
+    },
+    {
+      "id": 3,
+      "query": "Create a skill that explains what a REST endpoint is",
+      "files": [],
+      "expected_behavior": [
+        "Notes that the baseline is likely to show no failures, since Claude already knows the concept",
+        "Stops instead of producing a skill that only spends tokens, if the baseline confirms it"
+      ]
+    },
+    {
+      "id": 4,
+      "query": "Create a skill that runs our production database migrations",
+      "files": [],
+      "expected_behavior": [
+        "Classifies the task as fragile and chooses low freedom: exact steps or a script to run",
+        "Includes a run, validate, fix, repeat loop",
+        "Keeps the SKILL.md body under 500 lines with references one level deep"
+      ]
+    }
+  ],
+  "runs": []
+}

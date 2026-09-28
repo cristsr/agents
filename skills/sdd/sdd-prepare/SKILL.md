@@ -4,12 +4,12 @@ description: >
   Puts every component affected by a story onto a fresh base branch (checkout +
   pull) and then creates and checks out the story's working branch off it,
   recording the branch name in work/active/spec-{number}/.branch so /sdd-build's
-  branch gate can rely on it without asking. Runs right after /sdd-spec, before /sdd-clarify.
+  branch gate can rely on it without asking. Runs right after /sdd-route, before /sdd-scan.
   Use when the user says "/sdd-prepare", "/sdd-prepare spec-XXXX", "prepare the branches",
   "checkout and pull", "bring the base up to date", "leave the base ready", or
-  right after /sdd-spec to leave the repo ready before scanning.
+  right after /sdd-route to leave the repo ready before scanning.
   Do NOT use to commit or push (that's /sdd-commit), to survey the codebase (use
-  /sdd-clarify), or to write the plan (use /sdd-plan).
+  /sdd-scan), or to write the plan (use /sdd-plan).
 ---
 
 # prepare
@@ -19,7 +19,7 @@ description: >
 Puts every component affected by a story onto a fresh base branch
 (`BASE_BRANCH` from the profile) via `checkout` + `pull`, then **creates and
 checks out the story's working branch** off that fresh base and records the name
-in the story workspace. The pipeline (clarify → design → plan → build) runs on
+in the story workspace. The pipeline (scan → clarify → design → plan → build) runs on
 the working branch from here on; the branch gates `/sdd-build` in every tier, and
 `/sdd-plan`'s `Task 0` verifies it only where a plan exists — `/sdd-build` refuses
 to run on the base.
@@ -68,15 +68,15 @@ The last row is per-<component>, not global: one dirty repo blocks itself, not t
 
 The affected <component>s come from `context.md`, `spec.md` or `MODULE_ROOT` (Step 0),
 and **two tiers reach Step 0 without a `context.md`**: `fast` never has one, because its
-flow runs no clarification pass at all, and `standard` has none until `/sdd-clarify`
+flow runs no clarification pass at all, and `standard` has none until `/sdd-scan`
 runs — which is after this skill. So the question Step 0 asks about components is the
 expected path in those runs, not a defect: with no inventory to read, `spec.md` and
 `MODULE_ROOT` are the sources by design.
 
-**Produces** — this is what `/sdd-clarify` and `Task 0` rely on
+**Produces** — this is what `/sdd-scan` and `Task 0` rely on
 
 - every affected <component> checked out on `BASE_BRANCH` and fast-forwarded to the
-  remote, with a clean working tree. `/sdd-clarify` surveys current code because of this,
+  remote, with a clean working tree. `/sdd-scan` surveys current code because of this,
   and the working branch is cut off an up-to-date base because of this
 - the story's **working branch** created off `BASE_BRANCH` and checked out in every
   affected <component>, with the branch name recorded in
@@ -122,11 +122,11 @@ command instead of by intention. A pull that can't fast-forward stops the <compo
 
 **Degrades**
 
-- `context.md` absent (the normal case — `/sdd-prepare` runs before `/sdd-clarify`) → derive
+- `context.md` absent (the normal case — `/sdd-prepare` runs before `/sdd-scan`) → derive
   the <component>s from `spec.md` and `MODULE_ROOT`. In `fast` it is the only case there
   is: that tier writes no `context.md` at all, so the fallback is the tier's normal path
   rather than a degradation.
-- `MODULE_ROOT` (stack block) inconclusive → ask, same as `/sdd-clarify` does.
+- `MODULE_ROOT` (stack block) inconclusive → ask, same as `/sdd-scan` does.
 - No item id in the input (a bare `/sdd-prepare`) → refresh the base only, and report
   that owning the working branch (creating it and recording `.branch`) needs the story
   id: rerun as `/prepare spec-<number>`.
@@ -161,11 +161,11 @@ back. The pull is fast-forward only, so local history is never rewritten.
 1. Extract the item id from the input (pattern `STORY_ID_PATTERN`, e.g. `spec-XXXX`).
    A bare `/sdd-prepare` with no id is valid — skip to the last bullet.
 2. To identify the affected <component>s, in this order:
-   - `work/active/spec-<number>/context.md` if it exists (because `/sdd-clarify` already
+   - `work/active/spec-<number>/context.md` if it exists (because `/sdd-scan` already
      ran; a `fast` story never has one, since its flow runs no clarification pass) — it's
      the source of truth, it was surveyed against the code.
    - Otherwise `work/active/spec-<number>/spec.md` (the normal run: `/sdd-prepare` goes
-     right after `/sdd-spec`) — the <component>s named in the item and its keywords, read
+     right after `/sdd-route`) — the <component>s named in the item and its keywords, read
      against `MODULE_ROOT`.
    - If it's still unclear → ask: "Which component(s) should I prepare?
      (e.g. `apps/finances`, `apps/ledger`)" and wait. Don't guess.
@@ -267,8 +267,9 @@ With every <component> on a fresh `BASE_BRANCH`:
 2. Close with:
    > "Ready: <components> on `<branch-name>` (cut off an up-to-date
    > `<BASE_BRANCH>`), recorded in `work/active/spec-<number>/.branch`.
-   > You can now run `/clarify spec-<number>`."
-3. Stop — don't clarify or scan.
+   > Next: `/sdd-scan spec-<number>`" — or `/sdd-build spec-<number>` for a `fast`
+   > story, which has no survey.
+3. Stop — don't scan or build.
 
 ---
 
@@ -282,7 +283,7 @@ resolution.
 |-------|-------|------------|
 | Dirty working tree in a component | Uncommitted work | STOP for that component; don't touch it — let the user resolve it and retry |
 | `--ff-only` refuses the pull | Local divergence from the remote | Stop and report; human decision |
-| Component can't be identified | Missing `context.md` or the user didn't say which | Ask explicitly — don't guess. A `fast` story (and a `standard` one before `/sdd-clarify`) has no `context.md` by design, so its absence alone is not the cause: ask, and derive from `spec.md` and `MODULE_ROOT` |
+| Component can't be identified | Missing `context.md` or the user didn't say which | Ask explicitly — don't guess. A `fast` story (and a `standard` one before `/sdd-scan`) has no `context.md` by design, so its absence alone is not the cause: ask, and derive from `spec.md` and `MODULE_ROOT` |
 | `/prepare spec-XXXX` with an id that has no workspace | Typo in the id, or `/sdd-spec` never ran | Stop before any git command — the `Requires` row catches it. Otherwise the branches move and `.branch` fails to write at the very end |
 
 ---

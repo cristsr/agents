@@ -2,6 +2,19 @@
 
 The full rubric with severities. The IDs are used in `skill-evaluator`'s report.
 
+## Contents
+
+- Severity scale
+- Group B — Hard rules (BLOCKING)
+- Group D — Description and boundary (IMPORTANT / MINOR)
+- Trigger diagnosis
+- Group E — Structure (IMPORTANT / MINOR)
+- Group C — Contract and handoff (pipeline only)
+- Group I — Instructions (IMPORTANT / MINOR)
+- Group V — Evals (IMPORTANT / MINOR)
+- Success criteria
+- Quick checklist
+
 ---
 
 ## Severity scale
@@ -12,11 +25,11 @@ The full rubric with severities. The IDs are used in `skill-evaluator`'s report.
 | **IMPORTANT** | The skill works but triggers wrongly or isn't followed | Changes real behavior |
 | **MINOR** | Polish, maintainability, consistency | Doesn't change behavior |
 
-Prioritization rule: **first what prevents loading, then what prevents triggering,
-then what breaks the chain, wording last.** A skill with brilliant instructions and a
+Prioritization rule: **first what prevents loading, then what prevents triggering or
+collides with a sibling, then what breaks the chain, wording last.** A skill with brilliant instructions and a
 vague `description` never runs; the reverse at least works when invoked by hand.
 
-Groups B and D apply to every skill. **Group C applies only to pipeline skills** —
+Groups B, D, E, I and V apply to every skill. **Group C applies only to pipeline skills** —
 see its own preamble; forcing it on a standalone skill manufactures findings.
 
 ---
@@ -28,7 +41,7 @@ see its own preamble; forcing it on a standalone skill manufactures findings.
 | B1 | File named exactly `SKILL.md` | `SKILL.MD`, `skill.md`, `Skill.md` | Rename. Verify with `ls -la` |
 | B2 | Frontmatter with opening and closing `---` | Delimiters missing | Add them |
 | B3 | Valid YAML | Unclosed quote, broken indentation | Fix the YAML |
-| B4 | `name` in kebab-case | `My Cool Skill`, `my_cool_skill`, `MyCoolSkill` | `my-cool-skill` |
+| B4 | `name` in kebab-case (lowercase letters, numbers, hyphens) | `My Cool Skill`, `my_cool_skill`, `MyCoolSkill` | `my-cool-skill` |
 | B5 | `name` matches the folder | Folder `report-builder`, `name: reports` | Align both |
 | B6 | `name` without "claude"/"anthropic" | `claude-helper` | Rename — they're reserved |
 | B7 | `description` present | Field absent | Write it (group D) |
@@ -38,16 +51,36 @@ see its own preamble; forcing it on a standalone skill manufactures findings.
 
 ---
 
-## Group D — Description (IMPORTANT)
+## Group D — Description and boundary (IMPORTANT / MINOR)
 
-| ID | Check | Typical failure | Fix |
-|---|---|---|---|
-| D1 | Says **what it does** | Only usage conditions | Add the concrete capability |
-| D2 | Says **when to use it** with user phrases | No triggers | Add literal phrases the user would say |
-| D3 | The phrases are what the user **actually** types | Internal jargon | Replace with user language |
-| D4 | Mentions relevant file types | Handles `.csv` and never says so | Name them |
-| D5 | Negative triggers if there are neighboring skills | Overlapping scope | `Do NOT use to… (use the X skill instead)` |
-| D6 | Isn't generic | "Helps with projects" | Rewrite with the what + when + capabilities formula |
+The `description` is the skill's public interface: Claude decides whether to activate
+it from the metadata alone.
+
+| ID | Check | Severity | Typical failure | Fix |
+|---|---|---|---|---|
+| D1 | Says **what it does** | IMPORTANT | Only usage conditions | Add the concrete capability |
+| D2 | Says **when to use it** with user phrases | IMPORTANT | No triggers | Add literal phrases the user would say |
+| D3 | The phrases are what the user **actually** types | IMPORTANT | Internal jargon | Replace with user language |
+| D4 | Mentions relevant file types | MINOR | Handles `.csv` and never says so | Name them |
+| D5 | Negative triggers for every neighboring skill | IMPORTANT | Overlapping scope | `Do NOT use to… (use the X skill instead)` |
+| D6 | Isn't generic | IMPORTANT | "Helps with projects" | Rewrite with the what + when + capabilities formula |
+| D7 | Third person | IMPORTANT | "I can help you…", "You can use this to…" | "Processes…", "Analyzes…" — the description is injected into the system prompt |
+| D8 | Single responsibility | IMPORTANT | Needs "and also…" to describe; triggers for unrelated intents; modes that share no steps | Propose the split: each piece named, with its one-sentence purpose and its triggers |
+| D9 | Mutually exclusive with sibling skills | IMPORTANT | A request both this and a sibling's description would claim | Decide the owner, cross negative triggers; if many are needed on both sides, redraw the boundary |
+| D10 | `name` is specific | IMPORTANT / MINOR | `helper`, `utils`, `tools` (IMPORTANT); not a gerund outside a family convention (MINOR) | Name the job: `processing-invoices`. A family prefix (`sdd-plan`, `sdd-build`) is a valid exception |
+
+### D8 — granularity vs discovery
+
+A split has a cost: every skill adds a description to the permanent context and one
+more collision risk. **A piece earns its own skill only if the user would ask for it
+on its own**, with a trigger no other skill claims. A piece with no trigger of its
+own becomes a reference or a script inside the skill that uses it.
+
+### D9 — reading a collision
+
+Load every installed skill's description (PHASE 1 Step 5). For each trigger phrase
+of the skill under review, ask whether another description would also claim it. The
+finding names both skills and the shared phrases, and proposes the owner.
 
 ### Formula
 
@@ -89,6 +122,7 @@ particular technical terms.
 
 **Signals:**
 - The skill loads on irrelevant queries.
+- It loads for requests a sibling should take (D9).
 - The user disables it.
 - Confusion about its purpose.
 
@@ -127,17 +161,22 @@ Ask Claude: "When would you use the `<name>` skill?". It will quote the
 | ID | Check | Severity | Fix |
 |---|---|---|---|
 | E1 | Folder in kebab-case | IMPORTANT | Rename |
-| E2 | `SKILL.md` < 5,000 words | IMPORTANT | Move detail to `references/` and link it |
+| E2 | `SKILL.md` body < ~500 lines | IMPORTANT | Move detail to `references/` and link it |
 | E3 | `references/` linked from `SKILL.md` | IMPORTANT | Add the explicit link — without one, it never loads |
 | E4 | No empty folders | MINOR | Delete the contentless scaffolding |
 | E5 | Heavy detail in `references/`, not inline | MINOR | Apply progressive disclosure |
 | E6 | The referenced `scripts/` exist | IMPORTANT | Fix the paths or add the script |
+| E7 | References one level deep | IMPORTANT | Link every reference from `SKILL.md`; chains of references get read partially |
+| E8 | TOC on references over ~100 lines | MINOR | Add a contents list at the top, so a partial read still shows the scope |
+| E9 | Forward slashes in every path | IMPORTANT | `references/guide.md`, never `references\guide.md` |
+| E10 | Scripts are robust and their role is stated | IMPORTANT | The script handles its own errors; every configurable value is justified; `SKILL.md` says whether to run it or read it |
 
 ### Expected structure
 
 ```
 <skill-name>/
 ├── SKILL.md          # Required
+├── evals/            # Required — evals.json, never linked from SKILL.md
 ├── scripts/          # Optional — executable code
 ├── references/       # Optional — docs loaded on demand
 └── assets/           # Optional — templates, fonts, icons
@@ -148,8 +187,8 @@ Ask Claude: "When would you use the `<name>` skill?". It will quote the
 | Level | What | When it loads |
 |---|---|---|
 | 1 | Frontmatter | Always, in the system prompt |
-| 2 | `SKILL.md`'s body | When Claude believes it's relevant |
-| 3 | Linked files | Only when Claude navigates them |
+| 2 | `SKILL.md`'s body | When the skill activates |
+| 3 | Linked files | Only on demand — a script's code never enters the context, only its output |
 
 ### Large-context symptom
 
@@ -238,6 +277,20 @@ Symptom: the skill loads but Claude doesn't follow the instructions.
 | I4 | No error handling | IMPORTANT | Add a common-issues section |
 | I5 | No examples | MINOR | Add user says / actions / result |
 | I6 | Not actionable | IMPORTANT | Literal, copy-pasteable commands |
+| I7 | Explains what Claude already knows | MINOR | Cut general concepts; keep conventions, domain rules and team decisions — the context window is shared |
+| I8 | Degree of freedom mismatched to fragility | IMPORTANT | Fragile operation → exact steps or a script; judgment task → criteria, not a rigid script |
+| I9 | Inconsistent terminology | MINOR | One term per concept across the whole skill |
+| I10 | Time-sensitive information in the main flow | MINOR | Remove it, or isolate it in a `## Legacy` section |
+| I11 | Multi-step workflow with no checklist | MINOR | A copyable checklist Claude ticks as it goes |
+| I12 | Quality-critical output with no feedback loop | IMPORTANT | run → validate → fix → repeat, ideally around a script |
+
+### I8 — degrees of freedom
+
+| Freedom | When | Form |
+|---|---|---|
+| High | Many valid solutions (reviewing code) | General criteria |
+| Medium | A preferred pattern with acceptable variations | Template or parameterized pseudocode |
+| Low | Fragile, consistency-critical (a DB migration) | Exact steps or a script |
 
 ### Ambiguity contrast
 
@@ -285,6 +338,23 @@ prompt than inside `SKILL.md`**.
 
 ---
 
+## Group V — Evals (IMPORTANT / MINOR)
+
+The guidance's central point: create the evals **before** writing extensive
+documentation, observe where Claude fails without the skill, and write only what
+fixes those failures. The format is the one `/skill-creator` writes:
+`evals/evals.json` with `skill`, `models`, `baseline`, `triggers.should`,
+`triggers.should_not` (each with an `owner`), `evals` and optional `runs`.
+
+| ID | Check | Severity | Typical failure | Fix |
+|---|---|---|---|---|
+| V1 | `evals/evals.json` with ≥3 behavior evals and a trigger battery | IMPORTANT | No evals, or only happy-path queries | Write them from the use cases, one per use case plus an edge case |
+| V2 | `baseline` records failures observed without the skill | IMPORTANT | Empty — nothing shows the content is needed | Run the evals without the skill; cut what fixes no observed failure |
+| V3 | `should_not` covers each neighboring skill | IMPORTANT | The battery can't catch a D9 collision | One query per sibling, naming it as `owner` |
+| V4 | `models` lists the targets and `runs` covers each | MINOR | Tuned on one model only | Re-run on every target model; Haiku may need more detail than Opus |
+
+---
+
 ## Success criteria (for recommending measurement)
 
 These are aspirational targets — rough benchmarks, not precise thresholds. There's a
@@ -326,17 +396,22 @@ With the skill:
 
 ## Quick checklist
 
-### During development
-- [ ] Folder in kebab-case
-- [ ] `SKILL.md` exists (exact spelling)
-- [ ] Frontmatter with `---` delimiters
-- [ ] `name`: kebab-case, no spaces, no uppercase
-- [ ] `description` includes WHAT and WHEN
+### Every skill
+- [ ] `SKILL.md` exists (exact spelling), frontmatter with `---` delimiters
+- [ ] `name` in kebab-case, matches the folder, specific; gerund unless a family
+      convention applies
+- [ ] `description` in third person, says what it does and when to use it
+- [ ] Describable in one or two sentences without "and also…"
+- [ ] No trigger shared with a sibling skill
 - [ ] No XML tags in the frontmatter (the YAML `>` block scalar doesn't count)
-- [ ] Clear, actionable instructions
-- [ ] Error handling included
-- [ ] Examples provided
-- [ ] References clearly linked
+- [ ] `SKILL.md` body under 500 lines
+- [ ] References one level deep, all linked; TOC on those over ~100 lines
+- [ ] Nothing explained that Claude already knows
+- [ ] Degree of freedom matches the task's fragility
+- [ ] A validation loop for multi-step, quality-critical tasks
+- [ ] Error handling and an example included
+- [ ] `evals/evals.json` exists, with a baseline, created before the documentation
+- [ ] Tested on every model it will run on
 
 ### Pipeline skills only
 - [ ] `## Contract` after the Overview, with the rows that apply
@@ -347,16 +422,8 @@ With the skill:
 - [ ] Junction verified in both directions with the neighboring skills
 - [ ] The project's validation script passes
 
-### Before shipping
-- [ ] Triggering tested on obvious tasks
-- [ ] Triggering tested with paraphrased requests
-- [ ] Verified it does NOT trigger on unrelated topics
-- [ ] Functional tests pass
-- [ ] Tool integration works (if applicable)
-
 ### After shipping
-- [ ] Test in real conversations
-- [ ] Monitor under/over-triggering
-- [ ] Collect feedback
-- [ ] Iterate on description and instructions
-- [ ] Update the version in `metadata`
+- [ ] Observe how Claude navigates the skill: which files it reads, which it ignores
+- [ ] Monitor under/over-triggering and sibling collisions
+- [ ] Add every real-use failure to `evals/evals.json` before fixing it
+- [ ] Iterate from real use, not assumptions

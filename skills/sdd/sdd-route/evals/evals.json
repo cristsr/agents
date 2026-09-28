@@ -1,0 +1,62 @@
+{
+  "skill": "sdd-route",
+  "models": ["haiku", "sonnet", "opus"],
+  "baseline": [],
+  "triggers": {
+    "should": [
+      "/sdd-route spec-0031",
+      "which tier should spec-0031 run at?",
+      "lower spec-0044 to fast",
+      "baja el tier de spec-0044",
+      "switch spec-0050 to evidence mode"
+    ],
+    "should_not": [
+      { "query": "clarify story spec-0031", "owner": "sdd-clarify" },
+      { "query": "survey the module for spec-0031", "owner": "sdd-scan" },
+      { "query": "change AC-2 of spec-0031", "owner": "sdd-refine" },
+      { "query": "new bug: dates parse as MM/DD", "owner": "sdd-spec" },
+      { "query": "what stage is spec-0031 in?", "owner": "sdd-status" }
+    ]
+  },
+  "evals": [
+    {
+      "id": 1,
+      "query": "/sdd-route spec-0031 on a bug with one AC naming src/dates/parse.ts",
+      "files": [],
+      "expected_behavior": [
+        "Runs as initial and infers fast from the input alone",
+        "Writes tier, Tier Rationale and Change Surface; resolves build_mode now",
+        "Hands off to /sdd-prepare then /sdd-build"
+      ]
+    },
+    {
+      "id": 2,
+      "query": "/sdd-route spec-0040 after clarify, standard story whose context.md lists two components",
+      "files": [],
+      "expected_behavior": [
+        "Raises to full without asking and appends the reason to Tier Rationale",
+        "Appends exactly one Tier entry and one Build mode entry to Ambiguity Resolution",
+        "Hands off to /sdd-design"
+      ]
+    },
+    {
+      "id": 3,
+      "query": "Lower spec-0045 to fast (a feat with two ACs)",
+      "files": [],
+      "expected_behavior": [
+        "Refuses: feat is outside FAST_TIER_TYPES and fast needs exactly one AC",
+        "Writes nothing"
+      ]
+    },
+    {
+      "id": 4,
+      "query": "/sdd-route spec-0050 review, chore regenerating docs, VERIFY bound",
+      "files": [],
+      "expected_behavior": [
+        "Asks the evidence question with tdd first; never writes evidence on its own",
+        "Names the concrete VERIFY check in the recommended option"
+      ]
+    }
+  ],
+  "runs": []
+}

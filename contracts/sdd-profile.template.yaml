@@ -1,7 +1,7 @@
 # SDD Profile — template
 #
 # Copy to `.agents/profile.yaml` at the PROJECT ROOT and fill it in. The SDD skills
-# (bootstrap, spec, prepare, clarify, scan, design, plan, build, refine, hotfix, sync,
+# (bootstrap, spec, route, prepare, scan, clarify, design, plan, build, refine, hotfix, sync,
 # commit, docs, rules) live in `~/.agents/skills/` and are global: this file is the
 # only thing that adapts them to a project. Without it, the skills stop.
 #

@@ -3,8 +3,8 @@ name: sdd-code-explorer
 description: >
   Surveys a module's structure in a repository (entities/models, module
   registration, use cases, contracts/DTOs, ports) and returns structured
-  findings with verbatim citations, modifying nothing. It is /sdd-clarify's
-  FALLBACK for projects WITHOUT a code graph — when the profile declares
+  findings with verbatim citations, modifying nothing. It is the survey
+  FALLBACK of /sdd-scan (the inventory) and /sdd-clarify (precedent) for projects WITHOUT a code graph — when the profile declares
   the `CODE_SURVEY` port has no graph adapter available. Do NOT use
   when a graph exists: querying it directly is cheaper and returns call paths
   and blast radius this agent cannot reconstruct. Also don't use it to resolve
@@ -27,7 +27,7 @@ mode: subagent
     because jq isn't installed here: the previous version failed OPEN — it couldn't
     extract the command and approved everything, including `rm -rf`. The current one
     fails CLOSED.
-  · Role: since /sdd-clarify queries CodeGraph directly, this agent is only the
+  · Role: since /sdd-scan and /sdd-clarify query CodeGraph directly, this agent is only the
     no-graph fallback. If that condition changes, update the description.
 ─────────────────────────────────────────────────────────────────────────────── -->
 

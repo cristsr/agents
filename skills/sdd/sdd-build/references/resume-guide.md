@@ -68,7 +68,7 @@ actually produced the expected output:
 
 Continue from the first task NOT marked `[X]`, running its group's cycle from there.
 Follow the same execution rules as a fresh start:
-- Mark the group's pending tasks `in_progress` in TodoWrite
+- Mark the group's pending tasks `in_progress` in your task list
 - Whatever a task fixes is binding; the bodies are yours to write
 - Tests for the remaining tasks first, one red run, then implement
 - Mark the group's tasks `[X]` in plan.md once it is green

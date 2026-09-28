@@ -88,13 +88,14 @@ test('a story with no plan is not faulted for it', () => {
   assert.doesNotMatch(out, /plan\.md/);
 });
 
-test('a context.md without the decision log means /clarify did not finish', () => {
-  // The pair is the contract: context.md exists only because /clarify ran, and
-  // /clarify writes the decision log first. One without the other is a story
-  // that LOOKS clarified — the state a later stage would build on unknowingly.
-  const { code, out } = check({ 'spec.md': VALID_SPEC, 'context.md': '# Context\n' });
-  assert.equal(code, 1);
-  assert.match(out, /Ambiguity Resolution/);
+test('a context.md without the decision log is a story between scan and clarify', () => {
+  // /sdd-scan writes context.md before /sdd-clarify runs, so the pair is not yet
+  // expected: a surveyed story waiting for its clarification is mid-pipeline, not
+  // a defect. The markers it still carries are pending, never an issue.
+  const spec = VALID_SPEC.replace('one row per settled entry.', 'one row per settled entry.\n[NEEDS CLARIFICATION: settled or posted?]');
+  const { code, out } = check({ 'spec.md': spec, 'context.md': '# Context\n' });
+  assert.equal(code, 0);
+  assert.match(out, /pending/);
 });
 
 test('an unknown story cannot be validated at all', () => {

@@ -7,8 +7,8 @@ description: >
   to commit. Use when the user says "/sdd-forge spec-XXXX", "forge the story",
   "plan and build", "plan build and sync in one go", "run the whole pipeline at
   once", or wants to go from an approved design straight to built-and-documented
-  in one shot. Do NOT use before /sdd-design is complete and approved (there is no plan
-  input yet). Do NOT use to only plan (use /sdd-plan) or only build (use /sdd-build). Forge
+  in one shot. Do NOT use before /sdd-ready (and, in full + tdd, /sdd-design) is
+  complete (there is no plan input yet). Do NOT use to only plan (use /sdd-plan) or only build (use /sdd-build). Forge
   never runs git — it stops at /sdd-commit, so commits and the PR stay manual.
 ---
 
@@ -80,12 +80,12 @@ design artifacts by construction, and the `VERIFY` check in the row below replac
 | Condition | Check | If it fails |
 |---|---|---|
 | You are in the project's working directory | `pwd` == `WORKING_DIRECTORY` (absolute path, from the profile) | `cd` there before running anything |
-| `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find `work/active/spec-<number>/spec.md`. Run `/spec spec-<number>` first." |
-| `context.md` exists **(not `fast`)** | `[ -f work/active/spec-<number>/context.md ]` | Stop: "Run `/clarify spec-<number>` first." A `fast` story runs no clarification pass, so this row does not apply to it |
+| `spec.md` exists | `[ -f work/active/spec-<number>/spec.md ]` | Stop: "I couldn't find `work/active/spec-<number>/spec.md`. Run `/sdd-spec spec-<number>` first." |
+| `context.md` exists **(not `fast`)** | `[ -f work/active/spec-<number>/context.md ]` | Stop: "Run `/sdd-ready spec-<number>` first." A `fast` story runs no survey, so this row does not apply to it |
 | `design.md` exists **(`full` + tdd only)** | `[ -f work/active/spec-<number>/design.md ]` | Stop: "Run `/design spec-<number>` first." Only `full` writes a design: `standard` and `fast` have none to require |
 | The API contract exists **(`full` + tdd only)** | `[ -f work/active/spec-<number>/docs/<api-artifact> ]` | Same stop as `design.md` — `/sdd-plan` reads it as the source of truth for every DTO task |
 | The build mode and the tier hold up | `node ~/.agents/scripts/validate-artifacts.mjs spec-<number>` reports no `build_mode` issue and no `tier` issue, and (for an `evidence` story) the `VERIFY` port resolves | Abort with the validator's message — forge runs unattended, so a carril or a tier that doesn't hold up must never reach `/sdd-plan` |
-| No unresolved ambiguity | `spec.md` has zero `[NEEDS CLARIFICATION]` markers | Stop: "Resolve the ambiguities with `/clarify spec-<number>` before forging." Building on ambiguities produces incorrect DTOs |
+| No unresolved ambiguity | `spec.md` has zero `[NEEDS CLARIFICATION]` markers | Stop: "Resolve the ambiguities with `/sdd-ready spec-<number>` (or `/sdd-clarify`) before forging." Building on ambiguities produces incorrect DTOs |
 | No plan is already under execution | `full` and `standard`: `plan.md` is absent, or present with **no** task marked `[X]`. `fast`: `plan.md` is **absent** | Stop and hand over: a plan with `[X]` tasks is `/build spec-<number>` to resume, or `/hotfix spec-<number>` for a targeted fix — never a re-forge, which would regenerate the plan and discard its execution state. In `fast` there is no plan to read: a file is a leftover no stage of that tier reads, or the tier is wrong |
 | The working branch exists (prepare ran) | `[ -f work/active/spec-<number>/.branch ]` | Stop: "Run `/prepare spec-<number>` first — it creates and checks out the working branch that `/sdd-plan`'s Task 0 verifies (in `full` and `standard`) and `/sdd-build` requires." |
 | The working tree is usable | `git status --porcelain` — and `git branch --show-current` | See "the branch" below |
@@ -133,8 +133,9 @@ patches no code and fixes no failing stage by hand.
   story looks small, never inserts one the tier omits, and never reorders them: `/sdd-sync`
   closes a build, and a build with no plan behind it is still a build. An unattended run
   does not improvise its flow.
-- **Forbidden:** changing the tier. The tier is the story's decision: `/sdd-clarify` and
-  `/sdd-plan` may raise it, the developer alone may lower it, and forge may do neither —
+- **Forbidden:** changing the tier. The tier is the story's decision, and `/sdd-route`
+  is the only skill that writes it — raising on evidence, lowering on the developer's
+  answer. Forge may do neither —
   a chain that rewrote its own flow mid-run would invalidate every preflight row above it.
 
 **Escalates** — the chain has no interaction point of its own. The branch name is
@@ -148,7 +149,7 @@ resolved once, by `/sdd-prepare`, before the chain starts.
   back, it does not resolve it.
 
 **Degrades** — none of its own. Each stage degrades per its own Contract
-(`TESTS`, `API_CLIENT_EXPORT`, `CI_GATES`, `CONTRACT_DIFF`, `DIAGRAM_CHECK`
+(`TESTS`, `VERIFY`, `CI_GATES`, `CONTRACT_DIFF`, `DIAGRAM_CHECK`
 unbound); forge carries whatever note the stage emitted into the
 Step 4 report instead of swallowing it.
 
@@ -274,10 +275,10 @@ resolution.
 | `design.md` missing at preflight | `/sdd-design` never ran or wasn't approved in a `full` story | STOP; run `/design spec-<number>` first |
 | Dirty working tree at preflight | uncommitted work would ride into the new branch | STOP; commit or stash it, then forge |
 | `plan.md` already has `[X]` tasks | the story was built (or partly built) before | Don't re-forge — `/sdd-build` resumes it, `/sdd-hotfix` fixes it |
-| A `fast` story carries a `plan.md` | the flow declares no plan for that tier, so the file is either a leftover from an earlier stage or the tier is wrong | STOP; don't build against it. The close belongs to `## AC Coverage` in `spec.md`: either drop the file, or — if the change really needs a plan — the story is not `fast`. Forge doesn't touch the tier: `/sdd-refine` on `spec.md` raises it — and the passes that tier declares then run, `/sdd-clarify` for `standard` and `/sdd-design` for `full` — while the developer decides any other change |
+| A `fast` story carries a `plan.md` | the flow declares no plan for that tier, so the file is either a leftover from an earlier stage or the tier is wrong | STOP; don't build against it. The close belongs to `## AC Coverage` in `spec.md`: either drop the file, or — if the change really needs a plan — the story is not `fast`. Forge doesn't touch the tier: `/sdd-route` raises it, and `/sdd-ready` then runs the passes that tier declares |
 | Empty `plan.md` after `/sdd-plan` | `/sdd-plan` stopped on a gate | Abort forge; resolve what `/sdd-plan` reported (e.g. `/sdd-clarify`) and retry |
 | `plan.md` without `Task 0` | the plan was written or edited by hand | Abort; regenerate with `/sdd-plan` — nothing would create the working branch |
-| `spec.md` with `[NEEDS CLARIFICATION]` | unresolved ambiguities | STOP; `/clarify spec-<number>` before forging |
+| `spec.md` with `[NEEDS CLARIFICATION]` | unresolved ambiguities | STOP; `/sdd-ready spec-<number>` (or `/sdd-clarify`) before forging |
 
 ---
 

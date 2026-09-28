@@ -1,0 +1,60 @@
+{
+  "skill": "sdd-clarify",
+  "models": ["haiku", "sonnet", "opus"],
+  "baseline": [],
+  "triggers": {
+    "should": [
+      "/sdd-clarify spec-1933",
+      "clarify story spec-1933",
+      "resolve the ambiguities in spec-1933",
+      "aclara la historia spec-1933",
+      "make the ACs of spec-1933 testable"
+    ],
+    "should_not": [
+      { "query": "survey the module for spec-1933", "owner": "sdd-scan" },
+      { "query": "the code changed, refresh the context of spec-1933", "owner": "sdd-scan" },
+      { "query": "lower spec-1933 to standard", "owner": "sdd-route" },
+      { "query": "switch spec-1933 to evidence mode", "owner": "sdd-route" },
+      { "query": "change AC-2 in the design of spec-1933", "owner": "sdd-refine" },
+      { "query": "new story: list zones by service type", "owner": "sdd-spec" }
+    ]
+  },
+  "evals": [
+    {
+      "id": 1,
+      "query": "/sdd-clarify spec-1933 — three ACs, one missing an HTTP code, one ambiguous AND/OR filter; context.md present",
+      "files": [],
+      "expected_behavior": [
+        "Decides the HTTP code autonomously from the REST convention and logs source and confidence",
+        "Escalates only the AND/OR question, in a single AskUserQuestion call",
+        "Writes the decision log before the ACs and leaves zero markers",
+        "Hands off to /sdd-route, never to /sdd-design directly"
+      ]
+    },
+    {
+      "id": 2,
+      "query": "/sdd-clarify spec-2001 when context.md does not exist",
+      "files": [],
+      "expected_behavior": [
+        "Stops at Requires and points at /sdd-scan",
+        "Does not survey the modules itself"
+      ]
+    },
+    {
+      "id": 3,
+      "query": "/sdd-clarify spec-2002 on a tier: fast story",
+      "files": [],
+      "expected_behavior": ["Stops and points at /sdd-route to raise the tier"]
+    },
+    {
+      "id": 4,
+      "query": "/sdd-clarify spec-2003 where five unknowns are about product scope",
+      "files": [],
+      "expected_behavior": [
+        "Escalates the three with the highest impact and resolves the rest at low confidence",
+        "Warns that the item's scope may not be ready"
+      ]
+    }
+  ],
+  "runs": []
+}

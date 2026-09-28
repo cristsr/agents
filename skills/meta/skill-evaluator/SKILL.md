@@ -1,44 +1,60 @@
 ---
 name: skill-evaluator
 description: >
-  Reviews an existing skill against Anthropic's official guidance and produces a
-  report with findings prioritized by severity, a trigger test battery and the
-  concrete fixes to apply. Validates the frontmatter's hard rules, assesses the
-  description's quality, detects over-triggering and under-triggering risks,
-  reviews the structure and the use of progressive disclosure, checks that
-  the instructions are actionable, and verifies the handoff contract when the
-  skill chains with others.
+  Reviews an existing skill against Anthropic's skill authoring best practices
+  and reports findings by severity, a single-responsibility verdict, a trigger
+  test battery and the concrete fixes. Checks the frontmatter's hard rules, the
+  description and its mutual exclusivity with sibling skills, the 500-line body
+  and one-level references, the instructions' conciseness and degree of
+  freedom, the evals and their baseline, and the handoff contract.
   Use when the user says "/skill-evaluator", "review this skill",
   "evaluate a skill", "why doesn't my skill trigger", "the skill over-triggers",
-  "audit a SKILL.md", "improve this skill", "review my skills", or points
-  at a skill folder or SKILL.md and asks for feedback.
-  Do NOT use to create a skill from scratch (use /skill-creator), to review
-  application code (use /code-review), or to run automated test suites — this
-  skill diagnoses and proposes tests, it doesn't execute them.
+  "should this skill be split", "audit a SKILL.md", "improve this skill",
+  "review my skills", or points at a skill folder and asks for feedback.
+  Do NOT use to create a skill or build the pieces of a decided split (use
+  /skill-creator), to review application code (use /code-review), or to run
+  eval suites — it diagnoses and proposes tests, it doesn't execute them.
 ---
 
 # skill-evaluator
 
 ## Overview
 
-Reviews one or more skills against Anthropic's official guidance and returns an
-actionable diagnosis: what's broken (blocking), what stops it from triggering, and
-which concrete fixes to apply.
+Reviews one or more skills against Anthropic's skill authoring best practices and
+returns an actionable diagnosis: what's broken (blocking), what stops it from
+triggering, whether it holds a single responsibility, and which concrete fixes to
+apply.
 
 This skill is **agnostic** — it evaluates skills from any project or domain.
 
 **Announce at start:** "I'll evaluate the skill against the guidance. Starting by reading the folder."
 
-**Output:** a report in the chat with prioritized findings, a trigger test battery,
-and — only if the user approves — the edits applied.
+**Output:** a report in the chat with prioritized findings, a single-responsibility
+verdict, a trigger test battery, and — only if the user approves — the edits
+applied.
 
 **Core principle:** most skills fail because of the `description`, not the
 instructions. Prioritize findings by what actually changes behavior: first what
-prevents the skill from loading or installing, then what makes it trigger wrongly,
-and finally wording polish.
+prevents the skill from loading, then what makes it trigger wrongly or collide with
+a sibling, then what breaks the chain, and finally wording polish.
 
 **CRITICAL: this skill diagnoses; it doesn't rewrite without permission.** Show the
 report first and ask for confirmation before editing files.
+
+### Progress checklist
+
+Copy it into the conversation and tick it as you go:
+
+```
+- [ ] PHASE 1 — locate, inventory, read, classify, load sibling descriptions
+- [ ] PHASE 2 — hard rules (B)
+- [ ] PHASE 3 — description and boundary (D)
+- [ ] PHASE 4 — structure (E)
+- [ ] PHASE 5 — instructions (I)
+- [ ] PHASE 6 — contract (C), pipeline only
+- [ ] PHASE 7 — evals (V) and trigger battery
+- [ ] PHASE 8 — report and handoff
+```
 
 ---
 
@@ -48,10 +64,11 @@ report first and ask for confirmation before editing files.
 
 Order of preference:
 1. The user passed an explicit path (folder or `SKILL.md`) → use it.
-2. The user named a skill (e.g. "review `commit`") → find it:
+2. The user named a skill (e.g. "review `commit`") → find it (`-L` follows the
+   symlinks installed skills usually are):
 
 ```bash
-find ~/.claude/skills ~/.agents/skills .claude/skills -maxdepth 2 -iname "SKILL.md" 2>/dev/null
+find -L ~/.claude/skills ~/.agents/skills .claude/skills -maxdepth 2 -iname "SKILL.md" 2>/dev/null
 ```
 
 3. The user said "review my skills" without specifying → list the ones found and
@@ -62,18 +79,19 @@ find ~/.claude/skills ~/.agents/skills .claude/skills -maxdepth 2 -iname "SKILL.
 
 ```bash
 SKILL_DIR=<resolved path>
-ls -la "$SKILL_DIR"
 find "$SKILL_DIR" -type f | sort
-wc -w "$SKILL_DIR/SKILL.md"
+wc -l "$SKILL_DIR/SKILL.md" "$SKILL_DIR"/references/*.md 2>/dev/null
 ```
 
-Record: the main file's exact name, which subfolders exist, whether a `README.md`
-is present, and `SKILL.md`'s word count.
+Record: the main file's exact name, which subfolders exist (`evals/` included),
+whether a `README.md` is present, and the line count of `SKILL.md` and of each
+reference.
 
 ### Step 3 — Read
 
-Read `SKILL.md` in full. Also read the `references/` files **only if** `SKILL.md`
-links them — if it doesn't link them, that's already a finding (see D3).
+Read `SKILL.md` in full, and `evals/evals.json` if it exists. Read the `references/`
+files **only if** `SKILL.md` links them — if it doesn't, that's already a finding
+(E3).
 
 ### Step 4 — Classify: pipeline or standalone
 
@@ -81,12 +99,21 @@ Decides whether **PHASE 6** applies. A skill is **pipeline** if a **named** skil
 produces its input or consumes its output, if it writes into a workspace shared with
 other skills, or if it reads a project profile for paths, branches or commands.
 Otherwise it's **standalone** — including a skill that operates on whatever file the
-user points it at: arbitrary input is not a handoff, however often it runs after
-some other skill.
+user points it at: arbitrary input is not a handoff.
 
-Say which one in the report's header. Getting this wrong costs in both directions:
-group C on a standalone skill produces findings demanding a contract that shouldn't
-exist, and skipping it on a pipeline skill drops the highest-impact checks there are.
+Say which one in the report's header. Getting it wrong costs in both directions:
+group C on a standalone skill demands a contract that shouldn't exist; skipping it
+on a pipeline skill drops the highest-impact checks there are.
+
+### Step 5 — Load the sibling descriptions
+
+D9 needs them. Collect every other installed skill's frontmatter:
+
+```bash
+for f in $(find -L ~/.claude/skills ~/.agents/skills .claude/skills -maxdepth 2 -name SKILL.md 2>/dev/null); do
+  echo "== $f"; awk '/^---$/{n++; next} n==1' "$f" | sed -n '/^description:/,/^[a-z-]*:/p'
+done
+```
 
 ---
 
@@ -94,20 +121,20 @@ exist, and skipping it on a pipeline skill drops the highest-impact checks there
 
 Consult `references/rubric.md` for the full rubric with severities.
 
-These are binary: either they hold or the skill is broken. Any failure here is
-**BLOCKING** severity and goes first in the report.
+Binary: either they hold or the skill is broken. Any failure here is **BLOCKING**
+and goes first in the report.
 
 | ID | Rule | How it's verified |
 |---|---|---|
 | B1 | The file is named exactly `SKILL.md` (case-sensitive) | `ls` — not `SKILL.MD`, not `skill.md` |
 | B2 | Frontmatter with opening and closing `---` delimiters | Read the first lines |
-| B3 | Valid YAML (closed quotes, consistent indentation) | Parse it mentally; look for unclosed quotes |
-| B4 | `name` present and in kebab-case | No spaces, uppercase or underscores |
+| B3 | Valid YAML (closed quotes, consistent indentation) | Look for unclosed quotes and broken indentation |
+| B4 | `name` present and in kebab-case | Lowercase letters, numbers and hyphens only |
 | B5 | `name` matches the folder name | Compare |
 | B6 | `name` doesn't contain "claude" or "anthropic" | Reserved |
 | B7 | `description` present | — |
 | B8 | `description` under 1024 characters | Count |
-| B9 | No XML angle brackets in the frontmatter | Search the whole block. **The YAML block-scalar indicators `>` and `\|` on `description:` are not a violation** — they're valid YAML, not markup. What's forbidden is a tag: `<tag>`, `</tag>`, `<placeholder>` |
+| B9 | No XML angle brackets in the frontmatter | **The YAML block-scalar indicators `>` and `\|` on `description:` are not a violation.** What's forbidden is a tag: `<tag>`, `</tag>`, `<placeholder>` |
 | B10 | No `README.md` inside the skill's folder | `ls` |
 
 To count the `description`'s characters without eyeballing it:
@@ -118,37 +145,60 @@ python -c "import sys,re,io; t=io.open(sys.argv[1],encoding='utf-8').read(); m=r
 
 ---
 
-## PHASE 3: `description` quality
+## PHASE 3: Description and boundary
 
-This is the highest-impact analysis. The `description` is the only thing always
-loaded and it's what decides triggering.
+The highest-impact analysis. The `description` is the only thing always loaded — it
+decides triggering, and it's the skill's public interface.
 
 ### Checks
 
 | ID | Check | Fails if… |
 |---|---|---|
 | D1 | It says **what the skill does** | It only says when, or it's just a domain name |
-| D2 | It says **when to use it** with real user phrases | There are no trigger phrases, just a technical description |
-| D3 | The phrases are ones a user **would actually say** | It uses internal jargon the user would never type |
+| D2 | It says **when to use it** with real user phrases | No trigger phrases, just a technical description |
+| D3 | The phrases are ones a user **would actually say** | Internal jargon the user would never type |
 | D4 | It mentions file types if they're relevant | It handles `.csv`/`.fig`/`.pdf` and never names them |
-| D5 | It has negative triggers if there are neighboring skills | Overlapping scope with no `Do NOT use…` |
+| D5 | Negative triggers for every neighboring skill | Overlapping scope with no `Do NOT use…` |
 | D6 | It isn't generic | "Helps with projects", "Processes documents" |
+| D7 | Written in **third person** | "I can help…", "You can use this to…" |
+| D8 | **Single responsibility** | It can't be stated in one or two sentences without "and also…" |
+| D9 | **Mutually exclusive** with every sibling | A request exists that this and another skill's description would both claim |
+| D10 | `name` is specific | `helper`, `utils`, `tools` (IMPORTANT). Not a gerund outside a family convention (MINOR) |
+
+### D8 — the single-responsibility verdict
+
+Write the skill's purpose in one or two sentences. Other signals it holds more than
+one responsibility:
+
+- its triggers serve unrelated user intents;
+- the body has modes that share no steps;
+- its references split into groups no single step reads together;
+- it produces different outputs for different consumers.
+
+When D8 fails, the report proposes the split: each piece named, its one-sentence
+purpose, and the triggers it takes. **A piece earns its own skill only if the user
+would ask for it on its own**; a piece with no trigger of its own becomes a
+reference or a script inside the skill that uses it — every extra skill adds a
+permanent description and one more collision risk.
+
+### D9 — reading a collision
+
+For each trigger phrase, check the sibling descriptions loaded in PHASE 1 Step 5:
+would another one also claim it? A collision names both skills and proposes the
+owner. Cross negative triggers mark a decided boundary; when both sides need many of
+them, the boundary itself is wrong — say so.
 
 ### Trigger diagnosis
 
-Classify the risk as one of three:
-
 | Risk | Signals | Fix |
 |---|---|---|
-| **Under-triggering** | Generic description; no trigger phrases; the user has to invoke it by hand | Add detail and nuance to the description — above all keywords and technical terms the user uses |
-| **Over-triggering** | Description too broad; loads on unrelated queries; the user disables it | Add negative triggers, be more specific, narrow the scope |
-| **OK** | Concrete phrases, bounded scope, exclusions where needed | — |
+| **Under-triggering** | Generic description; no trigger phrases; the user invokes it by hand | Add detail — keywords and technical terms the user uses |
+| **Over-triggering** | Too broad; loads on unrelated queries; collides with a sibling | Negative triggers, narrower scope, or a redrawn boundary |
+| **OK** | Concrete phrases, bounded scope, exclusive with its siblings | — |
 
-### Debug technique (recommend it to the user)
-
-> Ask Claude in a clean session: "When would you use the `<name>` skill?". Claude
-> will quote the description back. Whatever's missing from that answer is exactly
-> what's missing from the description.
+> **Debug technique (recommend it):** ask Claude in a clean session "When would you
+> use the `<name>` skill?". Whatever's missing from the answer is missing from the
+> description.
 
 ---
 
@@ -156,119 +206,112 @@ Classify the risk as one of three:
 
 | ID | Check | Threshold |
 |---|---|---|
-| E1 | Folder in kebab-case | No spaces, underscores or uppercase |
-| E2 | `SKILL.md` under 5,000 words | If it exceeds → move detail to `references/` |
-| E3 | The `references/` are explicitly linked from `SKILL.md` | A file nobody links never loads |
-| E4 | No empty folders (`scripts/`, `assets/`, `references/`) | Scaffolding with no content = noise |
+| E1 | Folder in kebab-case | Lowercase letters, numbers and hyphens |
+| E2 | `SKILL.md` body under ~500 lines | Over it → move detail to `references/` |
+| E3 | Every `references/` file is linked from `SKILL.md` | A file nobody links never loads |
+| E4 | No empty folders | Scaffolding with no content is noise |
 | E5 | Heavy detail lives in `references/`, not inline | Progressive disclosure level 3 |
 | E6 | The referenced `scripts/` exist and the command is correct | Verify the paths |
+| E7 | References one level deep | A reference that sends the reader to another reference for needed content |
+| E8 | TOC on references over ~100 lines | A long reference with no contents list at the top |
+| E9 | Forward slashes in every path | `references\guide.md`, `C:\…` |
+| E10 | Scripts are robust and their role is stated | A script that punts errors to Claude, an unexplained magic constant, or `SKILL.md` not saying whether to **run** it or **read** it |
 
-Remember the three levels: frontmatter (always loaded) → `SKILL.md`'s body
-(when Claude believes it's relevant) → linked files (only when it navigates them).
+The three levels: frontmatter (always) → `SKILL.md`'s body (on activation) → linked
+files (on demand; a script's code never enters the context, only its output).
 
 ---
 
 ## PHASE 5: Instruction quality
 
-The symptom this phase attacks: *the skill loads but Claude doesn't follow the
-instructions*.
+The symptom: *the skill loads but Claude doesn't follow it, or follows it at a high
+token cost.*
 
 | ID | Common cause | Check | Fix |
 |---|---|---|---|
-| I1 | Instructions too verbose | Long paragraphs where a list belongs? | Bullets and numbered lists; detail into `references/` |
-| I2 | Buried instructions | Is the critical part near the start? | Move it up — into the `Contract` if there is one. A `## CRITICAL` heading only for something irreversible it doesn't already cover (see C5) |
-| I3 | Ambiguous language | Does it say "validate properly" instead of what to validate? | Replace with verifiable criteria |
-| I4 | No error handling | Is there a common-issues section with cause and solution? | Add it |
-| I5 | No examples | Is there at least one end-to-end scenario? | Add user says / actions / result |
-| I6 | Not actionable | Are the commands literal and copy-pasteable? | ``Run `python scripts/validate.py --input {file}` `` |
+| I1 | Too verbose | Long paragraphs where a list belongs? | Bullets and numbered lists; detail into `references/` |
+| I2 | Buried instructions | Is the governing rule near the start? | Move it up — into the `Contract` if there is one |
+| I3 | Ambiguous language | "Validate properly" instead of what to validate? | Verifiable criteria |
+| I4 | No error handling | A common-issues section with cause and resolution? | Add it |
+| I5 | No examples | At least one end-to-end scenario? | Add user says / actions / result |
+| I6 | Not actionable | Literal, copy-pasteable commands? | ``Run `python scripts/validate.py --input {file}` `` |
+| I7 | Explains what Claude knows | General concepts (what a PDF, an endpoint, a branch is)? | Cut it; keep conventions, domain rules, team decisions |
+| I8 | Freedom mismatched to fragility | Loose prose on a fragile operation, or rigid steps on a judgment task? | Low freedom (exact steps, a script) for fragile; high (criteria) for judgment |
+| I9 | Inconsistent terminology | Several terms for one concept? | One term per concept |
+| I10 | Time-sensitive information | "Currently", "as of 2025", "the new API" in the main flow? | Remove it or isolate it in a `## Legacy` section |
+| I11 | Multi-step with no checklist | A long workflow Claude can lose its place in? | A copyable checklist to tick as it goes |
+| I12 | No feedback loop | Quality-critical output with no run → validate → fix → repeat? | Add the loop, ideally around a validation script |
 
-The contrast to look for:
-
-```
-# Bad
-Make sure to validate things properly
-
-# Good
-CRITICAL: Before calling create_project, verify:
-- Project name is non-empty
-- At least one team member assigned
-- Start date is not in the past
-```
-
-**Advanced signal:** if a critical validation depends on the model interpreting
-text, flag it as an opportunity — recommend a script that does it programmatically.
-Code is deterministic; language interpretation isn't.
+**Advanced signal:** a critical validation that depends on the model interpreting
+text is an opportunity — recommend a script. Code is deterministic; language
+interpretation isn't.
 
 ---
 
 ## PHASE 6: Contract and handoff (pipeline skills only)
 
-Skip this phase if PHASE 1 Step 4 said **standalone**, and say so in one line in the
-report. `references/rubric.md` carries group C in full.
+Skip this phase if PHASE 1 Step 4 said **standalone**, and say so in one line.
+`references/rubric.md` carries group C in full.
 
-The symptom this phase attacks: *each skill reads fine on its own and the chain still
-breaks*. A contract defect is only visible at the junction — reading either side
-alone shows nothing wrong.
+The symptom: *each skill reads fine on its own and the chain still breaks.* A
+contract defect is only visible at the junction.
 
 | ID | Check | Fails if… |
 |---|---|---|
-| C1 | A `## Contract` block after the Overview, with the rows that apply (`Requires`, `Produces`, `Writes`, `Never`, `Escalates`, `Degrades`, `Profile keys`, + `Reverting` if it overwrites live artifacts) | The block is absent, or scattered back across several `CRITICAL` sections |
-| C2 | Every key in `Profile keys` exists in the project's profile template, and the skill declares all the ones it actually reads | A key is invented, missing, or the catalog and the skill disagree |
+| C1 | A `## Contract` block after the Overview, with the rows that apply | Absent, or scattered across several `CRITICAL` sections |
+| C2 | Every key in `Profile keys` exists in the profile template, and every key read is declared | A key is invented, missing, or catalog and skill disagree |
 | C3 | No `\| In this document \| Key in profile.yaml \|` translation table | The table is still there |
-| C4 | Normative literals replaced by their key | A path, branch or command the project configures is hardcoded in a step |
-| C5 | No `## CRITICAL` heading the `Contract` already covers | `CRITICAL` used for language conventions, read paths or ordinary preconditions |
-| C6 | The handoff holds: the previous skill's `Produces` covers this one's `Requires` | This skill requires something nobody produces, or produces something nobody consumes |
+| C4 | Normative literals replaced by their key | A configured path, branch or command is hardcoded in a step |
+| C5 | No `## CRITICAL` heading the `Contract` already covers | `CRITICAL` used for language conventions or ordinary preconditions |
+| C6 | The handoff holds in both directions | It requires something nobody produces, or produces something nobody consumes |
 | C7 | The ecosystem's validator passes, if the project has one | It reports issues on this skill |
 
-### How to check C2 and C6 without guessing
+**C2** — read the profile template, not a hand-maintained catalog. Where they
+disagree, the catalog is the suspect: report it, don't fix it from here.
 
-**C2** — read the profile template, not the catalog. Where a hand-maintained
-"keys per skill" table disagrees with the skill's own `Contract`, treat **the table
-as the suspect**: it's maintained by memory and drifts. Report the discrepancy;
-don't silently fix the table from inside this evaluation.
-
-**C6** — open the neighboring skill and read its `Contract`, both directions:
+**C6** — open the neighbor and read its `Contract`, both directions:
 
 ```
 previous.Produces  ⊇  this.Requires      ← this skill can actually start
 this.Produces      ⊇  next.Requires      ← the next one can actually start
 ```
 
-Any `Requires` row with no producer is a finding against **whoever should produce
-it**, not against the skill that needs it. Name both skills in the finding.
-
-### What C4 looks like in practice
-
-The failure this check exists for: a skill carried `| develop | BASE_BRANCH |` in its
-translation table and, hundreds of lines below, still verified
-`branch ∉ {main, master}` — passing through exactly the project the table was there
-to cover. The table was correct and useless; the check was the contract.
+A `Requires` with no producer is a finding against **whoever should produce it**.
+Name both skills.
 
 ---
 
-## PHASE 7: Generate the trigger test battery
+## PHASE 7: Evals and trigger battery
 
-Derive the test cases from the `description` and the skill's examples — don't
-invent them from nothing.
+The guidance's central point: evals come **before** the documentation, and the
+instructions exist to fix failures observed without the skill.
+
+| ID | Check | Fails if… |
+|---|---|---|
+| V1 | `evals/evals.json` exists with ≥3 behavior evals and a trigger battery | Missing, or only happy-path queries |
+| V2 | `baseline` records failures observed without the skill | Empty or absent — nothing shows the skill's content is needed |
+| V3 | `should_not` includes a query owned by each neighboring skill | The battery can't detect a D9 collision |
+| V4 | `models` lists the target models and `runs` covers each | Tested on one model only, or never run |
+
+Then produce the battery for the report:
+
+- **With `evals.json`:** take its `triggers`, and add what V3 found missing.
+- **Without it:** derive the queries from the `description` and the examples — don't
+  invent them from nothing — and offer to persist them as `evals/evals.json` in the
+  format `/skill-creator` uses.
 
 ```
 Should trigger:
 - "<literal phrase from the description>"
 - "<natural paraphrase of that phrase>"
-- "<use case described in the skill's Examples>"
+- "<use case described in the skill's examples>"
 
 Should NOT trigger:
-- "<query from the neighboring domain the description excludes>"
+- "<query a named sibling owns>"  (owner: <sibling>)
 - "<generic unrelated query>"
-- "<query another skill in the system should take>"
 ```
 
-Aim for 10–20 queries if the user wants to measure seriously: the guidance's target
-is triggering on **90% of relevant queries**. It's measured by running them and
-counting how often it loads on its own vs. needs explicit invocation.
-
-If there are other installed skills with neighboring scope, name them explicitly in
-the report as a collision risk.
+Target: triggers on ~90% of relevant queries and on none owned by a sibling.
 
 ---
 
@@ -281,7 +324,9 @@ the report as a collision risk.
 
 **Verdict:** <Ready to use | Needs adjustments | Broken>
 **Kind:** <Pipeline | Standalone>   ← standalone means group C doesn't apply
+**Single responsibility:** <Yes | No — split into `a` (…), `b` (…)>
 **Trigger risk:** <Under-triggering | Over-triggering | OK>
+**Collides with:** <none | sibling skills and the shared triggers>
 
 ### Blocking (N)
 | ID | Finding | Fix |
@@ -309,11 +354,11 @@ Report rules:
 - Every finding carries the concrete fix, not just the diagnosis.
 - If a category has no findings, say so in one line — don't pad.
 - Don't report as a problem what the guidance leaves to the author's judgment.
-- **A C6 finding names both skills** — the one that requires and the one that should
-  produce. The fix usually belongs to the neighbor, not to the skill under review.
-- **Findings against a skill you weren't asked to evaluate are reported, not fixed.**
-  Editing a neighbor from inside this evaluation leaves a change with no record of
-  why it's there, and its own review won't know either.
+- **C6 and D9 findings name both skills.** The fix often belongs to the neighbor.
+- **Findings against a skill you weren't asked to evaluate are reported, not
+  fixed.** Editing a neighbor from here leaves a change with no record of why.
+- **A split is proposed, not executed.** Building the pieces is `/skill-creator`'s
+  job, with the boundary this report drew.
 
 ### Handoff
 
@@ -332,14 +377,12 @@ Say:
 ## Output language
 
 **The skills reviewed and any edit applied are written in English.** Finding IDs
-(B1, D3, E2, I4, C6), frontmatter field names, paths and code are always English.
+(B1, D8, E7, I8, C6, V2), frontmatter field names, paths and code are always English.
 So are structural headings that form a contract between skills (`## Contract`,
-`## AC Coverage`, `Task N`) — a translated one is a C6 finding, not a style note:
-the section is there and the next skill reports it missing.
+`## AC Coverage`, `Task N`) — a translated one is a C6 finding, not a style note.
 
 When proposing `description` fixes, keep the triggers in the language the user
-actually types — a trigger that never matches what the user writes is dead weight,
-whatever language the rest of the file is in.
+actually types — a trigger that never matches what the user writes is dead weight.
 
 **Chat interaction (the report) follows the user's language.**
 
@@ -353,8 +396,8 @@ resolution.
 
 | Issue | Cause | Resolution |
 |---|---|---|
-| The skill can't be found | Misspelled path or skill in another scope | Run PHASE 1 Step 1's `find` over all three scopes (project, `~/.claude`, `~/.agents`) |
-| `SKILL.md` is a symlink | Global skills linked from `~/.claude/skills` | Resolve the real target before editing: `readlink -f`; edit the original, not the link |
+| The skill can't be found | Misspelled path or skill in another scope | Run PHASE 1 Step 1's `find -L` over all three scopes |
+| `SKILL.md` is a symlink | Global skills linked from `~/.claude/skills` | Resolve the real target before editing: `readlink -f`; edit the original |
 | The user says "just fix it" | They want to skip the report | Show the blocking summary anyway before editing — it's the only moment to decide scope |
 
 ---
@@ -363,5 +406,3 @@ resolution.
 
 A full worked run — a skill evaluated phase by phase, with its findings — is in
 `references/example.md`. Read it when the shape of the output is in doubt.
-
----

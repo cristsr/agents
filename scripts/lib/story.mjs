@@ -300,7 +300,7 @@ export function section(text, name) {
 // the writer ("resolved by /sdd-prepare") left inside the block that gets written down.
 // Both read as helpful and both rot: the stage names move when a skill is refactored,
 // and whoever reads the artifact afterwards does not run this pipeline.
-const SKILL = 'spec|clarify|design|plan|build|sync|hotfix|refine|scan|docs|commit|prepare|forge|bootstrap|rules';
+const SKILL = 'spec|route|clarify|design|plan|build|sync|hotfix|refine|scan|docs|commit|prepare|forge|bootstrap|rules';
 const FOOTPRINTS = [
   // Checked first: a leaked comment usually CONTAINS one of the patterns below, and
   // naming the comment points at the cause (a template pasted whole) rather than at

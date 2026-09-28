@@ -5,13 +5,13 @@ description: >
   layer topology, ports & bindings, error handling) and produces a ranked
   findings report — then bridges into the SDD pipeline by generating draft
   spec.md stories (work/active/{story-id}/spec.md) whose ACs derive from the HIGH
-  and MEDIUM findings. Because these drafts carry no execution tier, they run the
-  full flow from /sdd-clarify onward. Read-only:
+  and MEDIUM findings. The drafts carry no execution tier: /sdd-route decides
+  it, like for any new story. Read-only:
   never edits code unless the user asks for the fixes to be applied. Use when
   the user says "audit the project", "review the architecture", "audit it",
   "find architecture improvements", "does this respect hexagonal", or wants to
   turn architecture debt into backlog stories. Do NOT use to build modules (use
-  /hexagonal-architecture), to survey the codebase for an item (use /sdd-clarify),
+  /hexagonal-architecture), to survey the codebase for an item (use /sdd-scan),
   or for C4 diagrams of the whole system (use /sdd-docs).
 metadata:
   author: styve
@@ -38,7 +38,7 @@ listed under **Profile keys** in the `Contract` below.
 
 ## Contract
 
-What this skill needs, what it hands to `/sdd-clarify`, and what it may not do. **Check
+What this skill needs, what it hands to `/sdd-route` and `/sdd-clarify`, and what it may not do. **Check
 every `Requires` row before mapping anything** — auditing against rules the project
 never adopted produces findings nobody asked for, and the survey is the expensive part.
 
@@ -52,7 +52,7 @@ never adopted produces findings nobody asked for, and the survey is the expensiv
 | The story workspace exists | `work/active/` is present | Create it — the `spec.md` drafts need it — and confirm `WORKDIR_ACTIVE` in the profile |
 | The ids to generate are free | for each resolved `<story-id>`, `work/active/<story-id>/` does **not** exist | Never overwrite: pick the next free id, or ask if the id came from a tracker key |
 
-**Produces** — this is what `/sdd-clarify` looks for
+**Produces** — this is what `/sdd-route` and `/sdd-clarify` look for
 
 - `docs/audits/<date>-<scope>.md`: the ranked report (HIGH/MEDIUM/LOW), each finding
   with its `file:line`, the rule broken, the concrete cost and the smallest fix, plus
@@ -72,7 +72,7 @@ never adopted produces findings nobody asked for, and the survey is the expensiv
 - `work/active/<story-id>/spec.md` — new files only, never over an existing workspace
 
 Not the project's source or test files. Not `context.md`, `design.md` or `plan.md` of
-the items it drafts — those come later, from `/sdd-clarify` onward.
+the items it drafts — those come later, from `/sdd-route` onward.
 
 **Never**
 

@@ -72,7 +72,9 @@ function validate(storyId) {
   const warn = (artifact, message) => warnings.push({ artifact, message });
 
   const closed = story.location === 'done';
-  const clarified = Boolean(story.files.context);
+  // Clarified means /sdd-clarify wrote its decision log. context.md alone no longer
+  // says so: /sdd-scan writes it first, and a story between the two is mid-pipeline.
+  const clarified = hasHeading(story.text.spec, 'Ambiguity Resolution');
   const mode = buildMode(story.text.spec);
   const evidence = mode === 'evidence';
   if (evidence) notes.push('evidence mode');
@@ -182,11 +184,8 @@ function validate(storyId) {
       else warn('spec.md', `${markers.length} [NEEDS CLARIFICATION] marker(s) pending (${where}) — /sdd-clarify resolves them`);
     }
 
-    if (clarified && !hasHeading(story.text.spec, 'Ambiguity Resolution')) {
-      issue('spec.md', 'context.md exists but spec.md has no `## Ambiguity Resolution` — /sdd-clarify writes the decision log before the ACs');
-    }
     if (fastTier && story.files.context) {
-      warn('context.md', 'present in a `tier: fast` story — that tier runs no clarification pass');
+      warn('context.md', 'present in a `tier: fast` story — that tier runs no survey');
     }
 
     // ── tier: fast, the guardrails a script can enforce ──────────────────────

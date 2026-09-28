@@ -15,15 +15,22 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadProfile, listStories, storyIdMatcher, workdirBase } from './lib/profile.mjs';
 import { rel as toRel } from './lib/paths.mjs';
-import { readStory, acceptanceCriteria, clarificationMarkers, tasks, acCoverage, traceability, buildMode, tier, hasHeading } from './lib/story.mjs';
+import { readStory, acceptanceCriteria, clarificationMarkers, tasks, acCoverage, traceability, buildMode, tier, hasHeading, section } from './lib/story.mjs';
 
 // ── The pipeline graph ──────────────────────────────────────────────────────
 // Order here is dependency order; ties break by declaration order, so the first
 // `ready` entry is always the next thing to do.
+//
+// `route` is /sdd-route's review run, the one after clarification. Its initial run
+// (right after /sdd-spec) leaves no trace a script can read when both axes keep their
+// defaults, so it is not a node — like /sdd-prepare, it is reported by its absence
+// only where something downstream needs it.
 const PIPELINE = [
   { id: 'spec', file: 'spec.md', requires: [], command: '/sdd-spec' },
-  { id: 'context', file: 'context.md', requires: ['spec'], command: '/sdd-clarify' },
-  { id: 'design', file: 'design.md', requires: ['context'], command: '/sdd-design' },
+  { id: 'context', file: 'context.md', requires: ['spec'], command: '/sdd-scan' },
+  { id: 'clarify', file: null, requires: ['context'], command: '/sdd-clarify' },
+  { id: 'route', file: null, requires: ['clarify'], command: '/sdd-route' },
+  { id: 'design', file: 'design.md', requires: ['route'], command: '/sdd-design' },
   { id: 'plan', file: 'plan.md', requires: ['design'], command: '/sdd-plan' },
   { id: 'build', file: null, requires: ['plan'], command: '/sdd-build' },
   { id: 'sync', file: null, requires: ['build'], command: '/sdd-sync' },
@@ -45,6 +52,8 @@ function pipelineFor(mode, storyTier) {
 
   if (storyTier === 'fast') {
     set('context', { skipped: true });
+    set('clarify', { skipped: true });
+    set('route', { skipped: true });
     set('design', { skipped: true });
     set('plan', { skipped: true, requires: [] });
     set('build', { requires: ['spec'] });
@@ -52,14 +61,14 @@ function pipelineFor(mode, storyTier) {
   }
   if (storyTier === 'standard') {
     set('design', { skipped: true });
-    set('plan', { requires: ['context'] });
+    set('plan', { requires: ['route'] });
     return nodes;
   }
   // `full` runs everything but the evidence carril's design, which has no API contract
-  // and no sequence diagram to produce; the plan then hangs off context.md instead.
+  // and no sequence diagram to produce; the plan then hangs off the routed story instead.
   if (mode === 'evidence') {
     set('design', { skipped: true });
-    set('plan', { requires: ['context'] });
+    set('plan', { requires: ['route'] });
   }
 
   return nodes;
@@ -121,13 +130,17 @@ function buildReport(storyId) {
   const coverage = acCoverage(fastTier ? story.text.spec : story.text.plan);
   const pipeline = pipelineFor(mode, storyTier);
 
-  // Satisfaction per artifact. `context` is not done while unresolved markers
+  // Satisfaction per artifact. `clarify` is not done while unresolved markers
   // remain: /sdd-clarify's own contract is to leave zero, so a spec still carrying
-  // them means clarification is unfinished, not that design may start. `build` is
-  // closed by the artifact the tier closes in.
+  // them means clarification is unfinished, not that design may start. `route` is done
+  // once the review wrote its two entries into the decision log. `build` is closed by
+  // the artifact the tier closes in.
+  const log = section(story.text.spec, 'Ambiguity Resolution') ?? '';
   const satisfied = {
     spec: Boolean(story.files.spec),
-    context: Boolean(story.files.context) && markers.length === 0,
+    context: Boolean(story.files.context),
+    clarify: hasHeading(story.text.spec, 'Ambiguity Resolution') && markers.length === 0,
+    route: /\*\*Tier ·/.test(log) && /\*\*Build mode ·/.test(log),
     design: Boolean(story.files.design),
     plan: Boolean(story.files.plan),
     build: fastTier
@@ -176,7 +189,7 @@ function buildReport(storyId) {
       warnings.push('tier: fast without a `## Change Surface` section — the build has no declared scope');
     }
     if (story.files.plan) warnings.push('plan.md is present in a `tier: fast` story — the close belongs to `## AC Coverage` in spec.md');
-    if (story.files.context) warnings.push('context.md is present in a `tier: fast` story — that tier runs no clarification pass');
+    if (story.files.context) warnings.push('context.md is present in a `tier: fast` story — that tier runs no survey');
   } else if (storyTier === 'standard' && story.files.design) {
     warnings.push('design.md is present in a `tier: standard` story — raise the tier, or drop the artifact');
   }

@@ -6,10 +6,12 @@ Read it when the shape of the output is in doubt; the rules themselves are in
 
 ## Example
 
-**Input:** `/plan spec-1933` with a design.md defining an endpoint in `catalog-ms`.
+**Input:** `/sdd-plan spec-1933` — `full` · `tdd`, a design.md defining an endpoint in `catalog-ms`.
 
-**Step 3:** reads the branch name from `work/active/spec-1933/.branch` (recorded by
-`/sdd-prepare`); **step 4** drafts against the design artifacts with `stack.SKILLS` loaded.
+**Step 0:** no `tier`, no `build_mode` → `full` · `tdd` → the `tdd` strategy.
+**Step 3:** reads the branch name from `work/active/spec-1933/.branch`. **Step 4** loads
+the design artifacts and `stack.SKILLS`. **Step 6** saves the tasks and runs
+`node ~/.agents/scripts/file-tree.mjs spec-1933`, which writes the File Tree below.
 
 **Resulting plan.md (fragment):**
 
@@ -36,7 +38,7 @@ Read it when the shape of the output is in doubt; the rules themselves are in
 
 ---
 
-### Task 0: Prepare the working branch
+### Task 0: Verify the working branch
 ...
 
 ### Task 1: Request and response DTOs
@@ -49,13 +51,13 @@ Read it when the shape of the output is in doubt; the rules themselves are in
 ...
 ```
 
-**Resulting docs/file-tree.md** — same list as the header's `### File Tree`, from the
-same PHASE 3.5 pass, rendered as a nested tree for review instead of a flat list:
+**Resulting docs/file-tree.md** — same list as the header's `### File Tree`, written by
+the same script run, rendered as a nested tree for review instead of a flat list:
 
 ```markdown
 # spec-1933: File Tree (visual)
 
-> For review only — the version `/sdd-build` and the validator check is the
+> For review only — the version the build and the validator check is the
 > `### File Tree` section in `plan.md`. Regenerated together with it; never edited
 > separately.
 
@@ -69,9 +71,10 @@ catalog-ms
             └── infrastructure
                 └── entry-points
                     └── dtos
-                            filter-zones-by-type.dto.ts   (create)
+                        └── filter-zones-by-type.dto.ts   (create)
 ```
 ```
 
-**Output to the user (PHASE 4 close):**
-> Plan saved to `work/active/spec-1933/plan.md`. Review the design sections and run it with `/build spec-1933`.
+**Output to the user (Step 7):**
+> Plan saved to `work/active/spec-1933/plan.md`. Review it, then run `/sdd-build spec-1933`
+> — or `/sdd-forge spec-1933` to build and sync in one go.

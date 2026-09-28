@@ -53,25 +53,43 @@ const stage = (report, id) => report.artifacts.find((a) => a.id === id);
 
 const SPEC = '---\ntype: feat\n---\n\n## Acceptance Criteria\n\n### AC-1: It works\n\nTHE SYSTEM SHALL work.\n';
 const CONTEXT = '# Technical context\n';
+// What /sdd-clarify leaves (the decision log), and then what /sdd-route's review adds
+// to it (its two entries). The review is the gate before the design or the plan.
+const CLARIFIED = `${SPEC}\n## Ambiguity Resolution\n\n- **AC-1 · autonomous (high):** which? → this.\n`;
+const ROUTED = `${CLARIFIED}\n- **Tier · autonomous (high):** full? → **full**.\n\n- **Build mode · autonomous (high):** tdd? → **tdd**.\n`;
 
-test('a spec-only story points at /clarify', () => {
+test('a spec-only story points at /sdd-scan', () => {
   const { code, json } = status({ 'spec.md': SPEC });
   assert.equal(code, 0);
   assert.equal(stage(json, 'spec').status, 'done');
   assert.equal(json.next.artifact, 'context');
+  assert.match(json.next.command, /^\/sdd-scan /);
+});
+
+test('a surveyed story points at /sdd-clarify', () => {
+  const { json } = status({ 'spec.md': SPEC, 'context.md': CONTEXT });
+  assert.equal(stage(json, 'context').status, 'done');
+  assert.equal(json.next.artifact, 'clarify');
 });
 
 test('an unresolved marker keeps clarification unfinished', () => {
-  // /clarify's contract is to leave zero markers, so a spec still carrying one
+  // /sdd-clarify's contract is to leave zero markers, so a spec still carrying one
   // means the stage did not finish — design must not read as ready.
-  const spec = `${SPEC}\n[NEEDS CLARIFICATION: which currency?]\n`;
+  const spec = `${CLARIFIED}\n[NEEDS CLARIFICATION: which currency?]\n`;
   const { json } = status({ 'spec.md': spec, 'context.md': CONTEXT });
-  assert.equal(stage(json, 'context').status, 'ready');
+  assert.equal(stage(json, 'clarify').status, 'ready');
   assert.equal(stage(json, 'design').status, 'blocked');
 });
 
-test('in the tdd carril /design stands between context and plan', () => {
-  const { json } = status({ 'spec.md': SPEC, 'context.md': CONTEXT });
+test('a clarified story is routed before it is designed', () => {
+  const { json } = status({ 'spec.md': CLARIFIED, 'context.md': CONTEXT });
+  assert.equal(json.next.artifact, 'route');
+  assert.match(json.next.command, /^\/sdd-route /);
+  assert.equal(stage(json, 'design').status, 'blocked');
+});
+
+test('in the tdd carril /design stands between the route and the plan', () => {
+  const { json } = status({ 'spec.md': ROUTED, 'context.md': CONTEXT });
   assert.equal(json.next.artifact, 'design');
   assert.equal(stage(json, 'plan').status, 'blocked');
   assert.deepEqual(stage(json, 'plan').missingDeps, ['design']);
@@ -80,23 +98,23 @@ test('in the tdd carril /design stands between context and plan', () => {
 test('in the evidence carril /design is skipped, not pending', () => {
   // Reporting "/sdd-design" as the next step in a carril where it never runs sends
   // the developer to a stage that has nothing to produce.
-  const spec = SPEC.replace('type: feat', 'type: chore\nbuild_mode: evidence');
+  const spec = ROUTED.replace('type: feat', 'type: chore\nbuild_mode: evidence');
   const { json } = status({ 'spec.md': spec, 'context.md': CONTEXT });
   assert.equal(stage(json, 'design').status, 'skipped');
   assert.equal(json.next.artifact, 'plan');
-  assert.deepEqual(stage(json, 'plan').requires, ['context']);
+  assert.deepEqual(stage(json, 'plan').requires, ['route']);
 });
 
 test('a half-done plan is not a finished build', () => {
   const plan = '### Task 1: One [X]\n### Task 2: Two\n';
-  const { json } = status({ 'spec.md': SPEC, 'context.md': CONTEXT, 'design.md': '# D\n', 'plan.md': plan });
+  const { json } = status({ 'spec.md': ROUTED, 'context.md': CONTEXT, 'design.md': '# D\n', 'plan.md': plan });
   assert.equal(stage(json, 'build').status, 'ready');
   assert.notEqual(stage(json, 'build').status, 'done');
 });
 
 test('a gap behind finished work is flagged as a regression', () => {
   // plan.md and a finished build exist, but context.md never did. Re-running
-  // /clarify would discard what was built on top — /hotfix is the way back in.
+  // /sdd-scan would discard what was built on top — /hotfix is the way back in.
   const plan = '### Task 1: One [X]\n';
   const { json } = status({ 'spec.md': SPEC, 'plan.md': plan });
   assert.equal(json.next.regression, true);
@@ -125,10 +143,12 @@ tier: fast
 THE SYSTEM SHALL work.
 `;
 
-test('in the fast tier clarification, the design and the plan are skipped', () => {
+test('in the fast tier the survey, clarification, the design and the plan are skipped', () => {
   const { json } = status({ 'spec.md': FAST_SPEC });
   assert.equal(json.tier, 'fast');
   assert.equal(stage(json, 'context').status, 'skipped');
+  assert.equal(stage(json, 'clarify').status, 'skipped');
+  assert.equal(stage(json, 'route').status, 'skipped');
   assert.equal(stage(json, 'design').status, 'skipped');
   assert.equal(stage(json, 'plan').status, 'skipped');
   assert.equal(stage(json, 'build').status, 'ready');
@@ -157,13 +177,13 @@ AC-1: ✗ the parser still drops it
   assert.equal(stage(json, 'build').status, 'ready');
 });
 
-test('in the standard tier the design is skipped and the plan hangs off context', () => {
-  const spec = SPEC.replace('type: feat', 'type: feat\ntier: standard');
+test('in the standard tier the design is skipped and the plan hangs off the route', () => {
+  const spec = ROUTED.replace('type: feat', 'type: feat\ntier: standard');
   const { json } = status({ 'spec.md': spec, 'context.md': CONTEXT });
   assert.equal(json.tier, 'standard');
   assert.equal(stage(json, 'design').status, 'skipped');
   assert.equal(json.next.artifact, 'plan');
-  assert.deepEqual(stage(json, 'plan').requires, ['context']);
+  assert.deepEqual(stage(json, 'plan').requires, ['route']);
 });
 
 test('a story with no tier runs the whole pipeline', () => {

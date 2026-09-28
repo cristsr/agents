@@ -1,0 +1,63 @@
+{
+  "skill": "sdd-plan",
+  "models": ["haiku", "sonnet", "opus"],
+  "baseline": [],
+  "triggers": {
+    "should": [
+      "/sdd-plan spec-1933",
+      "plan spec-1933",
+      "create the implementation plan for spec-1933",
+      "planifica spec-1933",
+      "genera el plan de spec-1933"
+    ],
+    "should_not": [
+      { "query": "build spec-1933", "owner": "sdd-build" },
+      { "query": "plan, build and sync spec-1933", "owner": "sdd-forge" },
+      { "query": "design spec-1933", "owner": "sdd-design" },
+      { "query": "plan this story sm-0412", "owner": "wr-plans" },
+      { "query": "plan my week", "owner": null }
+    ]
+  },
+  "evals": [
+    {
+      "id": 1,
+      "query": "/sdd-plan spec-1933 — full · tdd, one endpoint in catalog-ms, design artifacts present",
+      "files": [],
+      "expected_behavior": [
+        "Loads only references/strategy-tdd.md among the strategy references",
+        "Writes Task 0 verifying the branch read from .branch, never creating it",
+        "Maps every AC in the traceability table and takes DTO fields verbatim from the contract",
+        "Generates the File Tree with scripts/file-tree.mjs and ends with the validator at exit 0"
+      ]
+    },
+    {
+      "id": 2,
+      "query": "/sdd-plan spec-2001 — tier: standard, spec.md still carries a NEEDS CLARIFICATION marker",
+      "files": [],
+      "expected_behavior": [
+        "Stops at Requires and points at /sdd-ready",
+        "Writes no plan.md"
+      ]
+    },
+    {
+      "id": 3,
+      "query": "/sdd-plan spec-2002 — tier: standard, and the analysis finds a public DTO change",
+      "files": [],
+      "expected_behavior": [
+        "Stops without saving and hands off to /sdd-route with the signal",
+        "Never writes tier: full into spec.md itself"
+      ]
+    },
+    {
+      "id": 4,
+      "query": "/sdd-plan spec-2003 — build_mode: evidence with VERIFY bound, three docs deliverables",
+      "files": [],
+      "expected_behavior": [
+        "Orders the deliverables by what validates what",
+        "Every task names a VERIFY command and its verbatim expected output",
+        "No design artifact is required"
+      ]
+    }
+  ],
+  "runs": []
+}

@@ -1,5 +1,16 @@
 # Skill patterns
 
+## Contents
+
+- Choosing the framing: problem-first vs tool-first
+- Pattern 1: Sequential workflow orchestration
+- Pattern 2: Multi-MCP coordination
+- Pattern 3: Iterative refinement
+- Pattern 4: Contextual tool selection
+- Pattern 5: Domain intelligence
+- Use case categories
+- MCP and skills: the kitchen analogy
+
 These patterns emerged from skills built by early adopters and Anthropic's internal
 teams. They are approaches that worked well, **not prescriptive templates**.
 

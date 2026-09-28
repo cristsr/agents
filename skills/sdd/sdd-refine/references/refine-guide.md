@@ -23,8 +23,6 @@ section isn't in this guide, it isn't refinable: regenerate with the skill that 
 | Section | What can change | Examples |
 |---------|----------------|---------|
 | The framing block (As / I want / So that, or the block for the item's type) | Correcting wording or role name | "operator" → "administrator" |
-| `tier` (front-matter field) | Raising the tier, applied on request, or lowering it — which requires deleting the artifacts the lower tier does not produce | `standard` → `full` adds the design stage; `full` → `fast` deletes `plan.md`, `context.md` and `docs/` |
-| `## Tier Rationale` | The reason recorded beside the field — the decision, never the stage that made it | Add the survey signal that raised a `standard` story to `full` |
 | `## Change Surface` | In `fast`, the scope contract `/sdd-build` enforces: the `**Confined to:**` paths and symbols, and the `**Check:**` command | Add the second symbol the change is confined to |
 | AC body text | Correcting or clarifying the criterion | Fix ambiguous wording, add missing detail |
 | AC title (heading) | Renaming the short label | "AC-1: Filter" → "AC-1: Filter by service type" |

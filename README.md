@@ -43,14 +43,16 @@ than being discovered by a skill following a dead reference.
 The whole chain, which is what `full` — the default tier — runs:
 
 ```
-/sdd-spec → /sdd-prepare → /sdd-clarify → /sdd-design → /sdd-plan → /sdd-build → /sdd-sync → /sdd-commit
+/sdd-spec → /sdd-route → /sdd-prepare → /sdd-scan → /sdd-clarify → /sdd-route → /sdd-design → /sdd-plan → /sdd-build → /sdd-sync → /sdd-commit
 ```
 
 | Skill | Input | Output |
 |---|---|---|
-| `/sdd-spec` | raw text or a tracker export (feature, bug, debt, incident, chore) | `spec.md`, typed, with the execution tier it inferred |
+| `/sdd-spec` | raw text or a tracker export (feature, bug, debt, incident, chore) | `spec.md`, typed |
+| `/sdd-route` | `spec.md` — and, in its review run, `context.md` and the decision log | the story's route: the `tier` (inferred first, then confirmed or raised) and the `build_mode` |
 | `/sdd-prepare` | the item | a fresh base branch + the story's working branch (`.branch`) |
-| `/sdd-clarify` | `spec.md` | precise ACs with scenarios, a decision log, `context.md`, and the story's `build_mode` — plus the tier it confirms or raises |
+| `/sdd-scan` | `spec.md` | `context.md` — the affected components surveyed, with detected gaps |
+| `/sdd-clarify` | `spec.md` + `context.md` | precise ACs with scenarios and a decision log |
 | `/sdd-design` | `spec.md` + `context.md` | `design.md` + `docs/` (contract, model, diagrams) — `full` only |
 | `/sdd-plan` | the approved artifacts | `plan.md` — numbered tasks, each with its verification, plus a consolidated `### File Tree` — `full` and `standard` |
 | `/sdd-build` | `plan.md` — or `spec.md` in the `fast` tier | code + green checks — `plan.md`'s tasks `[X]` and its `## AC Coverage`, or in `fast` the criterion closed in `spec.md`'s `## AC Coverage` |
@@ -58,21 +60,36 @@ The whole chain, which is what `full` — the default tier — runs:
 | `/sdd-commit` | `work/done/` | commits + a drafted PR (never pushes) |
 
 A stage is conditional in two ways: the carril, which drops `/sdd-design` in `evidence`
-(see "Build modes"), and the tier, which drops `/sdd-clarify`, `/sdd-design` and
-`/sdd-plan` as it narrows (see "Execution tiers"). `/sdd-prepare` is the one condition
+(see "Build modes"), and the tier, which drops `/sdd-scan`, `/sdd-clarify`, the review
+`/sdd-route`, `/sdd-design` and `/sdd-plan` as it narrows (see "Execution tiers"). `/sdd-prepare` is the one condition
 that belongs to the repository rather than to the story: it runs only when the base
 isn't fresh.
 
-`/sdd-clarify` absorbed the old survey step — it produces the precise `spec.md` **and**
-`context.md` in one pass.
+Each skill has one responsibility: `/sdd-scan` surveys, `/sdd-clarify` decides the
+ambiguities, `/sdd-route` decides the tier and the build mode. `/sdd-route` runs twice —
+right after the specification, from the input alone, and after clarification, with the
+survey and the decisions in view.
+
+Two orchestrators chain the stages so nobody types them one by one — they implement
+nothing and every stage keeps its own gates:
+
+```
+/sdd-spec  →  /sdd-ready  →  [/sdd-design]  →  /sdd-forge  →  /sdd-commit
+ (review)     route · prepare ·   full+tdd      plan · build ·   (review)
+              scan · clarify ·    only          sync
+              route review
+```
+
+`/sdd-ready` is interactive — it relays the stages' questions. `/sdd-forge` is not.
 
 **How much of that chain a story runs is its execution tier** (see "Execution tiers").
 `full` — the default, and the absence of the field — is the line above. `standard` drops
-`/sdd-design`. `fast` goes `/sdd-spec → /sdd-prepare → /sdd-build → /sdd-sync`.
+`/sdd-design`. `fast` goes `/sdd-spec → /sdd-route → /sdd-prepare → /sdd-build → /sdd-sync`.
 
-**Support skills:** `/sdd-forge` (runs the chain the tier declares, unattended) · `/sdd-hotfix`
+**Support skills:** `/sdd-ready` (spec → ready for design, relaying the stages' questions) ·
+`/sdd-forge` (plan → build → sync, unattended) · `/sdd-hotfix`
 (post-build defect traced to an ambiguous AC) · `/sdd-refine` (targeted artifact
-corrections) · `/sdd-scan` (refresh `context.md` alone) · `/sdd-status` (where a story sits) ·
+corrections) · `/sdd-status` (where a story sits) ·
 `/healthcheck` (validate the ecosystem) · `/sdd-rules` (the project's non-negotiables) ·
 `/sdd-docs` (C4 Level 1/2) · `/sdd-bootstrap` (the profile) · `/hexagonal-audit` (turns
 architecture debt into draft stories).
@@ -80,9 +97,9 @@ architecture debt into draft stories).
 ## Execution tiers
 
 A story declares **how much of the pipeline it runs** in `spec.md`'s front matter.
-`/sdd-spec` infers it from the input when the specification is written — never by asking,
-and never by reading the code, which is `/sdd-clarify`'s survey — and writes it with its
-reason. **The absence of the field means `full`**, so every story predating this axis
+`/sdd-route` infers it from the input right after the specification is written — never
+by asking, and never by reading the code, which is `/sdd-scan`'s survey — and writes it
+with its reason. **The absence of the field means `full`**, so every story predating this axis
 keeps every stage it had.
 
 ```yaml
@@ -92,7 +109,7 @@ tier: fast                # fast | standard; absent → full
 | | `full` (default) | `standard` | `fast` |
 |---|---|---|---|
 | Applies to | features, multi-component changes, schema or contract changes, critical integrations | a change circumscribed to one component, with no contract or schema change | a defect or small refactor with a single criterion |
-| `/sdd-clarify` | required | required | skipped |
+| `/sdd-scan`, `/sdd-clarify` | required | required | skipped |
 | `/sdd-design` | required | skipped | skipped |
 | `/sdd-plan` | required | required — a flat, atomic breakdown, no `[P]` groups | skipped |
 | `/sdd-build` reads | `plan.md` | `plan.md` | `spec.md`, and it closes there |
@@ -114,16 +131,15 @@ the story mechanically when either fails; and a reduced tier whose check cannot 
 **stops** rather than closing by eye. Features stop at `standard` and incidents at
 `full`: a new capability, or a production remediation, is rarely one symbol wide.
 
-**The inference is provisional and moves one way.** `/sdd-clarify` and `/sdd-plan` may
-*raise* a tier — they add work, never remove it — writing the reason into
-`## Tier Rationale`. Lowering is the developer's decision: `/sdd-clarify` asks and never
-takes it, `/sdd-refine` applies it. The contract is
-`~/.agents/contracts/TIERS.md`; the reading that picks the value is
-`sdd-spec/references/tier-inference.md`.
+**The inference is provisional and moves one way.** `/sdd-route`'s review run may
+*raise* a tier — it adds work, never removes it — writing the reason into
+`## Tier Rationale`. Lowering is the developer's decision: `/sdd-route` asks and never
+takes it on its own. The contract is `~/.agents/contracts/TIERS.md`; the reading that
+picks the value is `sdd-route/references/tier-inference.md`.
 
 ## Build modes
 
-A story declares its carril in `spec.md`'s front matter. `/sdd-clarify` resolves it, and
+A story declares its carril in `spec.md`'s front matter. `/sdd-route` resolves it, and
 **the absence of the field means `tdd`** — so every story predating this axis is
 unaffected.
 
@@ -155,8 +171,7 @@ deliberately hard to reach: the item's `type` must be in `EVIDENCE_MODE_TYPES`
 `## Build Mode Rationale`; and `validate-artifacts.mjs` plus `/sdd-plan`'s step 0 reject
 the story mechanically when either fails. A fourth follows from the port model:
 `VERIFY` unbound **stops** the run rather than degrading to "reviewed by eye". And
-`/sdd-clarify` may never choose `evidence` on its own — it is always returned as a
-question.
+`/sdd-route` may never choose `evidence` on its own — it is always asked.
 
 ## The profile
 

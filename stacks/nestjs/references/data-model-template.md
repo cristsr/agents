@@ -57,7 +57,7 @@ CREATE TABLE table_name (
 ## Rules
 - One `## EntityName` block per new/changed table.
 - Entity field names/types must match the SQL column names/types exactly —
-  `/sdd-plan`'s "Entity field consistency" check (PHASE 3.5) compares them directly.
+  `/sdd-plan`'s "Entity field consistency" check (its `tdd` strategy) compares them directly.
 - Field names here should match `context.md` where the field already exists
   on a related entity (reuse, don't rename without reason).
 - If a field is also exposed in the API contract (`docs/api.yaml`), the

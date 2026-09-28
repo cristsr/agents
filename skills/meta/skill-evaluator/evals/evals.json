@@ -1,0 +1,60 @@
+{
+  "skill": "skill-evaluator",
+  "models": ["haiku", "sonnet", "opus"],
+  "baseline": [],
+  "triggers": {
+    "should": [
+      "review this skill",
+      "why doesn't my skill trigger?",
+      "audit skills/sdd/sdd-plan/SKILL.md",
+      "should sdd-clarify be split into smaller skills?",
+      "evalúa la skill sdd-build"
+    ],
+    "should_not": [
+      { "query": "create a new skill for our deploy checklist", "owner": "skill-creator" },
+      { "query": "build the pieces of the split we agreed for sdd-plan", "owner": "skill-creator" },
+      { "query": "review the code in this pull request", "owner": "code-review" },
+      { "query": "run the eval suite for every skill", "owner": null }
+    ]
+  },
+  "evals": [
+    {
+      "id": 1,
+      "query": "Evaluate a skill whose description reads: 'Generates reports and also exports them to the dashboard.'",
+      "files": [],
+      "expected_behavior": [
+        "Reports D8 with a split proposal naming each piece and its triggers",
+        "Checks sibling descriptions and reports D9 if another skill already owns the export",
+        "Reports D2 for the missing trigger phrases"
+      ]
+    },
+    {
+      "id": 2,
+      "query": "Evaluate a skill whose SKILL.md body is 820 lines and whose references link to other references",
+      "files": [],
+      "expected_behavior": [
+        "Reports E2 against the 500-line budget, not a word count",
+        "Reports E7 for the nested references"
+      ]
+    },
+    {
+      "id": 3,
+      "query": "Evaluate a skill that has no evals folder",
+      "files": [],
+      "expected_behavior": [
+        "Reports V1 and V2",
+        "Derives a trigger battery from the description and offers to persist it as evals/evals.json"
+      ]
+    },
+    {
+      "id": 4,
+      "query": "Evaluate a convention skill that nobody hands artifacts to",
+      "files": [],
+      "expected_behavior": [
+        "Classifies it as standalone and skips group C in one line",
+        "Does not report a missing Contract"
+      ]
+    }
+  ],
+  "runs": []
+}

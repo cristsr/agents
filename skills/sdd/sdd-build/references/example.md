@@ -10,7 +10,7 @@ Read it when the shape of the output is in doubt; the rules themselves are in
 
 ## Example
 
-**Input:** `/build spec-1933`
+**Input:** `/sdd-build spec-1933`
 
 **During execution — output per group:**
 
@@ -37,5 +37,5 @@ Executing plan spec-1933.
 
 **Final output:**
 > All tasks completed. Review the changes and tell me if anything needs adjusting.
-> Once they're OK, the next step is `/sync spec-<number>` to close out the module's
-> documentation (and then `/commit spec-<number>` for the commits and the PR).
+> Once they're OK, the next step is `/sdd-sync spec-<number>` to close out the module's
+> documentation (and then `/sdd-commit spec-<number>` for the commits and the PR).

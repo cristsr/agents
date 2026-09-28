@@ -17,7 +17,7 @@ Read it when the shape of the output is in doubt; the rules themselves are in
 5. `git checkout -b feat/SPEC-0009-ledger-transfers develop` → created and active.
 6. `echo feat/SPEC-0009-ledger-transfers > work/active/spec-0009/.branch`.
 7. Reports:
-   > "Ready: the mono-repo on `feat/SPEC-0009-ledger-transfers` (cut off an up-to-date `develop`; you were on `feat/ledger-transfers`), recorded in `work/active/spec-0009/.branch`. You can now run `/clarify spec-0009`."
+   > "Ready: the mono-repo on `feat/SPEC-0009-ledger-transfers` (cut off an up-to-date `develop`; you were on `feat/ledger-transfers`), recorded in `work/active/spec-0009/.branch`. You can now run `/sdd-scan spec-0009`."
 
 **User input (with a dirty working tree):**
 > `/prepare spec-0009`

@@ -1,5 +1,13 @@
 # Decision authority — when to resolve alone and when to escalate
 
+## Contents
+
+1. Authority source hierarchy
+2. Code probing (level 4)
+3. Mandatory escalation
+4. Confidence levels
+5. Calibrated cases
+
 The rubric **phase P (Plan)** uses to decide, for each unknown, whether it resolves it
 autonomously or escalates it to the developer.
 

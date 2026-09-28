@@ -8,9 +8,9 @@ description: >
   model if a table changes, and design.md. /sdd-sync reconciles it into the unit's
   living docs.
   Use when the user says "/sdd-design spec-XXXX", "design the story", "create the
-  design", "technical specification", or has completed /sdd-clarify and wants to
-  define what to build.
-  Do NOT use before /sdd-clarify is complete. Do NOT use for planning tasks (use /sdd-plan).
+  design", "technical specification", or /sdd-route has routed the story to
+  design.
+  Do NOT use before /sdd-clarify and /sdd-route are complete. Do NOT use for planning tasks (use /sdd-plan).
   Do NOT use for system-wide architecture (C4 Level 1/2 — actors, external
   systems, apps/microservices) — that's /sdd-docs, invoked by /sdd-sync.
 ---
@@ -66,19 +66,19 @@ the design at the start, not halfway through a contract.
 > **This skill does not run in `build_mode: evidence`.** When `spec.md`'s front matter
 > declares that carril, the story has no API contract, no sequence diagram and no data
 > model to produce, and `/sdd-plan` does not require any of them — the pipeline goes
-> `/clarify → /sdd-plan`. If you are invoked on such a story, say so and stop; the story is
-> not missing a step. Changing the carril is `/sdd-refine` on `spec.md`, not a design run.
+> `/sdd-route → /sdd-plan`. If you are invoked on such a story, say so and stop; the story
+> is not missing a step. Changing the build mode is `/sdd-route`, not a design run.
 >
 > **This skill runs only at `tier: full`.** `standard` and `fast` have no design to produce
 > either: no API contract, no data model and no sequence diagram, and `/sdd-plan` requires
 > none of them at `standard` — at `fast` it never runs at all. What the omitted design costs
-> is paid elsewhere, and deliberately: `standard` keeps `/sdd-clarify`'s `context.md` and an
+> is paid elsewhere, and deliberately: `standard` keeps `/sdd-scan`'s `context.md` and an
 > atomic plan whose contracts are signatures and invariants, and `fast` keeps
 > `## Change Surface` in `spec.md` — the files and symbols the change is confined to —
 > closing the story with `## AC Coverage` in that same artifact. If you are invoked on
 > either tier, say so and stop; the story is not missing a step. The way in is raising the
-> tier: `/sdd-refine` on `spec.md`, not a design run, because the tier is what decides
-> whether this stage exists.
+> tier with `/sdd-route`, not a design run, because the tier is what decides whether this
+> stage exists.
 
 **Requires**
 
@@ -115,9 +115,10 @@ matches). One marker or one placeholder left is a stop.
 
 - `work/active/spec-<number>/design.md`
 - `work/active/spec-<number>/docs/` — `<api-artifact>`, `diagram.md`,
-  `component.md`, `flows/*.md`, `data-model.md`, `research.md`
+  `component.md`, `flows/*.md`, `data-model.md`, `research.md`, and
+  `postman_collection.json` (generated from the contract, step 5)
 
-Not `spec.md` or `context.md` (that's `/sdd-clarify`, or `/sdd-refine` for a correction), not
+Not `spec.md` or `context.md` (that's `/sdd-clarify` and `/sdd-scan`, or `/sdd-refine` for a correction), not
 `plan.md` (that's `/sdd-plan`), not the unit's living docs (that's `/sdd-sync` — this skill
 only *reads* them, in drafting PHASE 4 step 2), and not `DOCS_ARCHITECTURE`: C4
 Level 1/2 belongs to `/sdd-docs`.
@@ -164,9 +165,10 @@ recoverable from git. When they are not, read `component.md` and the existing fl
 first and update them surgically, which is what `Never` requires anyway.
 
 **Ports** — `CONTRACT_LINT`, `DIAGRAM_CHECK`, `CONTRACT_DIFF`: the gates over the
-produced artifacts. This skill names capabilities, never tools — which command
-implements each one is the profile's `ports` block. `CONTRACT_LINT` and
-`DIAGRAM_CHECK` run in step 5's verification; `CONTRACT_DIFF` is `/sdd-sync`'s.
+produced artifacts; `API_CLIENT_EXPORT`: the client collection derived from the
+contract. This skill names capabilities, never tools — which command implements each one
+is the profile's `ports` block. `CONTRACT_LINT`, `DIAGRAM_CHECK` and
+`API_CLIENT_EXPORT` run in step 5; `CONTRACT_DIFF` is `/sdd-sync`'s.
 
 **Profile keys**
 
@@ -245,6 +247,12 @@ Verify against the files on disk, not against what you meant to write:
    `design.md`, never renamed to force a pass.
 3. Confirm `design.md` carries every heading the `design-md` contract declares — the
    always-present ones and the conditional ones this run actually produced.
+4. **Client collection** — once the contract passes check 1, derive it: call the
+   `API_CLIENT_EXPORT.run` port with `docs/<api-artifact>` as `<input>` and
+   `docs/postman_collection.json` as `<output>`, both under the story's workspace. It is
+   a rendering of the contract, so it is regenerated whenever the contract is — never
+   hand-written. Port unbound, or its adapter fails → skip it, say so in the summary and
+   suggest importing `<api-artifact>` directly; it never blocks the design.
 
 If a check fails → **fix-and-retry, max 3**: correct the artifact and re-verify. After
 3 attempts, record the failure in `design.md` as a known risk and surface it in the
@@ -317,7 +325,8 @@ for the user's approval.
 Once verification passes and the escalations are handled:
 
 1. Summarise what was produced: the <component>s, the new endpoints and schemas, whether
-   `docs/data-model.md` and `docs/research.md` were generated, the **Global Architecture
+   `docs/data-model.md` and `docs/research.md` were generated, whether the client
+   collection was generated (or why not), the **Global Architecture
    Impact verdict** (Yes/No, and if Yes the C4 level and the node/edge — this is what
    `/sdd-sync` reads to invoke `/sdd-docs` without re-analysing anything), the Quality
    Gates result, and every escalation with its resolution. If no constitution was found,
@@ -332,7 +341,8 @@ Once verification passes and the escalations are handled:
    > model (if applicable) before continuing.
    > Once approved, `/sdd-plan` generates the DTOs and the entity/migration from these
    > files — a later change means regenerating them.
-   > If something isn't right, say so now. When you're ready, run `/plan spec-<number>`."
+   > If something isn't right, say so now. When you're ready, run `/sdd-plan spec-<number>`
+   > — or `/sdd-forge spec-<number>` to plan, build and sync in one go."
 
 4. Stop — do not start planning.
 
@@ -346,7 +356,7 @@ resolution.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| context.md not found | /sdd-clarify never ran | Tell the user to run /sdd-clarify first |
+| context.md not found | /sdd-scan never ran | Tell the user to run /sdd-scan, then /sdd-clarify and /sdd-route |
 | `spec.md` has `[NEEDS CLARIFICATION]` markers | Unresolved ambiguities | STOP: run `/clarify spec-<number>` before designing |
 | A Quality Gate fails (⚠️) | The design violates a principle | Adjust the design to pass it, or record a justified exception in `design.md` and approve it in PHASE 5 |
 | You can't even list the unknowns in PHASE 2 | Missing context, or a spec that contradicts itself | Stop before drafting: show the blocker, fix the input (`/sdd-refine`/`/sdd-clarify`), then re-run |

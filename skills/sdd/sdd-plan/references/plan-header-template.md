@@ -1,5 +1,13 @@
 # Plan Header Template
 
+## Contents
+
+- The header
+- Task 0 — always the first task after the header
+- Formatting
+- Language rules
+- docs/file-tree.md — the visual companion
+
 Every plan MUST start with this exact header structure:
 
 ```markdown
@@ -45,10 +53,13 @@ change, never hand-edit it independently of the tasks.
 ```
 
 Every AC in `spec.md` must appear at least once in that table. If any is missing, add
-the corresponding task before saving the plan (PHASE 3.5). That rule is for you, not
+the corresponding task before saving the plan (Step 6). That rule is for you, not
 for the plan: it stays here, out of the artifact.
 
-The File Tree is built the same way, from the same pass over every task (PHASE 3.5):
+**The File Tree is generated, not written:** `node ~/.agents/scripts/file-tree.mjs
+spec-<number>` builds it from every task's `**Files:**` lines once `plan.md` is saved
+(Step 6), and writes `docs/file-tree.md` in the same run. What follows is the shape it
+produces — and the shape to write by hand only when `node` is unavailable:
 a bold `**<component>**` label followed by one fenced, tree-connector-prefixed block
 — every leaf line carries the file's **complete path exactly as its task's
 `**Files:**` line wrote it** (`<component>/<exact path>/<file>.<ext>`), never
@@ -111,7 +122,7 @@ fence**. One idea per bullet; never a bullet longer than ~3 lines.
 ## docs/file-tree.md — the visual companion
 
 `work/active/spec-<number>/docs/file-tree.md`, written alongside `plan.md` from the
-same PHASE 3.5 pass that consolidates the `### File Tree` block above. Same source
+same script run that writes the `### File Tree` block above. Same source
 list, two renderings: the header's block is flat and full-path-per-leaf so the
 validator can find any task's path as a plain substring; this file is a nested
 directory tree — folders as parent nodes, files as their children — for a human to
@@ -124,7 +135,7 @@ Required header, to disambiguate it from the plan's own `### File Tree` section:
 ```markdown
 # spec-<number>: File Tree (visual)
 
-> For review only — the version `/sdd-build` and the validator check is the
+> For review only — the version the build and the validator check is the
 > `### File Tree` section in `plan.md`. Regenerated together with it; never edited
 > separately.
 
@@ -135,8 +146,8 @@ Required header, to disambiguate it from the plan's own `### File Tree` section:
 └── src
     └── domain
         └── <feature>
-                <file-1>.ts   (create)
-                <file-2>.ts   (modify)
+            ├── <file-1>.ts   (create)
+            └── <file-2>.ts   (modify)
 ```
 ```
 

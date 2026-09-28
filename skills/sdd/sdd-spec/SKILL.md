@@ -3,14 +3,14 @@ name: sdd-spec
 description: >
   Structures any raw unit of work — feature, bug, technical debt, incident or
   chore — into a well-formed spec.md and saves it to the story's folder under
-  work/active/, ready for /sdd-clarify. Picks the framing block
+  work/active/, ready for /sdd-route. Picks the framing block
   that matches the item type instead of forcing everything into a user story.
   Use when the user says "/sdd-spec", "new story", "create story", "structure a
   story", "new bug", "log a defect", "new technical debt", "log an incident",
   "new chore", provides an item id like "spec-XXXX", pastes raw story/bug/debt
   text, or provides a path to a tracker PDF export. Do NOT use for surveying the
-  codebase (use /sdd-clarify), designing (use /sdd-design), planning (use /sdd-plan), or
-  executing (use /sdd-build). For a defect in already-built code that traces back to
+  codebase (use /sdd-scan), deciding the tier (use /sdd-route), designing (use
+  /sdd-design), planning (use /sdd-plan), or executing (use /sdd-build). For a defect in already-built code that traces back to
   an ambiguous AC, use /sdd-hotfix on the original item instead of opening a new one.
 ---
 
@@ -20,18 +20,15 @@ description: >
 
 Receive a raw unit of work (text or tracker export), classify it, structure it
 with the spec template, and save it to `work/active/{story-id}/spec.md` — ready
-for `/sdd-clarify` (or, when the item is small enough, directly for `/sdd-build`).
+for `/sdd-route`, which decides how much of the pipeline it runs.
 
 The pipeline is **agnostic to the type of work**: `/sdd-clarify`, `/sdd-design`, `/sdd-plan` and
 `/sdd-build` consume **verifiable acceptance criteria**, not the narrative mold. That's
 why the type only decides the **framing block**, and everything else in the artifact
 is identical for a feature, a bug or a piece of technical debt.
 
-The item's **execution tier** is inferred in the same pass (Step 2b) and it decides
-something else entirely: **how much of the pipeline this story runs at all**. A one-line
-defect with a single criterion goes `spec → build`; a multi-component change runs the
-whole flow. The tier is written into the front matter, never asked, and skipped
-altogether when it is `full` — which is what its absence means.
+**How much of the pipeline the story runs** — its tier — is not decided here. `/sdd-route`
+reads this file right after and infers it.
 
 **Announce at start:** "Structuring {story-id} (<type>)."
 
@@ -51,7 +48,8 @@ listed under **Profile keys** in the `Contract` below.
 
 ## Contract
 
-What this skill needs, what it guarantees to `/sdd-clarify`, and what it may not do.
+What this skill needs, what it guarantees to `/sdd-route` and the stages after it, and
+what it may not do.
 **Check every `Requires` row before any other work** — this is the pipeline's first
 link, so nothing upstream will catch a bad input for you.
 
@@ -66,15 +64,11 @@ link, so nothing upstream will catch a bad input for you.
 | It is a new item, not a correction | Step 2, "Cases that are not a new item" | Redirect to `/hotfix {story-id}` (defect in already-built code from an ambiguous AC) or `/refine {story-id}` (artifact not built yet) and stop |
 | `work/active/{story-id}/spec.md` does not exist yet | `[ -f work/active/{story-id}/spec.md ]` (Step 3) | Ask for explicit overwrite confirmation before writing anything |
 
-**Produces** — this is what `/sdd-clarify` looks for
+**Produces** — this is what `/sdd-route` and `/sdd-clarify` look for
 
 - `work/active/{story-id}/spec.md`, structured per `references/spec-template.md`
-- frontmatter with `type` (one of `ITEM_TYPES`) and `origin` — `/sdd-clarify` reads `type`
-  to keep the framing and the tone of the ACs
-- the item's **`tier`**, inferred in Step 2b, written **only when the reading is not
-  `full`** (`references/tier-inference.md`): a reduced tier adds `tier:` to the front
-  matter, a non-empty `## Tier Rationale`, and — for `fast` — a `## Change Surface`
-  naming the files the change is confined to and the check that will close it
+- frontmatter with `type` (one of `ITEM_TYPES`) and `origin` — `/sdd-route` reads `type`
+  against the tier allowlists, `/sdd-clarify` to keep the framing and the tone of the ACs
 - **exactly one** framing block, the one matching that `type` — never two, never a
   user-story mold forced onto an item that isn't one
 - `## Acceptance Criteria` with **at least one** `### AC-N:` heading, numbered in order
@@ -84,11 +78,12 @@ link, so nothing upstream will catch a bad input for you.
 - every unresolved gap as an inline `[NEEDS CLARIFICATION: <question>]` marker, placed
   and left unresolved — `/sdd-clarify` resolves and removes them, `/sdd-design` refuses to
   proceed while any remain
-- countable close (Step 5): the summary reports the AC count, the marker count and the
-  tier; a summary with zero ACs means the artifact isn't finished
+- countable close (Step 5): the summary reports the AC count and the marker count; a
+  summary with zero ACs means the artifact isn't finished
 
 Not `## Ambiguity Resolution` or `## Technical Context` (that's `/sdd-clarify`), and not
-`## Hotfixes` (that's `/sdd-hotfix`). Not `## AC Coverage` either — that is the section
+`## Hotfixes` (that's `/sdd-hotfix`), and not `tier`, `build_mode`, `## Tier Rationale`,
+`## Build Mode Rationale` or `## Change Surface` (that's `/sdd-route`). Not `## AC Coverage` either — that is the section
 that *closes* a `fast` story, and `/sdd-build` is what writes it.
 
 **Writes** — nothing outside this list
@@ -109,18 +104,8 @@ project's documentation.
   and nothing else
 - any git command. This skill only reads the filesystem (listing `WORKDIR_ACTIVE` and
   `WORKDIR_DONE` to compute the next free id)
-- write `build_mode` into the front matter. Its absence means `tdd`, the default for
-  every item; the relaxed carril is resolved by `/sdd-clarify` (P2b) and only ever written
-  as `evidence` alongside a `## Build Mode Rationale` section. Writing it here opens
-  that carril with nothing justifying it — and `validate-artifacts.mjs` rejects the
-  pair as an ISSUE
-- infer the tier from anything but the input. Measuring the real blast radius means
-  reading the modules the change would touch, and that is `/sdd-clarify`'s survey, not
-  this pass
-- write a tier against `FAST_TIER_TYPES` or `STANDARD_TIER_TYPES`, or invent a
-  `## Change Surface` to reach `fast`. A story whose input does not say what it touches
-  is `standard`: the guardrail is the profile's, and `validate-artifacts.mjs` fails the
-  pair
+- write `tier` or `build_mode` into the front matter, or their sections. The story's
+  route is `/sdd-route`'s decision, made right after this pass
 
 **Escalates** — asks and waits, never guesses
 
@@ -129,12 +114,8 @@ project's documentation.
 - the next free id under `STORY_ID_MODE: sequential` → propose and confirm before writing
 - `spec.md` already exists → overwrite confirmation (Step 3)
 
-**The tier is not on that list, and that is deliberate.** It is inferred from the input
-and written down; a reading that turns out to be wrong is corrected where the code
-becomes visible (`/sdd-clarify`, `/sdd-plan`) or by the developer through `/sdd-refine`.
-If the developer states a tier while the item is being structured, that is an
-instruction, not a question: take it, write it, and make `## Tier Rationale` say what
-the reading had missed.
+If the developer states a tier or a build mode while the item is being structured, don't
+write it: say it in the handoff, and `/sdd-route` takes it as the developer's decision.
 
 **Reverting** — overwriting an existing `spec.md` is confirmed, not undone: if the story
 folder is already tracked by git, `git checkout -- work/active/{story-id}/spec.md`
@@ -156,12 +137,7 @@ number.
 - `WORKDIR_DONE` — scanned alongside `WORKDIR_ACTIVE` to compute the next free id
   under `STORY_ID_MODE: sequential` (Step 1, Input 2); a closed story still owns its
   number
-- `ITEM_TYPES` — the types this project classifies among (Step 2), and the universe the
-  tier allowlists are drawn from
-- `FAST_TIER_TYPES` — which of those types may run the `fast` tier (Step 2b); default
-  `[bug, debt, chore]`. `[]` disables the tier
-- `STANDARD_TIER_TYPES` — which may run the `standard` tier (Step 2b); default
-  `[feat, bug, debt, incident, chore]`
+- `ITEM_TYPES` — the types this project classifies among (Step 2)
 - `TRACKER`, `INTAKE_FORMATS`, `INTAKE_FIELD_MAP` — Mode A's extraction: which heading
   of this project's export feeds each `spec.md` field
 - `ARTIFACT_LANGUAGE`, `OUTPUT_LANGUAGE`, `IDENTIFIER_LANGUAGE` — see "Output language"
@@ -286,34 +262,6 @@ clear**, offering the 2-3 candidate types with the inferred one first and
 
 ---
 
-## Step 2b: Infer the execution tier
-
-The tier decides **how much of the pipeline this story runs**: `full` runs all of it,
-`standard` runs it without the design stage, and `fast` goes from this file straight to
-`/sdd-build` — no clarification pass, no design, no plan. `references/tier-inference.md`
-holds the reading; `~/.agents/contracts/TIERS.md` is the contract behind it.
-
-Read it now, in this order, and stop at the first match:
-
-1. **A change to a schema, a public contract, an integration, more than one component,
-   or to security/performance behavior → `full`.** These make the story `full` however
-   small the edit looks: a one-line rename of an exported function is a contract change.
-2. **Three or more acceptance criteria → `full`.**
-3. **Exactly one criterion, a `type` in `FAST_TIER_TYPES`, no `[NEEDS CLARIFICATION]`
-   marker, the input naming the file or symbol, and nothing from 1 → `fast`.**
-4. **Anything else → `standard`.**
-
-Two rules keep this honest. The reading uses **only the input** — this skill never reads
-the modules, and a tier inferred from a guess is worse than the default it replaces. And
-when the reading is `full`, **nothing is written**: the absence of the field *is* `full`,
-which is what every story predating this axis carries.
-
-The inference is provisional by construction. `/sdd-clarify` surveys the code and may
-raise it; nothing may lower it silently. Do not ask the developer to pick a tier (the
-`Escalates` note in the Contract says why) — but if they state one, take it.
-
----
-
 ## Step 3: Check for an existing file
 
 Before writing, check if the item already exists:
@@ -351,13 +299,6 @@ govern what goes into it.
 - The title as provided by the user — use it verbatim.
 - Structured AC headings derived from the criterion content.
 - Out of scope section — only if explicitly mentioned in the input.
-- The tier, when Step 2b read one that isn't `full`: `tier:` in the front matter after
-  `origin`, then `## Tier Rationale` (two labeled lines, neither empty), then — for
-  `fast` only — `## Change Surface` with `**Confined to:**` and `**Check:**`. The order
-  is framing block → `## Tier Rationale` → (the `evidence` carril's own
-  `## Build Mode Rationale`, written later) → `## Change Surface` → `## Acceptance
-  Criteria`: the wider decision first, and each rationale above the section it justifies.
-  `references/spec-template.md` shows it literally.
 
 ### What NOT to invent
 - Do not add acceptance criteria not present in the input.
@@ -408,33 +349,15 @@ missing; never leave the section empty.
 
 After saving `work/active/{story-id}/spec.md`:
 
-1. Show a brief summary: ID, type, title, **the inferred tier**, **number of ACs** and
-   **number of `[NEEDS CLARIFICATION]` markers**. Those counts are the stage's closing
-   signal, so state them even when a count is zero — and if the AC count is zero, the
-   item isn't finished: go back to Step 4 rather than handing it off. Announce the tier
-   in one clause with the reason, e.g. "Tier: `fast` (one criterion, confined to
-   `parseFoo`, no contract change)".
-2. Say, depending on the markers and the tier:
-   - **Tier `fast`, no markers:** "Saved to `work/active/{story-id}/spec.md` as a `fast`
-     story — no clarification, no design, no plan. Review it and when you're ready run
-     `/sdd-prepare {story-id}`, then `/sdd-build {story-id}`, which closes the criterion
-     in this file's `## AC Coverage`."
-   - **Tier `standard`:** "Saved to `work/active/{story-id}/spec.md` with `tier:
-     standard` — no design stage, so the flow is `/sdd-clarify` and then `/sdd-plan`.
-     Review it and when you're ready run `/sdd-prepare {story-id}`."
-   - **Any tier, with markers:** the tier does not change what a marker means — they are
-     resolved by `/sdd-clarify`, and `/sdd-design` won't proceed while any remain. (A
-     `fast` story never reaches here with a marker: Step 2b refuses the pair, because
-     the pass that resolves them is the one `fast` omits.)
-   - **Tier `full`:** "Saved to `work/active/{story-id}/spec.md`. Review it and when
-     you're ready run `/sdd-prepare {story-id}` (leaves the base fresh) and then
-     `/sdd-clarify {story-id}`."
-
-   Either way, mention what running `/sdd-prepare` first costs: it resolves the affected
-   <component>s from `context.md`, `spec.md` or `MODULE_ROOT`, and the `spec.md` this
-   skill writes declares none — `/sdd-clarify` is what surveys them. So `/sdd-prepare` before
-   `/sdd-clarify` will ask which <component>s to check out. That order is still the right
-   one when the base is stale; it just is not the cheaper one.
+1. Show a brief summary: ID, type, title, **number of ACs** and **number of
+   `[NEEDS CLARIFICATION]` markers**. Those counts are the stage's closing signal, so
+   state them even when a count is zero — and if the AC count is zero, the item isn't
+   finished: go back to Step 4 rather than handing it off.
+2. Say: "Saved to `work/active/{story-id}/spec.md`. Review it and when you're ready run
+   `/sdd-ready {story-id}` — it takes the story up to the design in one command (or
+   `/sdd-route {story-id}` to go stage by stage)." If the
+   developer stated a tier or a build mode, repeat it here so `/sdd-route` takes it.
+   Markers, if any, are resolved by `/sdd-clarify` later in the flow.
 
 3. Stop — do not start scanning.
 
@@ -448,11 +371,9 @@ the business rules of `spec.md` are written in that language. Never translate th
 English on your own: the language is the profile's decision, not this skill's.
 
 Two things stay verbatim regardless of that key: the **section headings**, always
-English because other skills locate them by name (`## Acceptance Criteria`, and
-`## Tier Rationale` / `## Change Surface` when the tier is reduced), and the
-**front-matter keys and their enum values** — `type`, `origin`, and `tier: fast` /
-`tier: standard` — copied exactly as the profile declares them, because they are
-matched, not read.
+English because other skills locate them by name (`## Acceptance Criteria`), and the
+**front-matter keys and their enum values** — `type` and `origin` — copied exactly as
+the profile declares them, because they are matched, not read.
 
 The item ID and any path or symbol you quote are **identifiers**: they follow
 `IDENTIFIER_LANGUAGE` (profile, language block), which decides the code's language
@@ -470,8 +391,6 @@ resolution.
 |-------|-------|------------|
 | No title provided | User pasted only the content | If it comes from a tracker, ask for the exact title; if it originates in the project, propose a 5-8 word one and confirm it |
 | Type ambiguous between `bug` and `hotfix` | Defect in already-built code | If it traces to an ambiguous AC of the original item → `/sdd-hotfix`; if it's independent → a new `bug` |
-| The item reads like a one-liner but names nothing | The input describes a symptom with no file, symbol or module | `standard`, not `fast`: `## Change Surface` cannot be written honestly, and inventing it defeats the tier's only scope guardrail |
-| The inferred tier looks wrong to the developer | The reading sees the input, never the code | Take theirs, write it (even `tier: full`), and let `## Tier Rationale` say what the reading missed. A tier against `FAST_TIER_TYPES`/`STANDARD_TIER_TYPES` is not an option: widen the profile or leave the story `full` |
 
 ---
 
