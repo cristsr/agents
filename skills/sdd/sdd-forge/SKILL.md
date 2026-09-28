@@ -149,7 +149,7 @@ resolved once, by `/sdd-prepare`, before the chain starts.
   back, it does not resolve it.
 
 **Degrades** — none of its own. Each stage degrades per its own Contract
-(`TESTS`, `API_CLIENT_EXPORT`, `CI_GATES`, `CONTRACT_DIFF`, `DIAGRAM_CHECK`
+(`TESTS`, `VERIFY`, `CI_GATES`, `CONTRACT_DIFF`, `DIAGRAM_CHECK`
 unbound); forge carries whatever note the stage emitted into the
 Step 4 report instead of swallowing it.
 

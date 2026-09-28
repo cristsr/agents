@@ -115,7 +115,8 @@ matches). One marker or one placeholder left is a stop.
 
 - `work/active/spec-<number>/design.md`
 - `work/active/spec-<number>/docs/` — `<api-artifact>`, `diagram.md`,
-  `component.md`, `flows/*.md`, `data-model.md`, `research.md`
+  `component.md`, `flows/*.md`, `data-model.md`, `research.md`, and
+  `postman_collection.json` (generated from the contract, step 5)
 
 Not `spec.md` or `context.md` (that's `/sdd-clarify` and `/sdd-scan`, or `/sdd-refine` for a correction), not
 `plan.md` (that's `/sdd-plan`), not the unit's living docs (that's `/sdd-sync` — this skill
@@ -164,9 +165,10 @@ recoverable from git. When they are not, read `component.md` and the existing fl
 first and update them surgically, which is what `Never` requires anyway.
 
 **Ports** — `CONTRACT_LINT`, `DIAGRAM_CHECK`, `CONTRACT_DIFF`: the gates over the
-produced artifacts. This skill names capabilities, never tools — which command
-implements each one is the profile's `ports` block. `CONTRACT_LINT` and
-`DIAGRAM_CHECK` run in step 5's verification; `CONTRACT_DIFF` is `/sdd-sync`'s.
+produced artifacts; `API_CLIENT_EXPORT`: the client collection derived from the
+contract. This skill names capabilities, never tools — which command implements each one
+is the profile's `ports` block. `CONTRACT_LINT`, `DIAGRAM_CHECK` and
+`API_CLIENT_EXPORT` run in step 5; `CONTRACT_DIFF` is `/sdd-sync`'s.
 
 **Profile keys**
 
@@ -245,6 +247,12 @@ Verify against the files on disk, not against what you meant to write:
    `design.md`, never renamed to force a pass.
 3. Confirm `design.md` carries every heading the `design-md` contract declares — the
    always-present ones and the conditional ones this run actually produced.
+4. **Client collection** — once the contract passes check 1, derive it: call the
+   `API_CLIENT_EXPORT.run` port with `docs/<api-artifact>` as `<input>` and
+   `docs/postman_collection.json` as `<output>`, both under the story's workspace. It is
+   a rendering of the contract, so it is regenerated whenever the contract is — never
+   hand-written. Port unbound, or its adapter fails → skip it, say so in the summary and
+   suggest importing `<api-artifact>` directly; it never blocks the design.
 
 If a check fails → **fix-and-retry, max 3**: correct the artifact and re-verify. After
 3 attempts, record the failure in `design.md` as a known risk and surface it in the
@@ -317,7 +325,8 @@ for the user's approval.
 Once verification passes and the escalations are handled:
 
 1. Summarise what was produced: the <component>s, the new endpoints and schemas, whether
-   `docs/data-model.md` and `docs/research.md` were generated, the **Global Architecture
+   `docs/data-model.md` and `docs/research.md` were generated, whether the client
+   collection was generated (or why not), the **Global Architecture
    Impact verdict** (Yes/No, and if Yes the C4 level and the node/edge — this is what
    `/sdd-sync` reads to invoke `/sdd-docs` without re-analysing anything), the Quality
    Gates result, and every escalation with its resolution. If no constitution was found,
@@ -332,7 +341,8 @@ Once verification passes and the escalations are handled:
    > model (if applicable) before continuing.
    > Once approved, `/sdd-plan` generates the DTOs and the entity/migration from these
    > files — a later change means regenerating them.
-   > If something isn't right, say so now. When you're ready, run `/plan spec-<number>`."
+   > If something isn't right, say so now. When you're ready, run `/sdd-plan spec-<number>`
+   > — or `/sdd-forge spec-<number>` to plan, build and sync in one go."
 
 4. Stop — do not start planning.
 

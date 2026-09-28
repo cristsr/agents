@@ -1,0 +1,61 @@
+{
+  "skill": "sdd-build",
+  "models": ["haiku", "sonnet", "opus"],
+  "baseline": [],
+  "triggers": {
+    "should": [
+      "/sdd-build spec-0040",
+      "execute the plan of spec-0040",
+      "build spec-0031",
+      "construye la historia spec-0031",
+      "implementa la historia spec-0040"
+    ],
+    "should_not": [
+      { "query": "plan, build and sync spec-0040", "owner": "sdd-forge" },
+      { "query": "there's a bug in the built code of spec-0040 from an ambiguous AC", "owner": "sdd-hotfix" },
+      { "query": "generate the plan for spec-0040", "owner": "sdd-plan" },
+      { "query": "close the story spec-0040", "owner": "sdd-sync" }
+    ]
+  },
+  "evals": [
+    {
+      "id": 1,
+      "query": "/sdd-build spec-0040 — full · tdd plan with Task 0 and two [P] groups",
+      "files": [],
+      "expected_behavior": [
+        "Runs Task 0 alone first and re-checks the branch before touching source files",
+        "Launches one sdd-code-implementer per [P] group in a single response",
+        "Writes tests first with one red run per group, marks [X] once per group",
+        "Closes with the suite, provenance check and conventions review in one batch, then AC Coverage in plan.md"
+      ]
+    },
+    {
+      "id": 2,
+      "query": "/sdd-build spec-0031 — tier: fast bug with a Change Surface and a Check command",
+      "files": [],
+      "expected_behavior": [
+        "Invents no plan, task list or [X] markers",
+        "Writes AC Coverage into spec.md naming the check command, only once it is green"
+      ]
+    },
+    {
+      "id": 3,
+      "query": "/sdd-build spec-0031 — the fast fix needs a file outside the Change Surface",
+      "files": [],
+      "expected_behavior": [
+        "Stops and reports the overflowing file",
+        "Does not widen the surface or touch spec.md's front matter; points at /sdd-route"
+      ]
+    },
+    {
+      "id": 4,
+      "query": "/sdd-build spec-0040 when running in OpenCode",
+      "files": [],
+      "expected_behavior": [
+        "Resolves the conventions reviewer's model from its tier for the host, never a fixed model name",
+        "Does not generate a Postman collection or install packages"
+      ]
+    }
+  ],
+  "runs": []
+}
