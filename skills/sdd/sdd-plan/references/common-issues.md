@@ -12,5 +12,6 @@ These are the rest: what to do when the run can continue.
 | A test with no AC behind it | Invented test | Every test must map to an AC in spec.md |
 | Relative path in imports | Convention violated | Follow the conventions doc under `DOCS_ARCHITECTURE` |
 | `TESTS.module` unbound | Project without a per-module command | Write each task's TDD cycle against `TESTS.full` |
-| An `evidence` story that ALSO has design artifacts | `/sdd-design` ran before the mode was decided | Not an error: the artifacts are extra context. Plan against the evidence carril anyway — the mode in `spec.md` wins |
-| The written plan lacks the traceability table or has `[X]` | PHASE 3.5 was skipped or cut short | Fix it before closing — step 5's validator catches both |
+| An `evidence` story that ALSO has design artifacts | `/sdd-design` ran before the mode was decided | Not an error: the artifacts are extra context. Plan against the `evidence` strategy anyway — the mode in `spec.md` wins |
+| The written plan lacks the traceability table or has `[X]` | Step 6 was skipped or cut short | Fix it before closing — Step 6's validator catches both |
+| `STALE` from `file-tree.mjs --check` | A task's Files changed after the File Tree was generated | Re-run `node ~/.agents/scripts/file-tree.mjs spec-<number>` — never hand-edit the tree |

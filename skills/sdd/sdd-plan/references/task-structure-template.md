@@ -1,5 +1,14 @@
 # Task Structure Template (generic — stack-agnostic)
 
+## Contents
+
+- The task shape
+- What the plan fixes, and what it leaves to the build
+- Granularity
+- `[P]` marker (parallel execution)
+- Language rules
+- Formatting
+
 A task is a **vertical slice**: the whole path that closes one behavior, from its
 entry point down to the deepest new thing it needs. Not one task per layer.
 

@@ -15,7 +15,8 @@
     "rules:check": "node scripts/validate-rules.mjs",
     "artifacts:check": "node scripts/validate-artifacts.mjs",
     "code:check": "node scripts/validate-code-provenance.mjs",
-    "story:status": "node scripts/status.mjs"
+    "story:status": "node scripts/status.mjs",
+    "plan:tree": "node scripts/file-tree.mjs"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"

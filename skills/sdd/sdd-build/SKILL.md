@@ -608,7 +608,7 @@ resolution.
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | Branch is main/master | User forgot to switch | Stop immediately, ask for correct branch |
-| An AC with no task in the traceability table | `/sdd-plan` produced the plan before this change, or PHASE 3.5 was skipped | STOP at Step 1.5, ask for the plan to be regenerated with `/plan spec-<number>` |
+| An AC with no task in the traceability table | `/sdd-plan` produced the plan before this change, or its traceability step was skipped | STOP at Step 1.5, ask for the plan to be regenerated with `/plan spec-<number>` |
 | An AC ends up `✗` in `## AC Coverage` | The tasks are done but no test exercises that AC's behavior | STOP at Step 3.4 — report the uncovered ACs and ask; `/sdd-sync` will refuse to close the story anyway |
 | An `evidence` task's baseline run starts red | The deliverable was already broken before this task | Stop: a later green would prove nothing. Report it — fixing the pre-existing break is its own decision |
 | `plan.md` is written in the other carril than `spec.md` declares | The mode changed after the plan was written | Critical gap: stop at Step 1 and ask for `/plan spec-<number>` to be regenerated. Never reconcile it by choosing one yourself |
